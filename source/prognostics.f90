@@ -8,10 +8,10 @@ module prognostics
     implicit none
 
     private
-    ! public vor, div, t, ps, tr
-    ! public phi, phis
-    public initialize_prognostics
+
     public prognostic_vars_t
+    public initialize_prognostics
+    public deallocate_prognostics
 
     type prognostic_vars_t
         ! Prognostic spectral variables
@@ -19,15 +19,15 @@ module prognostics
         ! kx Number of vertical levels
         ! nx Number of total wavenumbers for spectral storage arrays
         ! mx Number of zonal wavenumbers for spectral storage arrays
-        complex(p) :: vor(mx, nx, kx, 2)     !! Vorticity
-        complex(p) :: div(mx, nx, kx, 2)     !! Divergence
-        complex(p) :: t(mx, nx, kx, 2)       !! Absolute temperature
-        complex(p) :: ps(mx, nx, 2)          !! Log of (normalised) surface pressure (p_s/p0)
-        complex(p) :: tr(mx, nx, kx, 2, ntr) !! Tracers (tr(1): specific humidity in g/kg)
+        complex(p), allocatable :: vor(:, :, :, :)   !! Vorticity
+        complex(p), allocatable :: div(:, :, :, :)   !! Divergence
+        complex(p), allocatable :: t(:, :, :, :)     !! Absolute temperature
+        complex(p), allocatable :: ps(:, :, :)       !! Log of (normalised) surface pressure (p_s/p0)
+        complex(p), allocatable :: tr(:, :, :, :, :) !! Tracers (tr(1): specific humidity in g/kg)
 
         ! Geopotential
-        complex(p) :: phi(mx, nx, kx) !! Atmospheric geopotential
-        complex(p) :: phis(mx, nx)   !! Surface geopotential
+        complex(p), allocatable :: phi(:, :, :) !! Atmospheric geopotential
+        complex(p), allocatable :: phis(:, :)  !! Surface geopotential
     end type
 
 contains
@@ -36,7 +36,32 @@ contains
     subroutine initialize_prognostics(prognostic_vars, user_params)
         type(prognostic_vars_t), intent(out) :: prognostic_vars
         type(user_params_t), intent(in) :: user_params
+
+        ! Allocate variables
+        allocate (prognostic_vars%vor(mx, nx, kx, 2))
+        allocate (prognostic_vars%div(mx, nx, kx, 2))
+        allocate (prognostic_vars%t(mx, nx, kx, 2))
+        allocate (prognostic_vars%ps(mx, nx, 2))
+        allocate (prognostic_vars%tr(mx, nx, kx, 2, ntr))
+
+        allocate (prognostic_vars%phi(mx, nx, kx))
+        allocate (prognostic_vars%phis(mx, nx))
+        
         call initialize_from_rest_state(prognostic_vars, user_params)
+    end subroutine
+
+    !> Deallocate the memory reserved for the prognostic variables.
+    subroutine deallocate_prognostics(prognostic_vars)
+        type(prognostic_vars_t), intent(inout) :: prognostic_vars
+
+        ! Deallocate variables
+        deallocate (prognostic_vars%vor)
+        deallocate (prognostic_vars%div)
+        deallocate (prognostic_vars%t)
+        deallocate (prognostic_vars%ps)
+        deallocate (prognostic_vars%tr)
+        deallocate (prognostic_vars%phi)
+        deallocate (prognostic_vars%phis)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
@@ -49,7 +74,7 @@ contains
         use spectral, only: grid_to_spec, trunct
         use input_output, only: output
 
-        type(prognostic_vars_t), intent(out) :: prognostic_vars
+        type(prognostic_vars_t), intent(inout) :: prognostic_vars
         type(user_params_t), intent(in) :: user_params
 
         complex(p) :: surfs(mx, nx)

@@ -14,7 +14,7 @@ contains
         use implicit, only: initialize_implicit
 
         type(prognostic_vars_t), intent(inout) :: prognostic_vars
-
+        
         call initialize_implicit(0.5*delt)
 
         call step(prognostic_vars, 1, 1, 0.5*delt)
@@ -53,7 +53,7 @@ contains
         complex(p) :: ctmp(mx, nx, kx)
 
         integer :: n, itr, k, m
-
+        
         ! =========================================================================
         ! Compute tendencies of prognostic variables
         ! =========================================================================

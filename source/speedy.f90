@@ -12,7 +12,7 @@ program speedy
     use initialization, only: initialize
     use time_stepping, only: step
     use diagnostics, only: check_diagnostics
-    use prognostics, only: prognostic_vars_t
+    use prognostics, only: prognostic_vars_t, deallocate_prognostics
     use forcing, only: set_forcing
 
     implicit none
@@ -28,6 +28,7 @@ program speedy
 
     ! Model main loop
     do while (.not. datetime_equal(model_datetime, end_datetime))
+        
         ! Daily tasks
         if (mod(model_step - 1, nsteps) == 0) then
             ! Set forcing terms according to date
@@ -62,4 +63,6 @@ program speedy
         ! Exchange data with coupler
         call couple_sea_land(1 + model_step/nsteps)
     end do
+
+    call deallocate_prognostics(prognostic_vars)
 end

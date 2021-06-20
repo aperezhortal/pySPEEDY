@@ -16,7 +16,7 @@ contains
         complex(p), intent(inout) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
         integer, intent(in) :: j2
 
-        type(prognostic_vars_t), intent(out) :: prognostic_vars
+        type(prognostic_vars_t), intent(inout) :: prognostic_vars
 
         ! =========================================================================
         ! Computation of grid-point tendencies (converted to spectral at the end of
@@ -90,7 +90,6 @@ contains
         ! =========================================================================
         ! Convert prognostics to grid point space
         ! =========================================================================
-
         do k = 1, kx
             vorg(:, :, k) = spec_to_grid(prognostic_vars%vor(:, :, k, j2), 1)
             divg(:, :, k) = spec_to_grid(prognostic_vars%div(:, :, k, j2), 1)
