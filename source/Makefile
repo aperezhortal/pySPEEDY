@@ -2,7 +2,7 @@
 FC=gfortran
 
 # Set variables depending on target
-default : COMPOPTS = $(OPT) $(BASE)
+default : COMPOPTS = $(OPT) $(BASE) -g -fbacktrace
 profile : COMPOPTS = -pg $(BASE)
 
 # Default
@@ -18,10 +18,10 @@ BASE=-fconvert=swap -Wall
 OPT=-Ofast
 
 # # Location of NetCDF module (netcdf.mod)
-INC=-I$(NETCDF)/include
+INC=-I$(NETCDF)/include -I/usr/include
 
 # Library flags
-LIB=-L$(NETCDF)/lib -lnetcdff -lnetcdf
+LIB=-L$(NETCDF)/lib -L/usr/lib -lnetcdff -lnetcdf
 
 FILES= \
 	   auxiliaries.o \
