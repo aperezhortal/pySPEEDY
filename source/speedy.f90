@@ -50,7 +50,7 @@ program speedy
         call newdate
 
         ! Output
-        if (mod(model_step - 1, nsteps) == 0) then
+        if (mod(model_step - 1, user_params%nsteps_out) == 0) then
             call output(model_step - 1, vor, div, t, ps, tr, phi)
         end if
 

@@ -28,7 +28,7 @@ module params
                                        !! tracer)
 
     ! Time stepping parameters
-    integer, parameter :: nsteps = 36              !! Number of time steps in one day
+    integer, parameter    :: nsteps = 36           !! Number of time steps in one day
     real(p), parameter    :: delt = 86400.0/nsteps !! Time step in seconds
     real(p), parameter    :: rob = 0.05            !! Damping factor in Robert time filter
     real(p), parameter    :: wil = 0.53            !! Parameter of Williams filter
@@ -48,7 +48,7 @@ module params
     ! =========================================================================
     type user_params_t
         integer :: nstdia     !! Period (number of steps) for diagnostic print-out
-        integer :: nsteps !! Number of time steps between outputs
+        integer :: nsteps_out !! Number of time steps between outputs
     end type
 
 contains
@@ -56,13 +56,13 @@ contains
     subroutine initialize_params(user_params)
         class(user_params_t), intent(out) :: user_params
         integer :: nstdia !! Period (number of steps) for diagnostic print
-        integer :: nsteps !! Number of time steps between outputs
+        integer :: nsteps_out !! Number of time steps between outputs
 
-        namelist /params/ nsteps, nstdia
+        namelist /params/ nsteps_out, nstdia
         logical :: namelist_file_exists
 
         ! Set default values
-        nsteps = 1
+        nsteps_out = 1
         nstdia = 36*5
 
         ! Read namelist file, if it exists
@@ -73,11 +73,11 @@ contains
             close (10)
         end if
 
-        user_params%nsteps = nsteps
+        user_params%nsteps_out = nsteps_out
         user_params%nstdia = nstdia
 
         ! Print values to screen
-        write (*, '(A,I5)') 'nsteps (frequency of output)  = ', user_params%nsteps
-        write (*, '(A,I5)') 'nstdia (frequency of diagnostics) = ', user_params%nstdia
+        write (*, '(A,I5)') 'nsteps_out (frequency of output)=', user_params%nsteps_out
+        write (*, '(A,I5)') 'nstdia (frequency of diagnostics)=', user_params%nstdia
     end subroutine
 end module
