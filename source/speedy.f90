@@ -12,18 +12,19 @@ program speedy
     use initialization, only: initialize
     use time_stepping, only: step
     use diagnostics, only: check_diagnostics
-    use prognostics, only: vor, div, t, ps, tr, phi
+    use prognostics, only: prognostic_vars_t
     use forcing, only: set_forcing
 
     implicit none
 
     type(user_params_t) :: user_params
+    type(prognostic_vars_t) :: prognostic_vars
 
     ! Time step counter
     integer :: model_step = 1
 
     ! Initialization
-    call initialize(user_params)
+    call initialize(prognostic_vars, user_params)
 
     ! Model main loop
     do while (.not. datetime_equal(model_datetime, end_datetime))
@@ -37,10 +38,12 @@ program speedy
         compute_shortwave = mod(model_step, nstrad) == 1
 
         ! Perform one leapfrog time step
-        call step(2, 2, 2*delt)
+        call step(prognostic_vars, 2, 2, 2*delt)
 
         ! Check model diagnostics
-        call check_diagnostics(vor(:, :, :, 2), div(:, :, :, 2), t(:, :, :, 2), &
+        call check_diagnostics(prognostic_vars%vor(:, :, :, 2), &
+                               prognostic_vars%div(:, :, :, 2), &
+                               prognostic_vars%t(:, :, :, 2), &
                                model_step, user_params%nstdia)
 
         ! Increment time step counter
@@ -51,7 +54,9 @@ program speedy
 
         ! Output
         if (mod(model_step - 1, user_params%nsteps_out) == 0) then
-            call output(model_step - 1, vor, div, t, ps, tr, phi)
+            call output(model_step - 1, prognostic_vars%vor, prognostic_vars%div, &
+                        prognostic_vars%t, prognostic_vars%ps, prognostic_vars%tr, &
+                        prognostic_vars%phi)
         end if
 
         ! Exchange data with coupler

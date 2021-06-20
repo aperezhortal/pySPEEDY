@@ -8,31 +8,39 @@ module prognostics
     implicit none
 
     private
-    public vor, div, t, ps, tr
-    public phi, phis
+    ! public vor, div, t, ps, tr
+    ! public phi, phis
     public initialize_prognostics
+    public prognostic_vars_t
 
-    ! Prognostic spectral variables
-    complex(p) :: vor(mx, nx, kx, 2)    !! Vorticity
-    complex(p) :: div(mx, nx, kx, 2)    !! Divergence
-    complex(p) :: t(mx, nx, kx, 2)      !! Absolute temperature
-    complex(p) :: ps(mx, nx, 2)        !! Log of (normalised) surface pressure (p_s/p0)
-    complex(p) :: tr(mx, nx, kx, 2, ntr) !! Tracers (tr(1): specific humidity in g/kg)
+    type prognostic_vars_t
+        ! Prognostic spectral variables
 
-    ! Geopotential
-    complex(p) :: phi(mx, nx, kx) !! Atmospheric geopotential
-    complex(p) :: phis(mx, nx)   !! Surface geopotential
+        ! kx Number of vertical levels
+        ! nx Number of total wavenumbers for spectral storage arrays
+        ! mx Number of zonal wavenumbers for spectral storage arrays
+        complex(p) :: vor(mx, nx, kx, 2)     !! Vorticity
+        complex(p) :: div(mx, nx, kx, 2)     !! Divergence
+        complex(p) :: t(mx, nx, kx, 2)       !! Absolute temperature
+        complex(p) :: ps(mx, nx, 2)          !! Log of (normalised) surface pressure (p_s/p0)
+        complex(p) :: tr(mx, nx, kx, 2, ntr) !! Tracers (tr(1): specific humidity in g/kg)
+
+        ! Geopotential
+        complex(p) :: phi(mx, nx, kx) !! Atmospheric geopotential
+        complex(p) :: phis(mx, nx)   !! Surface geopotential
+    end type
 
 contains
     !> Initializes all spectral variables starting from either a reference
     !  atmosphere or a restart file.
-    subroutine initialize_prognostics(user_params)
+    subroutine initialize_prognostics(prognostic_vars, user_params)
+        type(prognostic_vars_t), intent(out) :: prognostic_vars
         type(user_params_t), intent(in) :: user_params
-        call initialize_from_rest_state(user_params)
+        call initialize_from_rest_state(prognostic_vars, user_params)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
-    subroutine initialize_from_rest_state(user_params)
+    subroutine initialize_from_rest_state(prognostic_vars, user_params)
         use dynamical_constants, only: gamma, hscale, hshum, refrh1
         use physical_constants, only: grav, rgas
         use geometry, only: fsg
@@ -41,6 +49,7 @@ contains
         use spectral, only: grid_to_spec, trunct
         use input_output, only: output
 
+        type(prognostic_vars_t), intent(out) :: prognostic_vars
         type(user_params_t), intent(in) :: user_params
 
         complex(p) :: surfs(mx, nx)
@@ -51,15 +60,15 @@ contains
         gam1 = gamma/(1000.0*grav)
 
         ! 1. Compute spectral surface geopotential
-        phis = grid_to_spec(phis0)
+        prognostic_vars%phis = grid_to_spec(phis0)
 
         ! 2. Start from reference atmosphere (at rest)
         write (*, '(A)') 'Starting from rest'
 
         ! 2.1 Set vorticity, divergence and tracers to zero
-        vor(:, :, :, 1) = (0.0, 0.0)
-        div(:, :, :, 1) = (0.0, 0.0)
-        tr(:, :, :, 1, :) = (0.0, 0.0)
+        prognostic_vars%vor(:, :, :, 1) = (0.0, 0.0)
+        prognostic_vars%div(:, :, :, 1) = (0.0, 0.0)
+        prognostic_vars%tr(:, :, :, 1, :) = (0.0, 0.0)
 
         ! 2.2 Set reference temperature :
         !     tropos:  T = 288 degK at z = 0, constant lapse rate
@@ -71,17 +80,17 @@ contains
         rgamr = 1.0/rgam
 
         ! Surface and stratospheric air temperature
-        t(:, :, 1, 1) = (0.0, 0.0)
-        t(:, :, 2, 1) = (0.0, 0.0)
-        surfs = -gam1*phis
+        prognostic_vars%t(:, :, 1, 1) = (0.0, 0.0)
+        prognostic_vars%t(:, :, 2, 1) = (0.0, 0.0)
+        surfs = -gam1*prognostic_vars%phis
 
-        t(1, 1, 1, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
-        t(1, 1, 2, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
-        surfs(1, 1) = sqrt(2.0)*(1.0, 0.0)*tref - gam1*phis(1, 1)
+        prognostic_vars%t(1, 1, 1, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
+        prognostic_vars%t(1, 1, 2, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
+        surfs(1, 1) = sqrt(2.0)*(1.0, 0.0)*tref - gam1*prognostic_vars%phis(1, 1)
 
         ! Temperature at tropospheric levels
         do k = 3, kx
-            t(:, :, k, 1) = surfs*fsg(k)**rgam
+            prognostic_vars%t(:, :, k, 1) = surfs*fsg(k)**rgam
         end do
 
         ! 2.3 Set log(ps) consistent with temperature profile
@@ -94,8 +103,8 @@ contains
             end do
         end do
 
-        ps(:, :, 1) = grid_to_spec(surfg)
-        if (ix == iy*4) call trunct(ps)
+        prognostic_vars%ps(:, :, 1) = grid_to_spec(surfg)
+        if (ix == iy*4) call trunct(prognostic_vars%ps)
 
         ! 2.4 Set tropospheric specific humidity in g/kg
         !     Qref = RHref * Qsat(288K, 1013hPa)
@@ -115,14 +124,17 @@ contains
 
         ! Specific humidity at tropospheric levels
         do k = 3, kx
-            tr(:, :, k, 1, 1) = surfs*fsg(k)**qexp
+            prognostic_vars%tr(:, :, k, 1, 1) = surfs*fsg(k)**qexp
         end do
 
         ! Print diagnostics from initial conditions
-        call check_diagnostics(vor(:, :, :, 1), div(:, :, :, 1), t(:, :, :, 1), 0, &
-                               user_params%nstdia)
+        call check_diagnostics(prognostic_vars%vor(:, :, :, 1), &
+                               prognostic_vars%div(:, :, :, 1), &
+                               prognostic_vars%t(:, :, :, 1), &
+                               0, user_params%nstdia)
 
         ! Write initial data
-        call output(0, vor, div, t, ps, tr, phi)
+        call output(0, prognostic_vars%vor, prognostic_vars%div, prognostic_vars%t, &
+                    prognostic_vars%ps, prognostic_vars%tr, prognostic_vars%phi)
     end subroutine
 end module

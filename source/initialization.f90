@@ -9,7 +9,7 @@ module initialization
 
 contains
     !> Initializes everything.
-    subroutine initialize(user_params)
+    subroutine initialize(prognostic_vars, user_params)
         use params, only: issty0, initialize_params, user_params_t
         use date, only: isst0, initialize_date, start_datetime
         use coupler, only: initialize_coupler
@@ -22,12 +22,13 @@ contains
         use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
-        use prognostics, only: initialize_prognostics
+        use prognostics, only: initialize_prognostics, prognostic_vars_t
         use forcing, only: set_forcing
 
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
+        type(prognostic_vars_t), intent(out) :: prognostic_vars
         type(user_params_t), intent(out) :: user_params
 
         call print_speedy_title
@@ -67,7 +68,7 @@ contains
         call initialize_boundaries
 
         ! Initialize model variables
-        call initialize_prognostics(user_params)
+        call initialize_prognostics(prognostic_vars, user_params)
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)
@@ -83,7 +84,7 @@ contains
         call set_forcing(0)
 
         ! Do the initial (2nd-order) time step, initialize the semi-implicit scheme
-        call first_step
+        call first_step(prognostic_vars)
     end subroutine
 
     !> Prints SPEEDY.f90 banner.
