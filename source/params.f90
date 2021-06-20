@@ -8,8 +8,9 @@ module params
 
     private
     public trunc, ix, iy, il, kx, nx, mx, ntr
-    public nsteps, nstdia, nsteps_out, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
+    public nsteps, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
     public initialize_params
+    public user_params_t
 
     ! =========================================================================
     ! Constant parameters
@@ -21,8 +22,8 @@ module params
     integer, parameter :: iy = 24      !! Number of latitudes in hemisphere
     integer, parameter :: il = 2*iy    !! Number of latitudes in full sphere
     integer, parameter :: kx = 8       !! Number of vertical levels
-    integer, parameter :: nx = trunc+2 !! Number of total wavenumbers for spectral storage arrays
-    integer, parameter :: mx = trunc+1 !! Number of zonal wavenumbers for spectral storage arrays
+    integer, parameter :: nx = trunc + 2 !! Number of total wavenumbers for spectral storage arrays
+    integer, parameter :: mx = trunc + 1 !! Number of zonal wavenumbers for spectral storage arrays
     integer, parameter :: ntr = 1      !! Number of tracers (specific humidity is considered a
                                        !! tracer)
 
@@ -45,30 +46,38 @@ module params
     ! =========================================================================
     ! User-specified parameters (through the namelist file)
     ! =========================================================================
-
-    integer :: nstdia     !! Period (number of steps) for diagnostic print-out
-    integer :: nsteps_out !! Number of time steps between outputs
+    type user_params_t
+        integer :: nstdia     !! Period (number of steps) for diagnostic print-out
+        integer :: nsteps !! Number of time steps between outputs
+    end type
 
 contains
     !> Initializes user-defined parameters from namelist file.
-    subroutine initialize_params
-        namelist /params/ nsteps_out, nstdia
+    subroutine initialize_params(user_params)
+        class(user_params_t), intent(out) :: user_params
+        integer :: nstdia !! Period (number of steps) for diagnostic print
+        integer :: nsteps !! Number of time steps between outputs
+
+        namelist /params/ nsteps, nstdia
         logical :: namelist_file_exists
 
         ! Set default values
-        nsteps_out = 1
+        nsteps = 1
         nstdia = 36*5
 
         ! Read namelist file, if it exists
-        inquire(file="namelist.nml", exist=namelist_file_exists)
+        inquire (file="namelist.nml", exist=namelist_file_exists)
         if (namelist_file_exists) then
-            open(10, file="namelist.nml")
-            read(10, nml=params)
-            close(10)
+            open (10, file="namelist.nml")
+            read (10, nml=params)
+            close (10)
         end if
 
+        user_params%nsteps = nsteps
+        user_params%nstdia = nstdia
+
         ! Print values to screen
-        write (*,'(A,I5)') 'nsteps_out (frequency of output)  = ', nsteps_out
-        write (*,'(A,I5)') 'nstdia (frequency of diagnostics) = ', nstdia
+        write (*, '(A,I5)') 'nsteps (frequency of output)  = ', user_params%nsteps
+        write (*, '(A,I5)') 'nstdia (frequency of diagnostics) = ', user_params%nstdia
     end subroutine
 end module

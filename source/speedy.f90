@@ -4,7 +4,7 @@
 !> until the (continually updated) model datetime (`model_datetime`) equals the
 !> final datetime (`end_datetime`).
 program speedy
-    use params, only: nsteps, delt, nsteps_out, nstrad
+    use params, only: nsteps, delt, nsteps, nstrad, user_params_t
     use date, only: model_datetime, end_datetime, newdate, datetime_equal
     use shortwave_radiation, only: compute_shortwave
     use input_output, only: output
@@ -17,16 +17,18 @@ program speedy
 
     implicit none
 
+    type(user_params_t) :: user_params
+
     ! Time step counter
     integer :: model_step = 1
 
     ! Initialization
-    call initialize
+    call initialize(user_params)
 
     ! Model main loop
     do while (.not. datetime_equal(model_datetime, end_datetime))
         ! Daily tasks
-        if (mod(model_step-1, nsteps) == 0) then
+        if (mod(model_step - 1, nsteps) == 0) then
             ! Set forcing terms according to date
             call set_forcing(1)
         end if
@@ -38,7 +40,8 @@ program speedy
         call step(2, 2, 2*delt)
 
         ! Check model diagnostics
-        call check_diagnostics(vor(:,:,:,2), div(:,:,:,2), t(:,:,:,2), model_step)
+        call check_diagnostics(vor(:, :, :, 2), div(:, :, :, 2), t(:, :, :, 2), &
+                               model_step, user_params%nstdia)
 
         ! Increment time step counter
         model_step = model_step + 1
@@ -47,9 +50,11 @@ program speedy
         call newdate
 
         ! Output
-        if (mod(model_step-1, nsteps_out) == 0) call output(model_step-1,  vor, div, t, ps, tr, phi)
+        if (mod(model_step - 1, nsteps) == 0) then
+            call output(model_step - 1, vor, div, t, ps, tr, phi)
+        end if
 
         ! Exchange data with coupler
-        call couple_sea_land(1+model_step/nsteps)
+        call couple_sea_land(1 + model_step/nsteps)
     end do
 end

@@ -9,8 +9,8 @@ module initialization
 
 contains
     !> Initializes everything.
-    subroutine initialize
-        use params, only: issty0, initialize_params
+    subroutine initialize(user_params)
+        use params, only: issty0, initialize_params, user_params_t
         use date, only: isst0, initialize_date, start_datetime
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
@@ -25,16 +25,21 @@ contains
         use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
 
+        ! =========================================================================
+        ! Subroutine definitions
+        ! =========================================================================
+        type(user_params_t), intent(out) :: user_params
+
         call print_speedy_title
 
         ! Initialize model parameters
-        call initialize_params
+        call initialize_params(user_params)
 
         ! Initialize date
         call initialize_date
 
         ! Initialize month index for reading SST anomaly file
-        isst0 = (start_datetime%year - issty0) * 12 + start_datetime%month
+        isst0 = (start_datetime%year - issty0)*12 + start_datetime%month
 
         ! Check consistency of coupling and prescribed SST anomaly flags
         if (sea_coupling_flag >= 4) sst_anomaly_coupling_flag = 1
@@ -62,7 +67,7 @@ contains
         call initialize_boundaries
 
         ! Initialize model variables
-        call initialize_prognostics
+        call initialize_prognostics(user_params)
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)
@@ -83,13 +88,13 @@ contains
 
     !> Prints SPEEDY.f90 banner.
     subroutine print_speedy_title
-        write (*,'(A)') ''
-        write (*,'(A)') '  _____ ______  _____  _____ ______ __   __     __  _____  _____'
-        write (*,'(A)') ' /  ___|| ___ \|  ___||  ___||  _  \\ \ / /    / _||  _  ||  _  |'
-        write (*,'(A)') ' \ `--. | |_/ /| |__  | |__  | | | | \ V /    | |_ | |_| || |/  |'
-        write (*,'(A)') '  `--. \|  __/ |  __| |  __| | | | |  \ /     |  _|\____ ||  /| |'
-        write (*,'(A)') ' /\__/ /| |    | |___ | |___ | |/ /   | |   _ | |  .___/ /\ |_/ /'
-        write (*,'(A)') ' \____/ \_|    \____/ \____/ |___/    \_/  (_)|_|  \____/  \___/'
-        write (*,'(A)') ''
+        write (*, '(A)') ''
+        write (*, '(A)') '  _____ ______  _____  _____ ______ __   __     __  _____  _____'
+        write (*, '(A)') ' /  ___|| ___ \|  ___||  ___||  _  \\ \ / /    / _||  _  ||  _  |'
+        write (*, '(A)') ' \ `--. | |_/ /| |__  | |__  | | | | \ V /    | |_ | |_| || |/  |'
+        write (*, '(A)') '  `--. \|  __/ |  __| |  __| | | | |  \ /     |  _|\____ ||  /| |'
+        write (*, '(A)') ' /\__/ /| |    | |___ | |___ | |/ /   | |   _ | |  .___/ /\ |_/ /'
+        write (*, '(A)') ' \____/ \_|    \____/ \____/ |___/    \_/  (_)|_|  \____/  \___/'
+        write (*, '(A)') ''
     end subroutine
 end module
