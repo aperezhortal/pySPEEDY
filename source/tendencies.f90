@@ -10,13 +10,13 @@ module tendencies
 contains
     subroutine get_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j2)
         use implicit, only: implicit_terms
-        use prognostics, only: prognostic_vars_t
+        use prognostics, only: PrognosticVars_t
 
         complex(p), dimension(mx, nx, kx), intent(inout) ::  vordt, divdt, tdt
         complex(p), intent(inout) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
         integer, intent(in) :: j2
 
-        type(prognostic_vars_t), intent(inout) :: prognostic_vars
+        type(PrognosticVars_t), intent(inout) :: prognostic_vars
 
         ! =========================================================================
         ! Computation of grid-point tendencies (converted to spectral at the end of
@@ -50,7 +50,7 @@ contains
     !           psdt  = spectral tendency of log(p_s)
     !           trdt  = spectral tendency of tracers
     subroutine get_grid_point_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j1, j2)
-        use prognostics, only: prognostic_vars_t
+        use prognostics, only: PrognosticVars_t
         use physical_constants, only: akap, rgas
         use geometry, only: dhs, dhsr, fsgr, coriol
         use implicit, only: tref, tref3
@@ -58,7 +58,7 @@ contains
         use physics, only: get_physical_tendencies
         use spectral, only: grid_to_spec, spec_to_grid, laplacian, grad, uvspec, vdspec
 
-        type(prognostic_vars_t), intent(inout) :: prognostic_vars
+        type(PrognosticVars_t), intent(inout) :: prognostic_vars
 
         !** notes ****
         ! -- TG does not have to be computed at both time levels every time step,
@@ -250,14 +250,14 @@ contains
     !                psdt  = tendency of log_surf.pressure (spectral)
     !                j2    = time level index (1 or 2)
     subroutine get_spectral_tendencies(prognostic_vars, divdt, tdt, psdt, j2)
-        use prognostics, only: prognostic_vars_t
+        use prognostics, only: PrognosticVars_t
         use physical_constants, only: rgas
         use geometry, only: dhs, dhsr
         use geopotential, only: get_geopotential
         use implicit, only: tref, tref2, tref3
         use spectral, only: laplacian
 
-        type(prognostic_vars_t), intent(inout) :: prognostic_vars
+        type(PrognosticVars_t), intent(inout) :: prognostic_vars
 
         complex(p), intent(inout) :: psdt(mx, nx), divdt(mx, nx, kx), tdt(mx, nx, kx)
         integer, intent(in) :: j2

@@ -4,7 +4,7 @@
 !> until the (continually updated) model datetime (`model_datetime`) equals the
 !> final datetime (`end_datetime`).
 program speedy
-    use params, only: nsteps, delt, nsteps, nstrad, user_params_t
+    use params, only: nsteps, delt, nsteps, nstrad, UserParams_t
     use date, only: model_datetime, end_datetime, newdate, datetime_equal
     use shortwave_radiation, only: compute_shortwave
     use input_output, only: output
@@ -12,23 +12,24 @@ program speedy
     use initialization, only: initialize
     use time_stepping, only: step
     use diagnostics, only: check_diagnostics
-    use prognostics, only: prognostic_vars_t, deallocate_prognostics
+    use prognostics, only: PrognosticVars_t, PrognosticVars_deallocate, PrognosticVars_allocate
     use forcing, only: set_forcing
 
     implicit none
 
-    type(user_params_t) :: user_params
-    type(prognostic_vars_t) :: prognostic_vars
-
     ! Time step counter
     integer :: model_step = 1
 
+    type(UserParams_t) :: user_params
+    type(PrognosticVars_t) :: prognostic_vars
+
     ! Initialization
+    call PrognosticVars_allocate(prognostic_vars)
     call initialize(prognostic_vars, user_params)
 
     ! Model main loop
     do while (.not. datetime_equal(model_datetime, end_datetime))
-        
+
         ! Daily tasks
         if (mod(model_step - 1, nsteps) == 0) then
             ! Set forcing terms according to date
@@ -64,5 +65,5 @@ program speedy
         call couple_sea_land(1 + model_step/nsteps)
     end do
 
-    call deallocate_prognostics(prognostic_vars)
+    call PrognosticVars_deallocate(prognostic_vars)
 end

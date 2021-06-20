@@ -10,10 +10,10 @@ module time_stepping
 contains
     ! Call initialization of semi-implicit scheme and perform initial time step
     subroutine first_step(prognostic_vars)
-        use prognostics, only: prognostic_vars_t
+        use prognostics, only: PrognosticVars_t
         use implicit, only: initialize_implicit
 
-        type(prognostic_vars_t), intent(inout) :: prognostic_vars
+        type(PrognosticVars_t), intent(inout) :: prognostic_vars
         
         call initialize_implicit(0.5*delt)
 
@@ -37,12 +37,12 @@ contains
     ! dt = time step
     subroutine step(prognostic_vars, j1, j2, dt)
         use dynamical_constants, only: tdrs
-        use prognostics, only: prognostic_vars_t
+        use prognostics, only: PrognosticVars_t
         use horizontal_diffusion, only: do_horizontal_diffusion, &
             & dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
         use tendencies, only: get_tendencies
 
-        type(prognostic_vars_t), intent(inout) :: prognostic_vars
+        type(PrognosticVars_t), intent(inout) :: prognostic_vars
 
         integer, intent(in) :: j1, j2
         real(p), intent(in) :: dt

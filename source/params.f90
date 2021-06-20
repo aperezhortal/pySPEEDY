@@ -10,7 +10,7 @@ module params
     public trunc, ix, iy, il, kx, nx, mx, ntr
     public nsteps, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
     public initialize_params
-    public user_params_t
+    public UserParams_t
 
     ! =========================================================================
     ! Constant parameters
@@ -46,7 +46,7 @@ module params
     ! =========================================================================
     ! User-specified parameters (through the namelist file)
     ! =========================================================================
-    type user_params_t
+    type UserParams_t
         integer :: nstdia     !! Period (number of steps) for diagnostic print-out
         integer :: nsteps_out !! Number of time steps between outputs
     end type
@@ -54,7 +54,7 @@ module params
 contains
     !> Initializes user-defined parameters from namelist file.
     subroutine initialize_params(user_params)
-        class(user_params_t), intent(out) :: user_params
+        class(UserParams_t), intent(out) :: user_params
         integer :: nstdia !! Period (number of steps) for diagnostic print
         integer :: nsteps_out !! Number of time steps between outputs
 

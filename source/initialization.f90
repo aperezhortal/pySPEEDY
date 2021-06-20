@@ -10,7 +10,7 @@ module initialization
 contains
     !> Initializes everything.
     subroutine initialize(prognostic_vars, user_params)
-        use params, only: issty0, initialize_params, user_params_t
+        use params, only: issty0, initialize_params, UserParams_t
         use date, only: isst0, initialize_date, start_datetime
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
@@ -22,14 +22,14 @@ contains
         use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
-        use prognostics, only: initialize_prognostics, prognostic_vars_t
+        use prognostics, only: initialize_prognostics, PrognosticVars_t
         use forcing, only: set_forcing
 
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
-        type(prognostic_vars_t), intent(out) :: prognostic_vars
-        type(user_params_t), intent(out) :: user_params
+        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+        type(UserParams_t), intent(out) :: user_params
 
         call print_speedy_title
 
