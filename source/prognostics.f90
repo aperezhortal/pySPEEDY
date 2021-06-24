@@ -4,80 +4,28 @@
 module prognostics
     use types, only: p
     use params, only: mx, nx, kx, ntr, ix, iy, il, UserParams_t
+    use date, only: ControlParams_t
+    use model_variables, only: ModelVars_t
 
     implicit none
 
     private
 
-    public PrognosticVars_t
     public initialize_prognostics
-    public PrognosticVars_allocate, PrognosticVars_deallocate
-
-    type PrognosticVars_t
-        ! Prognostic spectral variables
-
-        ! kx Number of vertical levels
-        ! nx Number of total wavenumbers for spectral storage arrays
-        ! mx Number of zonal wavenumbers for spectral storage arrays
-        complex(p), allocatable :: vor(:, :, :, :)   !! Vorticity
-        complex(p), allocatable :: div(:, :, :, :)   !! Divergence
-        complex(p), allocatable :: t(:, :, :, :)     !! Absolute temperature
-        complex(p), allocatable :: ps(:, :, :)       !! Log of (normalised) surface pressure (p_s/p0)
-        complex(p), allocatable :: tr(:, :, :, :, :) !! Tracers (tr(1): specific humidity in g/kg)
-
-        ! Geopotential
-        complex(p), allocatable :: phi(:, :, :) !! Atmospheric geopotential
-        complex(p), allocatable :: phis(:, :)  !! Surface geopotential
-    end type
 
 contains
 
-    !> Allocate PrognosticVars attributes.
-    subroutine PrognosticVars_allocate(prognostic_vars)
-        type(PrognosticVars_t), intent(out) :: prognostic_vars
-        ! Allocate variables
-        allocate (prognostic_vars%vor(mx, nx, kx, 2))
-        allocate (prognostic_vars%div(mx, nx, kx, 2))
-        allocate (prognostic_vars%t(mx, nx, kx, 2))
-        allocate (prognostic_vars%ps(mx, nx, 2))
-        allocate (prognostic_vars%tr(mx, nx, kx, 2, ntr))
-
-        allocate (prognostic_vars%phi(mx, nx, kx))
-        allocate (prognostic_vars%phis(mx, nx))
-
-        ! Initialize to 0 the allocated arrays
-        prognostic_vars%vor = 0
-        prognostic_vars%div = 0
-        prognostic_vars%t = 0
-        prognostic_vars%ps=0
-        prognostic_vars%tr=0
-        prognostic_vars%phi=0
-        prognostic_vars%phis=0        
-    end subroutine
-
-    !> Deallocate the memory reserved for the prognostic variables.
-    subroutine PrognosticVars_deallocate(prognostic_vars)
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
-        ! Deallocate variables
-        deallocate (prognostic_vars%vor)
-        deallocate (prognostic_vars%div)
-        deallocate (prognostic_vars%t)
-        deallocate (prognostic_vars%ps)
-        deallocate (prognostic_vars%tr)
-        deallocate (prognostic_vars%phi)
-        deallocate (prognostic_vars%phis)
-    end subroutine
-
     !> Initializes all spectral variables starting from either a reference
     !  atmosphere or a restart file.
-    subroutine initialize_prognostics(prognostic_vars, user_params)
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+    subroutine initialize_prognostics(prognostic_vars, user_params, control_params)
+        type(ModelVars_t), intent(inout) :: prognostic_vars
         type(UserParams_t), intent(in) :: user_params
-        call initialize_from_rest_state(prognostic_vars, user_params)
+        type(ControlParams_t), intent(in) :: control_params
+        call initialize_from_rest_state(prognostic_vars, user_params, control_params)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
-    subroutine initialize_from_rest_state(prognostic_vars, user_params)
+    subroutine initialize_from_rest_state(prognostic_vars, user_params, control_params)
         use dynamical_constants, only: gamma, hscale, hshum, refrh1
         use physical_constants, only: grav, rgas
         use geometry, only: fsg
@@ -86,8 +34,9 @@ contains
         use spectral, only: grid_to_spec, trunct
         use input_output, only: output
 
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+        type(ModelVars_t), intent(inout) :: prognostic_vars
         type(UserParams_t), intent(in) :: user_params
+        type(ControlParams_t), intent(in) :: control_params
 
         complex(p) :: surfs(mx, nx)
         real(p) :: surfg(ix, il)
@@ -171,7 +120,7 @@ contains
                                0, user_params%nstdia)
 
         ! Write initial data
-        call output(0, prognostic_vars%vor, prognostic_vars%div, prognostic_vars%t, &
+        call output(0, control_params, prognostic_vars%vor, prognostic_vars%div, prognostic_vars%t, &
                     prognostic_vars%ps, prognostic_vars%tr, prognostic_vars%phi)
     end subroutine
 end module

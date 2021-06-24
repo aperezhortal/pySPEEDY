@@ -12,14 +12,14 @@ module forcing
 contains
     !> Compute forcing fields for the current date and correction terms for
     !  horizontal diffusion
-    subroutine set_forcing(imode)
+    subroutine set_forcing(imode, model_datetime, tyear)
         use dynamical_constants, only: refrh1
         use params
         use horizontal_diffusion, only: tcorh, qcorh
         use physical_constants, only: rgas
         use boundaries, only: phis0, alb0
         use surface_fluxes, only: set_orog_land_sfc_drag
-        use date, only: model_datetime, tyear
+        use date, only: Datetime_t
         use land_model, only: stl_am, snowd_am, fmask_l, sd2sc
         use sea_model, only: fmask_s, sst_am, sice_am
         use mod_radcon, only: ablco2_ref, albsea, albice, snowc, albsn, alb_l, alb_s, albsfc
@@ -29,6 +29,8 @@ contains
         use spectral, only: grid_to_spec
 
         integer, intent(in) :: imode !! Mode -> 0 = initialization step, 1 = daily update
+        type(Datetime_t), intent(in) :: model_datetime
+        real(p), intent(in)          :: tyear !! The fraction of the current year elapsed
 
         real(p), dimension(ix, il) :: corh, tsfc, tref, psfc, qsfc, qref
         real(p) :: gamlat(il)

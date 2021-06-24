@@ -10,13 +10,13 @@ module tendencies
 contains
     subroutine get_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j2)
         use implicit, only: implicit_terms
-        use prognostics, only: PrognosticVars_t
-
+        use model_variables, only: ModelVars_t
+  
         complex(p), dimension(mx, nx, kx), intent(inout) ::  vordt, divdt, tdt
         complex(p), intent(inout) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
         integer, intent(in) :: j2
 
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+        type(ModelVars_t), intent(inout) :: prognostic_vars
 
         ! =========================================================================
         ! Computation of grid-point tendencies (converted to spectral at the end of
@@ -50,7 +50,7 @@ contains
     !           psdt  = spectral tendency of log(p_s)
     !           trdt  = spectral tendency of tracers
     subroutine get_grid_point_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j1, j2)
-        use prognostics, only: PrognosticVars_t
+        use model_variables, only: ModelVars_t
         use physical_constants, only: akap, rgas
         use geometry, only: dhs, dhsr, fsgr, coriol
         use implicit, only: tref, tref3
@@ -58,7 +58,7 @@ contains
         use physics, only: get_physical_tendencies
         use spectral, only: grid_to_spec, spec_to_grid, laplacian, grad, uvspec, vdspec
 
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+        type(ModelVars_t), intent(inout) :: prognostic_vars
 
         !** notes ****
         ! -- TG does not have to be computed at both time levels every time step,
@@ -208,11 +208,7 @@ contains
 
         prognostic_vars%phi = get_geopotential(prognostic_vars%t(:, :, :, j1), prognostic_vars%phis)
 
-        call get_physical_tendencies(prognostic_vars%vor(:, :, :, j1), &
-                                     prognostic_vars%div(:, :, :, j1), prognostic_vars%t(:, :, :, j1), &
-                                     prognostic_vars%tr(:, :, :, j1, 1), &
-                                     prognostic_vars%phi, &
-                                     prognostic_vars%ps(:, :, j1), &
+        call get_physical_tendencies(prognostic_vars, j1, &
                                      utend, vtend, ttend, trtend)
 
         ! =========================================================================
@@ -250,14 +246,14 @@ contains
     !                psdt  = tendency of log_surf.pressure (spectral)
     !                j2    = time level index (1 or 2)
     subroutine get_spectral_tendencies(prognostic_vars, divdt, tdt, psdt, j2)
-        use prognostics, only: PrognosticVars_t
+        use model_variables, only: ModelVars_t
         use physical_constants, only: rgas
         use geometry, only: dhs, dhsr
         use geopotential, only: get_geopotential
         use implicit, only: tref, tref2, tref3
         use spectral, only: laplacian
 
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+        type(ModelVars_t), intent(inout) :: prognostic_vars
 
         complex(p), intent(inout) :: psdt(mx, nx), divdt(mx, nx, kx), tdt(mx, nx, kx)
         integer, intent(in) :: j2

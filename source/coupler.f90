@@ -9,31 +9,46 @@ module coupler
 
 contains
     !> Initialize both land and sea models.
-    subroutine initialize_coupler
+    subroutine initialize_coupler(model_vars, control_params)
         use land_model, only: land_model_init, couple_land_atm
         use sea_model, only: sea_model_init, couple_sea_atm
+        use date, only: ControlParams_t
+        use model_variables, only: ModelVars_t
+
+        type(ModelVars_t) :: model_vars
+        type(ControlParams_t), intent(in)  :: control_params
 
         ! Initialize land model constants
         call land_model_init
 
         ! Initialize land model variables
-        call couple_land_atm(0)
+        call couple_land_atm(model_vars, 0, control_params%imont1, control_params%tmonth)
 
         ! Initialize sea and ice model constants
-        call sea_model_init
+        call sea_model_init(control_params%isst0)
 
         ! Initialize sea and ice model variables
-        call couple_sea_atm(0)
+        call couple_sea_atm(model_vars, 0, control_params%model_datetime, &
+                            control_params%start_datetime, control_params%imont1, &
+                            control_params%tmonth)
     end subroutine
 
     !> Exchange fluxes between atmosphere and land/sea.
-    subroutine couple_sea_land(day)
+    subroutine couple_sea_land(model_vars, day, control_params)
         use land_model, only: couple_land_atm
         use sea_model, only: couple_sea_atm
+        use date, only: ControlParams_t
+        use model_variables, only: ModelVars_t
+
+        type(ModelVars_t) :: model_vars
 
         integer, intent(in) :: day !! The current day of the model integration (starting from 0)
+        type(ControlParams_t), intent(in)  :: control_params
 
-        call couple_land_atm(day)
-        call couple_sea_atm(day)
+        call couple_land_atm(model_vars, day, control_params%imont1, control_params%tmonth)
+        call couple_sea_atm(model_vars, &
+                            day, control_params%model_datetime, &
+                            control_params%start_datetime, control_params%imont1, &
+                            control_params%tmonth)
     end subroutine
 end module

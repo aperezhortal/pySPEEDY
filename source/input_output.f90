@@ -25,15 +25,15 @@ contains
         character(len=*), intent(in) :: field_name !! The field to read
 
         integer :: ncid, varid
-        real(sp), dimension(ix,il) :: raw_input
-        real(p), dimension(ix,il)  :: field
+        real(sp), dimension(ix, il) :: raw_input
+        real(p), dimension(ix, il)  :: field
 
         ! Open boundary file, read variable and then close
         call check(nf90_open(file_name, nf90_nowrite, ncid))
         call check(nf90_inq_varid(ncid, field_name, varid))
-        call check(nf90_get_var(ncid, varid, raw_input, start = (/ 1, 1 /), count =  (/ ix, il /)))
+        call check(nf90_get_var(ncid, varid, raw_input, start=(/1, 1/), count=(/ix, il/)))
         call check(nf90_close(ncid))
-        field = raw_input(:,il:1:-1)
+        field = raw_input(:, il:1:-1)
 
         ! Fix undefined values
         where (field <= -999) field = 0.0
@@ -47,15 +47,15 @@ contains
         integer, intent(in)          :: month      !! The month to read
 
         integer :: ncid, varid
-        real(sp), dimension(ix,il,12) :: raw_input
-        real(p), dimension(ix,il)     :: field
+        real(sp), dimension(ix, il, 12) :: raw_input
+        real(p), dimension(ix, il)     :: field
 
         ! Open boundary file, read variable and then close
         call check(nf90_open(file_name, nf90_nowrite, ncid))
         call check(nf90_inq_varid(ncid, field_name, varid))
         call check(nf90_get_var(ncid, varid, raw_input))
         call check(nf90_close(ncid))
-        field = raw_input(:,il:1:-1,month)
+        field = raw_input(:, il:1:-1, month)
 
         ! Fix undefined values
         where (field <= -999) field = 0.0
@@ -77,28 +77,30 @@ contains
                                                    !! months
 
         integer :: ncid, varid
-        real(sp), dimension(ix,il,length) :: raw_input
-        real(p), dimension(ix,il)         :: field
+        real(sp), dimension(ix, il, length) :: raw_input
+        real(p), dimension(ix, il)         :: field
 
         ! Open boundary file, read variable and then close
         call check(nf90_open(file_name, nf90_nowrite, ncid))
         call check(nf90_inq_varid(ncid, field_name, varid))
         call check(nf90_get_var(ncid, varid, raw_input))
         call check(nf90_close(ncid))
-        field = raw_input(:,il:1:-1,month)
+        field = raw_input(:, il:1:-1, month)
 
         ! Fix undefined values
         where (field <= -999) field = 0.0
     end
 
     !> Writes a snapshot of all prognostic variables to a NetCDF file.
-    subroutine output(timestep, vor, div, t, ps, tr, phi)
+    subroutine output(timestep, control_params, vor, div, t, ps, tr, phi)
         use geometry, only: radang, fsg
         use physical_constants, only: p0, grav
-        use date, only: model_datetime, start_datetime
         use spectral, only: spec_to_grid, uvspec
+        use date, only: ControlParams_t
 
         integer, intent(in) :: timestep           !! The time step that is being written
+        type(ControlParams_t), target, intent(in)  :: control_params
+
         complex(p), intent(in) :: vor(mx,nx,kx,2)    !! Vorticity
         complex(p), intent(in) :: div(mx,nx,kx,2)    !! Divergence
         complex(p), intent(in) :: t(mx,nx,kx,2)      !! Temperature
@@ -106,11 +108,11 @@ contains
         complex(p), intent(in) :: tr(mx,nx,kx,2,ntr) !! Tracers
         complex(p), intent(in) :: phi(mx,nx,kx)      !! Geopotential
 
-        complex(p), dimension(mx,nx)     :: ucos, vcos
-        real(p), dimension(ix,il,kx)  :: u_grid, v_grid, t_grid, q_grid, phi_grid
-        real(p), dimension(ix,il)     :: ps_grid
-        real(sp), dimension(ix,il,kx) :: u_out, v_out, t_out, q_out, phi_out
-        real(sp), dimension(ix,il)    :: ps_out
+        complex(p), dimension(mx, nx)     :: ucos, vcos
+        real(p), dimension(ix, il, kx)  :: u_grid, v_grid, t_grid, q_grid, phi_grid
+        real(p), dimension(ix, il)     :: ps_grid
+        real(sp), dimension(ix, il, kx) :: u_out, v_out, t_out, q_out, phi_out
+        real(sp), dimension(ix, il)    :: ps_out
         character(len=15) :: file_name = 'yyyymmddhhmm.nc'
         character(len=32) :: time_template = 'hours since yyyy-mm-dd hh:mm:0.0'
         integer :: k, ncid
@@ -118,18 +120,18 @@ contains
         integer :: timevar, latvar, lonvar, levvar, uvar, vvar, tvar, qvar, phivar, psvar
 
         ! Construct file_name
-        write (file_name(1:4),'(i4.4)') model_datetime%year
-        write (file_name(5:6),'(i2.2)') model_datetime%month
-        write (file_name(7:8),'(i2.2)') model_datetime%day
-        write (file_name(9:10),'(i2.2)') model_datetime%hour
-        write (file_name(11:12),'(i2.2)') model_datetime%minute
+        write (file_name(1:4), '(i4.4)') control_params%model_datetime%year
+        write (file_name(5:6), '(i2.2)') control_params%model_datetime%month
+        write (file_name(7:8), '(i2.2)') control_params%model_datetime%day
+        write (file_name(9:10), '(i2.2)') control_params%model_datetime%hour
+        write (file_name(11:12), '(i2.2)') control_params%model_datetime%minute
 
         ! Construct time string
-        write (time_template(13:16),'(i4.4)') start_datetime%year
-        write (time_template(18:19),'(i2.2)') start_datetime%month
-        write (time_template(21:22),'(i2.2)') start_datetime%day
-        write (time_template(24:25),'(i2.2)') start_datetime%hour
-        write (time_template(27:28),'(i2.2)') start_datetime%minute
+        write (time_template(13:16), '(i4.4)') control_params%start_datetime%year
+        write (time_template(18:19), '(i2.2)') control_params%start_datetime%month
+        write (time_template(21:22), '(i2.2)') control_params%start_datetime%day
+        write (time_template(24:25), '(i2.2)') control_params%start_datetime%hour
+        write (time_template(27:28), '(i2.2)') control_params%start_datetime%minute
 
         ! Create NetCDF output file
         call check(nf90_create(file_name, nf90_clobber, ncid))
@@ -151,51 +153,52 @@ contains
         call check(nf90_put_att(ncid, levvar, "long_name", "atmosphere_sigma_coordinate"))
 
         ! Define prognostic fields
-        call check(nf90_def_var(ncid, "u", nf90_real4, (/ londim, latdim, levdim, timedim /), uvar))
+        call check(nf90_def_var(ncid, "u", nf90_real4, (/londim, latdim, levdim, timedim/), uvar))
         call check(nf90_put_att(ncid, uvar, "long_name", "eastward_wind"))
         call check(nf90_put_att(ncid, uvar, "units", "m/s"))
-        call check(nf90_def_var(ncid, "v", nf90_real4, (/ londim, latdim, levdim, timedim /), vvar))
+        call check(nf90_def_var(ncid, "v", nf90_real4, (/londim, latdim, levdim, timedim/), vvar))
         call check(nf90_put_att(ncid, vvar, "long_name", "northward_wind"))
         call check(nf90_put_att(ncid, vvar, "units", "m/s"))
-        call check(nf90_def_var(ncid, "t", nf90_real4, (/ londim, latdim, levdim, timedim /), tvar))
+        call check(nf90_def_var(ncid, "t", nf90_real4, (/londim, latdim, levdim, timedim/), tvar))
         call check(nf90_put_att(ncid, tvar, "long_name", "air_temperature"))
         call check(nf90_put_att(ncid, tvar, "units", "K"))
-        call check(nf90_def_var(ncid, "q", nf90_real4, (/ londim, latdim, levdim, timedim /), qvar))
+        call check(nf90_def_var(ncid, "q", nf90_real4, (/londim, latdim, levdim, timedim/), qvar))
         call check(nf90_put_att(ncid, qvar, "long_name", "specific_humidity"))
         call check(nf90_put_att(ncid, qvar, "units", "1"))
 
-        call check(nf90_def_var(ncid, "phi", nf90_real4, (/ londim, latdim, levdim, timedim /), &
+        call check(nf90_def_var(ncid, "phi", nf90_real4, (/londim, latdim, levdim, timedim/), &
             & phivar))
         call check(nf90_put_att(ncid, phivar, "long_name", "geopotential_height"))
         call check(nf90_put_att(ncid, phivar, "units", "m"))
-        call check(nf90_def_var(ncid, "ps", nf90_real4, (/ londim, latdim, timedim /), psvar))
+        call check(nf90_def_var(ncid, "ps", nf90_real4, (/londim, latdim, timedim/), psvar))
         call check(nf90_put_att(ncid, psvar, "long_name", "surface_air_pressure"))
         call check(nf90_put_att(ncid, psvar, "units", "Pa"))
 
         call check(nf90_enddef(ncid))
 
         ! Write dimensions to file
-        call check(nf90_put_var(ncid, timevar, timestep*24.0/real(nsteps,sp),               (/ 1 /)))
-        call check(nf90_put_var(ncid, lonvar, (/ (3.75*k, k = 0, ix-1) /),                 (/ 1 /)))
-        call check(nf90_put_var(ncid, latvar, (/ (radang(k)*90.0/asin(1.0), k = 1, il) /), (/ 1 /)))
-        call check(nf90_put_var(ncid, levvar, (/ (fsg(k), k = 1, 8) /),                    (/ 1 /)))
+        call check(nf90_put_var(ncid, timevar, timestep*24.0/real(nsteps, sp), (/1/)))
+        call check(nf90_put_var(ncid, lonvar, (/(3.75*k, k=0, ix - 1)/), (/1/)))
+        call check(nf90_put_var(ncid, latvar, (/(radang(k)*90.0/asin(1.0), k=1, il)/), (/1/)))
+        call check(nf90_put_var(ncid, levvar, (/(fsg(k), k=1, 8)/), (/1/)))
 
         ! Convert prognostic fields from spectral space to grid point space
         do k = 1, kx
-           call uvspec(vor(:,:,k,1), div(:,:,k,1), ucos, vcos)
-           u_grid(:,:,k)   = spec_to_grid(ucos, 2)
-           v_grid(:,:,k)   = spec_to_grid(vcos, 2)
-           t_grid(:,:,k)   = spec_to_grid(t(:,:,k,1), 1)
-           q_grid(:,:,k)   = spec_to_grid(tr(:,:,k,1,1), 1)
-           phi_grid(:,:,k) = spec_to_grid(phi(:,:,k), 1)
+            call uvspec(vor(:, :, k, 1), div(:, :, k, 1), ucos, vcos)
+            u_grid(:, :, k) = spec_to_grid(ucos, 2)
+            v_grid(:, :, k) = spec_to_grid(vcos, 2)
+            t_grid(:, :, k) = spec_to_grid(t(:, :, k, 1), 1)
+            q_grid(:, :, k) = spec_to_grid(tr(:, :, k, 1, 1), 1)
+            phi_grid(:, :, k) = spec_to_grid(phi(:, :, k), 1)
         end do
-        ps_grid = spec_to_grid(ps(:,:,1), 1)
+        ps_grid = spec_to_grid(ps(:, :, 1), 1)
 
         ! Output date
-        print '(A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2)',&
-            & 'Write gridded dataset for year/month/date/hour/minute: ', &
-            & model_datetime%year,'/',model_datetime%month,'/',model_datetime%day,'/', &
-            & model_datetime%hour,'/',model_datetime%minute
+        print '(A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2)', &
+            'Write gridded dataset for year/month/date/hour/minute: ', &
+            control_params%model_datetime%year, '/', &
+            control_params%model_datetime%month, '/', control_params%model_datetime%day, '/', &
+            control_params%model_datetime%hour, '/', control_params%model_datetime%minute
 
         ! Preprocess output variables
         u_out = real(u_grid, sp)
@@ -206,12 +209,12 @@ contains
         ps_out = real(p0*exp(ps_grid), sp)! Pa
 
         ! Write prognostic variables to file
-        call check(nf90_put_var(ncid, uvar, u_out, (/ 1, 1, 1, 1 /)))
-        call check(nf90_put_var(ncid, vvar, v_out, (/ 1, 1, 1, 1 /)))
-        call check(nf90_put_var(ncid, tvar, t_out, (/ 1, 1, 1, 1 /)))
-        call check(nf90_put_var(ncid, qvar, q_out, (/ 1, 1, 1, 1 /)))
-        call check(nf90_put_var(ncid, phivar, phi_out, (/ 1, 1, 1, 1 /)))
-        call check(nf90_put_var(ncid, psvar, ps_out, (/ 1, 1, 1 /)))
+        call check(nf90_put_var(ncid, uvar, u_out, (/1, 1, 1, 1/)))
+        call check(nf90_put_var(ncid, vvar, v_out, (/1, 1, 1, 1/)))
+        call check(nf90_put_var(ncid, tvar, t_out, (/1, 1, 1, 1/)))
+        call check(nf90_put_var(ncid, qvar, q_out, (/1, 1, 1, 1/)))
+        call check(nf90_put_var(ncid, phivar, phi_out, (/1, 1, 1, 1/)))
+        call check(nf90_put_var(ncid, psvar, ps_out, (/1, 1, 1/)))
 
         call check(nf90_close(ncid))
     end subroutine

@@ -9,9 +9,9 @@ module initialization
 
 contains
     !> Initializes everything.
-    subroutine initialize(prognostic_vars, user_params)
+    subroutine initialize(model_vars, user_params, control_params)
         use params, only: issty0, initialize_params, UserParams_t
-        use date, only: isst0, initialize_date, start_datetime
+        use date, only: initialize_date, ControlParams_t
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
         use geometry, only: initialize_geometry
@@ -22,14 +22,16 @@ contains
         use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
-        use prognostics, only: initialize_prognostics, PrognosticVars_t
+        use model_variables, only: ModelVars_t
+        use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
 
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
-        type(PrognosticVars_t), intent(inout) :: prognostic_vars
+        type(ModelVars_t), intent(inout) :: model_vars
         type(UserParams_t), intent(out) :: user_params
+        type(ControlParams_t), intent(out)  :: control_params
 
         call print_speedy_title
 
@@ -37,10 +39,11 @@ contains
         call initialize_params(user_params)
 
         ! Initialize date
-        call initialize_date
+        call initialize_date(control_params)
 
         ! Initialize month index for reading SST anomaly file
-        isst0 = (start_datetime%year - issty0)*12 + start_datetime%month
+        control_params%isst0 = (control_params%start_datetime%year - issty0)*12 &
+                               + control_params%start_datetime%month
 
         ! Check consistency of coupling and prescribed SST anomaly flags
         if (sea_coupling_flag >= 4) sst_anomaly_coupling_flag = 1
@@ -62,29 +65,29 @@ contains
         call initialize_horizontal_diffusion
 
         ! Initialize constants for physical parametrization
-        call initialize_physics
+        call initialize_physics()
 
         ! Initialize boundary conditions (land-sea mask, sea ice etc.)
         call initialize_boundaries
 
         ! Initialize model variables
-        call initialize_prognostics(prognostic_vars, user_params)
+        call initialize_prognostics(model_vars, user_params, control_params)
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)
         ! =========================================================================
 
-        call initialize_coupler
+        call initialize_coupler(model_vars, control_params)
 
         ! =========================================================================
         ! Initialization of first time step
         ! =========================================================================
 
         ! Set up the forcing fields for the first time step
-        call set_forcing(0)
+        call set_forcing(0, control_params%model_datetime, control_params%tyear)
 
         ! Do the initial (2nd-order) time step, initialize the semi-implicit scheme
-        call first_step(prognostic_vars)
+        call first_step(model_vars)
     end subroutine
 
     !> Prints SPEEDY.f90 banner.
