@@ -10,7 +10,7 @@ module tendencies
 contains
     subroutine get_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j2)
         use implicit, only: implicit_terms
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
   
         complex(p), dimension(mx, nx, kx), intent(inout) ::  vordt, divdt, tdt
         complex(p), intent(inout) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
@@ -50,7 +50,7 @@ contains
     !           psdt  = spectral tendency of log(p_s)
     !           trdt  = spectral tendency of tracers
     subroutine get_grid_point_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j1, j2)
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
         use physical_constants, only: akap, rgas
         use geometry, only: dhs, dhsr, fsgr, coriol
         use implicit, only: tref, tref3
@@ -246,7 +246,7 @@ contains
     !                psdt  = tendency of log_surf.pressure (spectral)
     !                j2    = time level index (1 or 2)
     subroutine get_spectral_tendencies(prognostic_vars, divdt, tdt, psdt, j2)
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
         use physical_constants, only: rgas
         use geometry, only: dhs, dhsr
         use geopotential, only: get_geopotential

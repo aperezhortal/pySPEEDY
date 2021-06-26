@@ -13,14 +13,14 @@ module boundaries
 
     private
     public initialize_boundaries, fillsf, forchk
-    public fmask, phi0, phis0, alb0
+    public fmask_orig, phi0, phis0, alb0
 
-    real(p) :: fmask(ix,il) !! Original (fractional) land-sea mask
+    real(p), allocatable :: fmask_orig(:,:) !! Original (fractional) land-sea mask
 
     ! Time invariant surface fields
-    real(p) :: phi0(ix,il)  !! Unfiltered surface geopotential
-    real(p) :: phis0(ix,il) !! Spectrally-filtered surface geopotential
-    real(p) :: alb0(ix,il)  !! Bare-land annual-mean albedo
+    real(p), allocatable :: phi0(:,:)  !! Unfiltered surface geopotential
+    real(p), allocatable :: phis0(:,:) !! Spectrally-filtered surface geopotential
+    real(p), allocatable :: alb0(:,:)  !! Bare-land annual-mean albedo
 
 contains
     !> Initialize boundary conditions (land-sea mask, surface geopotential
@@ -29,6 +29,11 @@ contains
         use physical_constants, only: grav
         use input_output, only: load_boundary_file
 
+        allocate(fmask_orig(ix,il))
+        allocate(phi0(ix,il))
+        allocate(phis0(ix,il))
+        allocate(alb0(ix,il))
+
         ! Read surface geopotential (i.e. orography)
         phi0 = grav*load_boundary_file("surface.nc", "orog")
 
@@ -36,11 +41,21 @@ contains
         call spectral_truncation(phi0, phis0)
 
         ! Read land-sea mask
-        fmask = load_boundary_file("surface.nc", "lsm")
+        fmask_orig = load_boundary_file("surface.nc", "lsm")
 
         ! Annual-mean surface albedo
         alb0 = load_boundary_file("surface.nc", "alb")
     end subroutine
+
+    !> Initialize boundary conditions (land-sea mask, surface geopotential
+    !  and surface albedo).
+    subroutine deinitialize_boundaries
+        deallocate(fmask_orig)
+        deallocate(phi0)
+        deallocate(phis0)
+        deallocate(alb0)
+    end subroutine
+
 
     !> Check consistency of surface fields with land-sea mask and set undefined
     !  values to a constant (to avoid over/underflow).
@@ -53,10 +68,8 @@ contains
         real(p), intent(inout) :: field(ix,il,nf) !! The output field
 
         integer :: i, j, jf, nfault
-
         do jf = 1, nf
             nfault = 0
-
             do i = 1, ix
                 do j = 1, il
                     if (fmask(i,j) > 0.0) then

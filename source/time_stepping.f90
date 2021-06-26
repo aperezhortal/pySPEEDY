@@ -10,7 +10,7 @@ module time_stepping
 contains
     ! Call initialization of semi-implicit scheme and perform initial time step
     subroutine first_step(prognostic_vars)
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
         use implicit, only: initialize_implicit
 
         type(ModelVars_t), intent(inout) :: prognostic_vars
@@ -37,7 +37,7 @@ contains
     ! dt = time step
     subroutine step(prognostic_vars, j1, j2, dt)
         use dynamical_constants, only: tdrs
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
         use horizontal_diffusion, only: do_horizontal_diffusion, &
             & dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
         use tendencies, only: get_tendencies

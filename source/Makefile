@@ -1,8 +1,5 @@
-# Fortran compiler
-FC=gfortran
-
 # Set variables depending on target
-default : COMPOPTS = $(OPT) $(BASE) -fPIC -g -fbacktrace -fcheck=bounds
+default : COMPOPTS = $(OPT) $(BASE) -fPIC  -g -fbacktrace -fcheck=bounds
 profile : COMPOPTS = -pg $(BASE)
 
 # Default
@@ -12,19 +9,24 @@ default : base_target
 profile : base_target
 
 # Base compiler options (always used)
-BASE=-fconvert=swap -Wall
+BASE=-fconvert=swap -Wall -cpp
 
 # Optimisation flags (disabled for debugging, profiling etc.)
-OPT=-Ofast
+OPT= -Ofast
 
 # # Location of NetCDF module (netcdf.mod)
-INC=-I$(NETCDF)/include -I/usr/include
+INC=-I/usr/include
+INC=-I/home/aperez/.conda/envs/speedy/include
+
+# -I/usr/include
 
 # Library flags
-LIB=-L$(NETCDF)/lib -L/usr/lib -lnetcdff -lnetcdf
+#-L/usr/lib
+LIB=-L$/usr/lib -lnetcdff -lnetcdf
+LIB=-L/home/aperez/.conda/envs/speedy/lib -lnetcdff -lnetcdf
 
 FILES= \
-       model_variables.o \
+       model_vars.o \
 	   boundaries.o \
 	   convection.o \
        coupler.o \
@@ -64,20 +66,20 @@ FILES= \
 	   speedy.o
 
 %.o: %.f90
-	$(FC) $(COMPOPTS) -c $< $(INC)
+	gfortran $(COMPOPTS) -c $< $(INC)
 
 base_target: $(FILES)
-	$(FC) -shared -o libspeedy.so $(FILES)
-	$(FC) $(COMPOPTS) $(FILES) -o speedy $(LIB) speedy_prog.f90
+	ar rcs libspeedy.a $(FILES)
+	gfortran $(COMPOPTS) $(FILES) -o speedy $(LIB) speedy_prog.f90
 
 .PHONY: clean
 clean:
-	rm -f *.o *.mod speedy libspeedy.so
+	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
 speedy.o               : params.o date.o prognostics.o input_output.o \
 				         shortwave_radiation.o time_stepping.o\
-                         diagnostics.o model_variables.o 
-model_variables.o      : types.o params.o
+                         diagnostics.o model_vars.o 
+model_vars.o           : types.o params.o
 boundaries.o           : physical_constants.o params.o input_output.o spectral.o types.o
 convection.o           : params.o physical_constants.o types.o
 coupler.o              : land_model.o sea_model.o
@@ -92,13 +94,13 @@ implicit.o             : params.o dynamical_constants.o physical_constants.o geo
                          horizontal_diffusion.o matrix_inversion.o types.o
 initialization.o       : coupler.o params.o date.o input_output.o time_stepping.o boundaries.o\
                          spectral.o sea_model.o physics.o geopotential.o \
-						 prognostics.o forcing.o model_variables.o
+						 prognostics.o forcing.o model_vars.o
 forcing.o              : dynamical_constants.o shortwave_radiation.o params.o \
                          physical_constants.o boundaries.o date.o land_model.o mod_radcon.o\
 						 surface_fluxes.o date.o sea_model.o longwave_radiation.o humidity.o\
 						 horizontal_diffusion.o types.o
 land_model.o           : params.o date.o interpolation.o input_output.o boundaries.o\
-                         types.o model_variables.o
+                         types.o model_vars.o
 large_scale_condensation.o : params.o physical_constants.o types.o
 legendre.o             : params.o physical_constants.o geometry.o types.o
 matrix_inversion.o     : types.o
@@ -113,12 +115,12 @@ params.o               : types.o
 physics.o              : params.o coupler.o physical_constants.o boundaries.o land_model.o\
                          sea_model.o sppt.o convection.o large_scale_condensation.o surface_fluxes.o\
                          vertical_diffusion.o shortwave_radiation.o longwave_radiation.o humidity.o\
-                         geometry.o  types.o model_variables.o
+                         geometry.o  types.o model_vars.o
 longwave_radiation.o   : params.o physical_constants.o mod_radcon.o geometry.o types.o \
-						 model_variables.o
+						 model_vars.o
 sea_model.o            : params.o input_output.o boundaries.o geometry.o interpolation.o\
- 						 date.o  mod_radcon.o types.o model_variables.o
-shortwave_radiation.o  : params.o mod_radcon.o geometry.o types.o model_variables.o
+ 						 date.o  mod_radcon.o types.o model_vars.o
+shortwave_radiation.o  : params.o mod_radcon.o geometry.o types.o model_vars.o
 surface_fluxes.o       : params.o physical_constants.o mod_radcon.o land_model.o humidity.o types.o
 spectral.o             : params.o physical_constants.o legendre.o fourier.o types.o
 sppt.o                 : params.o physical_constants.o spectral.o types.o

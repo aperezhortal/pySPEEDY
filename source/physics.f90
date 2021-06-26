@@ -12,7 +12,7 @@ contains
     subroutine initialize_physics()
         use physical_constants, only: grav, cp, p0, sigl, sigh, grdsig, grdscp, wvi
         use geometry, only: hsg, fsg, dhs
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         integer :: k
 
@@ -57,9 +57,9 @@ contains
         use vertical_diffusion, only: get_vertical_diffusion_tend
         use humidity, only: spec_hum_to_rel_hum
         use spectral, only: spec_to_grid, uvspec
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
-        type(ModelVars_t), intent(in) :: model_vars
+        type(ModelVars_t), intent(inout) :: model_vars
         integer, intent(in) :: j1
 
         real(p), intent(inout) :: utend(ix, il, kx) !! Zonal velocity tendency

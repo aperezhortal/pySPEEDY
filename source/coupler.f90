@@ -13,7 +13,7 @@ contains
         use land_model, only: land_model_init, couple_land_atm
         use sea_model, only: sea_model_init, couple_sea_atm
         use date, only: ControlParams_t
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         type(ModelVars_t) :: model_vars
         type(ControlParams_t), intent(in)  :: control_params
@@ -38,7 +38,7 @@ contains
         use land_model, only: couple_land_atm
         use sea_model, only: couple_sea_atm
         use date, only: ControlParams_t
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         type(ModelVars_t) :: model_vars
 

@@ -46,7 +46,7 @@ contains
     !> Initializes land model.
     subroutine land_model_init
         use input_output, only: load_boundary_file
-        use boundaries, only: forchk, fmask, alb0, fillsf
+        use boundaries, only: forchk, fmask_orig, alb0, fillsf
 
         ! Auxiliary variables
         integer :: i, j, month
@@ -73,12 +73,12 @@ contains
         ! =========================================================================
 
         ! Fractional and binary land masks
-        fmask_l = fmask
+        fmask_l = fmask_orig
         do j = 1, il
             do i = 1, ix
                 if (fmask_l(i, j) >= thrsh) then
                     bmask_l(i, j) = 1.0
-                    if (fmask(i, j) > (1.0 - thrsh)) fmask_l(i, j) = 1.0
+                    if (fmask_orig(i, j) > (1.0 - thrsh)) fmask_l(i, j) = 1.0
                 else
                     bmask_l(i, j) = 0.0
                     fmask_l(i, j) = 0.0
@@ -183,7 +183,7 @@ contains
     !> Exchanges fluxes between land and atmosphere.
     subroutine couple_land_atm(model_vars, day, imont1, tmonth)
         use interpolation, only: forin5, forint
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         type(ModelVars_t) :: model_vars
 
@@ -226,7 +226,7 @@ contains
 
     !> Integrates slab land-surface model for one day.
     subroutine run_land_model(model_vars)
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         type(ModelVars_t), intent(in) :: model_vars     
 

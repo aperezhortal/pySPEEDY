@@ -8,7 +8,7 @@ if [ -z "$NETCDF" ]; then
 fi
 
 # Name of makefile
-MAKE=gfortran.makefile
+MAKE=Makefile
 
 # Define directory names
 ROOT=`pwd`

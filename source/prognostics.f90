@@ -5,7 +5,7 @@ module prognostics
     use types, only: p
     use params, only: mx, nx, kx, ntr, ix, iy, il, UserParams_t
     use date, only: ControlParams_t
-    use model_variables, only: ModelVars_t
+    use model_vars, only: ModelVars_t
 
     implicit none
 

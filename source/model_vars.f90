@@ -5,7 +5,10 @@
 !
 !  All the Speedy model variables are defined inside the ModelVars_t type that holds
 !  all the information.
-module model_variables
+
+#define SAFE_DEALLOC(x) if (.not. allocated(x)) deallocate(x)
+
+module model_vars
     use types, only: p
 
     implicit none
@@ -14,22 +17,26 @@ module model_variables
 
     public ModelVars_t, ModelVars_allocate, ModelVars_deallocate
 
+    !===========================================================================================
+    ! Important!
+    !===========================================================================================
+    ! Here only the pointers to the data arrays are declared.
+    ! The instances of this data type need to be initialized (allocated) before
+    ! hand.
+
+    ! Why pointers?
+    ! This is to make things easier for the Python-Fortran brigde.
+    ! f2py does not support derived type declararions.
+    ! Hence, the prognostic variables needs to be passed to the main driver of the
+    ! speedy model (speedy.90).
+    ! To avoid coping the input variables into the attributes of this structure,
+    ! we declare them as pointers.
+    ! Then, we can make the structure attributes to point to the input variables.
+    ! See the "Step 0" in the run_speedy subroutine in the speedy.f90 module.
+
+
     type ModelVars_t
         ! Prognostic and auxiliary variables
-
-        ! Here only the pointers to the data arrays are declared.
-        ! The instances of this data type need to be initialized (allocated) before
-        ! hand.
-
-        ! Why pointers?
-        ! This is to make things easier for the Python-Fortran brigde.
-        ! f2py does not support derived type declararions.
-        ! Hence, the prognostic variables needs to be passed to the main driver of the
-        ! speedy model (speedy.90).
-        ! To avoid coping the input variables into the attributes of this structure,
-        ! we declare them as pointers.
-        ! Then, we can make the structure attributes to point to the input variables.
-        ! See the "Step 0" in the run_speedy subroutine in the speedy.f90 module.
 
         !===========================================================================================
         ! Prognostic variables
@@ -37,39 +44,39 @@ module model_variables
         ! kx Number of vertical levels
         ! nx Number of total wavenumbers for spectral storage arrays
         ! mx Number of zonal wavenumbers for spectral storage arrays
-        complex(p), pointer :: vor(:, :, :, :)   !! Vorticity
-        complex(p), pointer :: div(:, :, :, :)   !! Divergence
-        complex(p), pointer :: t(:, :, :, :)     !! Absolute temperature
-        complex(p), pointer :: ps(:, :, :)       !! Log of (normalised) surface pressure (p_s/p0)
-        complex(p), pointer :: tr(:, :, :, :, :) !! Tracers (tr(1): specific humidity in g/kg)
+        complex(p), allocatable :: vor(:, :, :, :)   !! Vorticity
+        complex(p), allocatable :: div(:, :, :, :)   !! Divergence
+        complex(p), allocatable :: t(:, :, :, :)     !! Absolute temperature
+        complex(p), allocatable :: ps(:, :, :)       !! Log of (normalised) surface pressure (p_s/p0)
+        complex(p), allocatable :: tr(:, :, :, :, :) !! Tracers (tr(1): specific humidity in g/kg)
 
         ! Geopotential
-        complex(p), pointer :: phi(:, :, :) !! Atmospheric geopotential
-        complex(p), pointer :: phis(:, :)   !! Surface geopotential
+        complex(p), allocatable :: phi(:, :, :) !! Atmospheric geopotential
+        complex(p), allocatable :: phis(:, :)   !! Surface geopotential
 
         !===========================================================================================
         ! Auxiliary variables used by the physic schemes
         !===========================================================================================
         ! Physical variables shared among all physics schemes
-        real(p), pointer, dimension(:, :)   :: precnv !! Convective precipitation  [g/(m^2 s)], total
-        real(p), pointer, dimension(:, :)   :: precls !! Large-scale precipitation [g/(m^2 s)], total
-        real(p), pointer, dimension(:, :)   :: snowcv !! Convective precipitation  [g/(m^2 s)], snow only
-        real(p), pointer, dimension(:, :)   :: snowls !! Large-scale precipitation [g/(m^2 s)], snow only
-        real(p), pointer, dimension(:, :)   :: cbmf   !! Cloud-base mass flux
-        real(p), pointer, dimension(:, :)   :: tsr    !! Top-of-atmosphere shortwave radiation (downward)
-        real(p), pointer, dimension(:, :)   :: ssrd   !! Surface shortwave radiation (downward-only)
-        real(p), pointer, dimension(:, :)   :: ssr    !! Surface shortwave radiation (net downward)
-        real(p), pointer, dimension(:, :)   :: slrd   !! Surface longwave radiation (downward-only)
-        real(p), pointer, dimension(:, :)   :: slr    !! Surface longwave radiation (net upward)
-        real(p), pointer, dimension(:, :)   :: olr    !! Outgoing longwave radiation (upward)
+        real(p), allocatable, dimension(:, :)   :: precnv !! Convective precipitation  [g/(m^2 s)], total
+        real(p), allocatable, dimension(:, :)   :: precls !! Large-scale precipitation [g/(m^2 s)], total
+        real(p), allocatable, dimension(:, :)   :: snowcv !! Convective precipitation  [g/(m^2 s)], snow only
+        real(p), allocatable, dimension(:, :)   :: snowls !! Large-scale precipitation [g/(m^2 s)], snow only
+        real(p), allocatable, dimension(:, :)   :: cbmf   !! Cloud-base mass flux
+        real(p), allocatable, dimension(:, :)   :: tsr    !! Top-of-atmosphere shortwave radiation (downward)
+        real(p), allocatable, dimension(:, :)   :: ssrd   !! Surface shortwave radiation (downward-only)
+        real(p), allocatable, dimension(:, :)   :: ssr    !! Surface shortwave radiation (net downward)
+        real(p), allocatable, dimension(:, :)   :: slrd   !! Surface longwave radiation (downward-only)
+        real(p), allocatable, dimension(:, :)   :: slr    !! Surface longwave radiation (net upward)
+        real(p), allocatable, dimension(:, :)   :: olr    !! Outgoing longwave radiation (upward)
 
         ! Third dimension -> 1:land, 2:sea, 3: weighted average
-        real(p), pointer, dimension(:, :, :) :: slru   !! Surface longwave emission (upward)
-        real(p), pointer, dimension(:, :, :) :: ustr   !! U-stress
-        real(p), pointer, dimension(:, :, :) :: vstr   !! V-stress
-        real(p), pointer, dimension(:, :, :) :: shf    !! Sensible heat flux
-        real(p), pointer, dimension(:, :, :) :: evap   !! Evaporation [g/(m^2 s)]
-        real(p), pointer, dimension(:, :, :) :: hfluxn !! Net heat flux into surface
+        real(p), allocatable, dimension(:, :, :) :: slru   !! Surface longwave emission (upward)
+        real(p), allocatable, dimension(:, :, :) :: ustr   !! U-stress
+        real(p), allocatable, dimension(:, :, :) :: vstr   !! V-stress
+        real(p), allocatable, dimension(:, :, :) :: shf    !! Sensible heat flux
+        real(p), allocatable, dimension(:, :, :) :: evap   !! Evaporation [g/(m^2 s)]
+        real(p), allocatable, dimension(:, :, :) :: hfluxn !! Net heat flux into surface
     end type
 
 contains

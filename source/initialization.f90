@@ -22,10 +22,10 @@ contains
         use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
         use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
-
+        
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================

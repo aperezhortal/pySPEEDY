@@ -77,7 +77,7 @@ module sea_model
 contains
     ! Initialization of sea model
     subroutine sea_model_init(isst0)
-        use boundaries, only: fmask, fillsf, forchk
+        use boundaries, only: fmask_orig, fillsf, forchk
         ! use date, only: isst0
         use geometry, only: radang
         use input_output, only: load_boundary_file
@@ -139,7 +139,7 @@ contains
         ! Fractional and binary sea masks
         do j = 1, il
             do i = 1, ix
-                fmask_s(i, j) = 1.0 - fmask(i, j)
+                fmask_s(i, j) = 1.0 - fmask_orig(i, j)
 
                 if (fmask_s(i, j) >= thrsh) then
                     bmask_s(i, j) = 1.0
@@ -256,7 +256,7 @@ contains
         use date, only:
         use interpolation, only: forin5, forint
         use date, only: Datetime_t
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         type(ModelVars_t), intent(in) :: model_vars
         integer, intent(in) :: day
@@ -399,7 +399,7 @@ contains
     subroutine run_sea_model(model_vars)        
         use mod_radcon, only: albsea, albice, emisfc
         use physical_constants, only: alhc, sbc
-        use model_variables, only: ModelVars_t
+        use model_vars, only: ModelVars_t
 
         type(ModelVars_t) :: model_vars
         real(p) :: hflux(ix, il)   ! net sfc. heat flux
