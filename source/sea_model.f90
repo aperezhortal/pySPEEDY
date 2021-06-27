@@ -76,12 +76,13 @@ module sea_model
 
 contains
     ! Initialization of sea model
-    subroutine sea_model_init(isst0)
-        use boundaries, only: fmask_orig, fillsf, forchk
+    subroutine sea_model_init(isst0, state)
+        use boundaries, only: fillsf, forchk
         ! use date, only: isst0
-        use geometry, only: radang
         use input_output, only: load_boundary_file
+        use model_state, only: ModelState_t
 
+        type(ModelState_t), intent(inout) :: state
         integer, intent(in) :: isst0 !! Initial month of SST anomalies
 
         ! Domain mask
@@ -139,7 +140,7 @@ contains
         ! Fractional and binary sea masks
         do j = 1, il
             do i = 1, ix
-                fmask_s(i, j) = 1.0 - fmask_orig(i, j)
+                fmask_s(i, j) = 1.0 - state%fmask_orig(i, j)
 
                 if (fmask_s(i, j) >= thrsh) then
                     bmask_s(i, j) = 1.0
@@ -152,7 +153,7 @@ contains
         end do
 
         ! Grid latitudes for sea-surface variables
-        deglat_s = radang*90.0/asin(1.0)
+        deglat_s = state%radang*90.0/asin(1.0)
 
         ! SST
         do month = 1, 12
@@ -256,9 +257,9 @@ contains
         use date, only:
         use interpolation, only: forin5, forint
         use date, only: Datetime_t
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
 
-        type(ModelVars_t), intent(in) :: model_vars
+        type(ModelState_t), intent(in) :: model_vars
         integer, intent(in) :: day
         type(Datetime_t), intent(in) :: model_datetime, start_datetime
         integer, intent(in) :: imont1 !! Month for computing seasonal forcing fields
@@ -399,9 +400,9 @@ contains
     subroutine run_sea_model(model_vars)        
         use mod_radcon, only: albsea, albice, emisfc
         use physical_constants, only: alhc, sbc
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
 
-        type(ModelVars_t) :: model_vars
+        type(ModelState_t) :: model_vars
         real(p) :: hflux(ix, il)   ! net sfc. heat flux
         real(p) :: tanom(ix, il)   ! sfc. temperature anomaly
         real(p) :: cdis(ix, il)    ! dissipation ceofficient

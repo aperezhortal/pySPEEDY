@@ -12,12 +12,11 @@ module forcing
 contains
     !> Compute forcing fields for the current date and correction terms for
     !  horizontal diffusion
-    subroutine set_forcing(imode, model_datetime, tyear)
+    subroutine set_forcing(state, imode, model_datetime, tyear)
         use dynamical_constants, only: refrh1
         use params
         use horizontal_diffusion, only: tcorh, qcorh
-        use physical_constants, only: rgas
-        use boundaries, only: phis0, alb0
+        use physical_constants, only: rgas        
         use surface_fluxes, only: set_orog_land_sfc_drag
         use date, only: Datetime_t
         use land_model, only: stl_am, snowd_am, fmask_l, sd2sc
@@ -27,11 +26,14 @@ contains
         use longwave_radiation, only: radset
         use humidity, only: get_qsat
         use spectral, only: grid_to_spec
+        use model_state, only: ModelState_t
+
+        type(ModelState_t), intent(inout) :: state
 
         integer, intent(in) :: imode !! Mode -> 0 = initialization step, 1 = daily update
         type(Datetime_t), intent(in) :: model_datetime
         real(p), intent(in)          :: tyear !! The fraction of the current year elapsed
-
+        
         real(p), dimension(ix, il) :: corh, tsfc, tref, psfc, qsfc, qref
         real(p) :: gamlat(il)
 
@@ -43,21 +45,21 @@ contains
         ! 1. time-independent parts of physical parametrizations
         if (imode == 0) then
             call radset
-            call set_orog_land_sfc_drag(phis0)
+            call set_orog_land_sfc_drag(state%phis0)
 
             ablco2_ref = ablco2
         end if
 
         ! 2. daily-mean radiative forcing
         ! incoming solar radiation
-        call get_zonal_average_fields(tyear)
+        call get_zonal_average_fields(state, tyear)
 
         ! total surface albedo
 
         do i = 1, ix
             do j = 1, il
                 snowc(i,j)  = min(1.0, snowd_am(i,j)/sd2sc)
-                alb_l(i,j)  = alb0(i,j) + snowc(i,j) * (albsn - alb0(i,j))
+                alb_l(i,j)  = state%alb0(i,j) + snowc(i,j) * (albsn - state%alb0(i,j))
                 alb_s(i,j)  = albsea + sice_am(i,j) * (albice - albsea)
                 albsfc(i,j) = alb_s(i,j) + fmask_l(i,j) * (alb_l(i,j) - alb_s(i,j))
             end do
@@ -77,7 +79,7 @@ contains
 
         do j = 1, il
             do i = 1, ix
-                corh(i,j) = gamlat(j) * phis0(i,j)
+                corh(i,j) = gamlat(j) * state%phis0(i,j)
             end do
         end do
 

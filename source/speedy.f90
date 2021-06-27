@@ -4,9 +4,10 @@
 !> until the (continually updated) model datetime (`model_datetime`) equals the
 !> final datetime (`end_datetime`).
 module speedy
+    use types, only: p
     use params, only: UserParams_t
     use date, only: ControlParams_t
-    use model_vars, only: ModelVars_t
+    use model_state, only: ModelState_t
 
     implicit none
 
@@ -14,23 +15,35 @@ module speedy
     public run_speedy
 
     !> Structure to represent the entire model state at a given time.
-    type model_state
-        type(UserParams_t)    :: user_params
-        type(ControlParams_t) :: control_params
-        type(ModelVars_t)     :: state_vars
-    end type
+    ! type model_state
+    !     type(UserParams_t)    :: user_params
+    !     type(ControlParams_t) :: control_params
+    !     type(ModelState_t)     :: state_vars
+    ! end type
+
+    !> Model input fields
+    ! type ModelInput_t
+    !     real(p), allocatable :: orography(:, :)       !! Unfiltered surface geopotential
+    !     real(p), allocatable :: land_sea_mask(:, :)   !! Spectrally-filtered surface geopotential
+    !     real(p), allocatable :: albedo(:, :)          !! Bare-land annual-mean albedo
+
+    !     real(p), allocatable :: land_sfc_temp(:, :)   !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: snow_depth(:, :)      !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: vegetation_low(:, :)  !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: vegetation_high(:, :) !! Bare-land annual-mean albedo
+
+    !     real(p), allocatable :: soil_wetness_l1(:, :) !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: soil_wetness_l2(:, :) !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: soil_wetness_l3(:, :) !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: sea_ice_conc(:, :)    !! Bare-land annual-mean albedo
+    !     real(p), allocatable :: sea_surf_temp(:, :)   !! Bare-land annual-mean albedo
+    ! end type
 
     ! !> Structure to hold the entire model state.
     ! type model_state
 
     ! model_config
 
-    !     type(UserParams_t)    :: user_params
-    !     type(ControlParams_t) :: control_params
-    !     type(ModelVars_t)     :: state_vars
-    !     type(ModelInputs_t)   :: inputs
-    !     type(ModelVars_t)     :: invariant
-    !     ! boundaries
     !     ! geometry
     !     ! geopotential constants
     !     ! horizontal_diffusion
@@ -51,7 +64,10 @@ contains
     ! 2d_vars
     ! 3d_vars
     ! 4d_vars
-    subroutine run_speedy( vor, div, t, ps, tr, phi, ix, il, kx, ntr)   
+    subroutine run_speedy( &
+        vor, div, t, ps, tr, phi, &
+        orography, land_sea_mask, albedo, &
+        ix, il, kx, ntr)
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
 
@@ -65,8 +81,10 @@ contains
         use time_stepping, only: step
         use diagnostics, only: check_diagnostics
         use forcing, only: set_forcing
-        use model_vars, only: ModelVars_t, ModelVars_deallocate, ModelVars_allocate
+        use model_state, only: ModelState_t, ModelState_deallocate, ModelState_allocate
         use spectral, only: spec_to_grid
+
+        use physical_constants, only: grav
         implicit none
 
         !============ INPUT VARIABLES ==================================================
@@ -79,36 +97,16 @@ contains
         real(8), intent(inout) :: tr(ix, il, kx, ntr) !! Tracers (tr(1): specific humidity in g/kg)
         real(8), intent(inout) :: phi(ix, il, kx)     !! Atmospheric geopotential
 
-        ! ! Auxiliary variables
-        ! real(p), allocatable, intent(out) :: precnv(:,:) !! Convective precipitation  [g/(m^2 s)], total
-        ! real(p), allocatable, intent(out) :: precls(:,:) !! Large-scale precipitation [g/(m^2 s)], total
-        ! real(p), allocatable, intent(out) :: snowcv(:,:) !! Convective precipitation  [g/(m^2 s)], snow only
-        ! real(p), allocatable, intent(out) :: snowls(:,:) !! Large-scale precipitation [g/(m^2 s)], snow only
-        ! real(p), allocatable, intent(out) :: cbmf(:,:)   !! Cloud-base mass flux
-        ! real(p), allocatable, intent(out) :: tsr(:,:)    !! Top-of-atmosphere shortwave radiation (downward)
-        ! real(p), allocatable, intent(out) :: ssrd(:,:)   !! Surface shortwave radiation (downward-only)
-        ! real(p), allocatable, intent(out) :: ssr(:,:)    !! Surface shortwave radiation (net downward)
-        ! real(p), allocatable, intent(out) :: slrd(:,:)   !! Surface longwave radiation (downward-only)
-        ! real(p), allocatable, intent(out) :: slr(:,:)    !! Surface longwave radiation (net upward)
-        ! real(p), allocatable, intent(out) :: olr(:,:)    !! Outgoing longwave radiation (upward)
-        ! real(p), allocatable, intent(out) :: slru(:,:,:) !! Surface longwave emission (upward)
-
-        ! ! Third dimension -> 1:land, 2:sea, 3: weighted average
-        ! real(p), allocatable, intent(out) :: ustr(:,:,:)   !! U-stress
-        ! real(p), allocatable, intent(out) :: vstr(:,:,:)   !! V-stress
-        ! real(p), allocatable, intent(out) :: shf(:,:,:)    !! Sensible heat flux
-        ! real(p), allocatable, intent(out) :: evap(:,:,:)   !! Evaporation [g/(m^2 s)]
-        ! real(p), allocatable, intent(out) :: hfluxn(:,:,:) !! Net heat flux into surface
-
-        ! ! variables dimensions
-        ! integer, intent(in) :: kx, ntr, ix, il
+        real(8), intent(in) :: orography(ix, il)
+        real(8), intent(in) :: land_sea_mask(ix, il)
+        real(8), intent(in) :: albedo(ix, il)
 
         ! integer, intent(inout) :: nstdia     !! Period (number of steps) for diagnostic print-out
         ! integer, intent(inout) :: nsteps_out !! Number of time steps between outputs
         !===============================================================================
         type(UserParams_t)     :: user_params
         type(ControlParams_t)  :: control_params
-        type(ModelVars_t) :: state_vars
+        type(ModelState_t)     :: state
 
         ! Time step counter
         integer :: model_step = 1
@@ -117,14 +115,17 @@ contains
         ! Step 0: Initialize the grid_t structure with the input data.
         !===============================================================================
 
-        
         !===============================================================================
         ! user_params%nstdia=nstdia
         ! user_params%nsteps_out=nsteps_out
 
         ! Initialization
-        call ModelVars_allocate(state_vars)
-        call initialize(state_vars, user_params, control_params)
+        call ModelState_allocate(state)
+        call initialize(state, user_params, control_params)
+
+        ! phi0(:,:) = grav*orography(:,:)
+        ! fmask_orig(:,:) = land_sea_mask(:,:)
+        ! alb0(:,:) = albedo(:,:)
 
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
@@ -132,19 +133,20 @@ contains
             ! Daily tasks
             if (mod(model_step - 1, nsteps) == 0) then
                 ! Set forcing terms according to date
-                call set_forcing(1, control_params%model_datetime, control_params%tyear)
+                call set_forcing(state, 1, control_params%model_datetime, &
+                                 control_params%tyear)
             end if
 
             ! Determine whether to compute shortwave radiation on this time step
             compute_shortwave = mod(model_step, nstrad) == 1
 
             ! Perform one leapfrog time step
-            call step(state_vars, 2, 2, 2*delt)
+            call step(state, 2, 2, 2*delt)
 
             ! Check model diagnostics
-            call check_diagnostics(state_vars%vor(:, :, :, 2), &
-                                   state_vars%div(:, :, :, 2), &
-                                   state_vars%t(:, :, :, 2), &
+            call check_diagnostics(state%vor(:, :, :, 2), &
+                                   state%div(:, :, :, 2), &
+                                   state%t(:, :, :, 2), &
                                    model_step, user_params%nstdia)
 
             ! Increment time step counter
@@ -155,15 +157,11 @@ contains
 
             ! Output
             if (mod(model_step - 1, user_params%nsteps_out) == 0) then
-                call output(model_step - 1, control_params, &
-                            state_vars%vor, state_vars%div, &
-                            state_vars%t, &
-                            state_vars%ps, state_vars%tr, &
-                            state_vars%phi)
+                call output(state, model_step - 1, control_params)
             end if
 
             ! Exchange data with coupler
-            call couple_sea_land(state_vars, 1 + model_step/nsteps, control_params)
+            call couple_sea_land(state, 1 + model_step/nsteps, control_params)
 
             write (*, '(A12,I4,A,I0.2,A,I0.2,A,I0.2,A,I0.2)') 'model_datetime: ', &
             & control_params%model_datetime%year, '/', control_params%model_datetime%month, &
@@ -177,19 +175,19 @@ contains
 
         end do
 
-        ! Export
-        do k = 1, kx
-            vor(:, :, k) = spec_to_grid(state_vars%vor(:,:,k,1), 0)
-            div(:, :, k) = spec_to_grid(state_vars%div(:,:,k,1), 0)
-            t(:, :, k) = spec_to_grid(state_vars%t(:,:,k,1), 1)
-            phi(:, :, k) = spec_to_grid(state_vars%phi(:, :, k), 1)
+        ! ! Export
+        ! do k = 1, kx
+        !     vor(:, :, k) = spec_to_grid(state%vor(:, :, k, 1), 0, state%cosgr)
+        !     div(:, :, k) = spec_to_grid(state%div(:, :, k, 1), 0, state%cosgr)
+        !     t(:, :, k) = spec_to_grid(state%t(:, :, k, 1), 1, state%cosgr)
+        !     phi(:, :, k) = spec_to_grid(state%phi(:, :, k), 1, state%cosgr)
 
-            do n=1,ntr
-                tr(:, :, k,n) = spec_to_grid(state_vars%tr(:, :, k,1, n), 1)
-            end do
-        end do
-        ps(:,:) = spec_to_grid(state_vars%ps(:, :, 1), 1)
+        !     do n = 1, ntr
+        !         tr(:, :, k, n) = spec_to_grid(state%tr(:, :, k, 1, n), 1, state%cosgr)
+        !     end do
+        ! end do
+        ! ps(:, :) = spec_to_grid(state%ps(:, :, 1), 1, state%cosgr)
 
-        call ModelVars_deallocate(state_vars)
+        call ModelState_deallocate(state)
     end subroutine
 end module

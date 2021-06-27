@@ -1,0 +1,8 @@
+Model variables registy
+
+Inside this folder, the model variables are defined in a configutation file.
+
+Using python scripts with jinja templating, the variables are defined
+
+
+variable_name, data_type, dimensions, description

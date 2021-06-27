@@ -44,9 +44,11 @@ module land_model
 
 contains
     !> Initializes land model.
-    subroutine land_model_init
+    subroutine land_model_init(state)
+        use model_state, only: ModelState_t
         use input_output, only: load_boundary_file
-        use boundaries, only: forchk, fmask_orig, alb0, fillsf
+        use boundaries, only: forchk, fillsf
+        type(ModelState_t), intent(inout) :: state
 
         ! Auxiliary variables
         integer :: i, j, month
@@ -73,12 +75,12 @@ contains
         ! =========================================================================
 
         ! Fractional and binary land masks
-        fmask_l = fmask_orig
+        fmask_l = state%fmask_orig
         do j = 1, il
             do i = 1, ix
                 if (fmask_l(i, j) >= thrsh) then
                     bmask_l(i, j) = 1.0
-                    if (fmask_orig(i, j) > (1.0 - thrsh)) fmask_l(i, j) = 1.0
+                    if (state%fmask_orig(i, j) > (1.0 - thrsh)) fmask_l(i, j) = 1.0
                 else
                     bmask_l(i, j) = 0.0
                     fmask_l(i, j) = 0.0
@@ -169,7 +171,7 @@ contains
         ! Set time_step/heat_capacity and dissipation fields
         do j = 1, il
             do i = 1, ix
-                if (alb0(i, j) .lt. 0.4) then
+                if (state%alb0(i, j) .lt. 0.4) then
                     rhcapl(i, j) = delt/hcapl
                 else
                     rhcapl(i, j) = delt/hcapli
@@ -183,9 +185,9 @@ contains
     !> Exchanges fluxes between land and atmosphere.
     subroutine couple_land_atm(model_vars, day, imont1, tmonth)
         use interpolation, only: forin5, forint
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
 
-        type(ModelVars_t) :: model_vars
+        type(ModelState_t) :: model_vars
 
         integer, intent(in) :: day    !! The day (starting at 0 for the first time step)
         real(p), intent(in) :: tmonth !! The fraction of the current month elapsed
@@ -226,9 +228,9 @@ contains
 
     !> Integrates slab land-surface model for one day.
     subroutine run_land_model(model_vars)
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
 
-        type(ModelVars_t), intent(in) :: model_vars     
+        type(ModelState_t), intent(in) :: model_vars     
 
         ! Surface temperature anomaly
         real(p) :: tanom(ix, il)

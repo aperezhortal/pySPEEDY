@@ -9,26 +9,26 @@ module coupler
 
 contains
     !> Initialize both land and sea models.
-    subroutine initialize_coupler(model_vars, control_params)
+    subroutine initialize_coupler(state, control_params)
         use land_model, only: land_model_init, couple_land_atm
         use sea_model, only: sea_model_init, couple_sea_atm
         use date, only: ControlParams_t
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
 
-        type(ModelVars_t) :: model_vars
+        type(ModelState_t) :: state
         type(ControlParams_t), intent(in)  :: control_params
 
         ! Initialize land model constants
-        call land_model_init
+        call land_model_init(state)
 
         ! Initialize land model variables
-        call couple_land_atm(model_vars, 0, control_params%imont1, control_params%tmonth)
+        call couple_land_atm(state, 0, control_params%imont1, control_params%tmonth)
 
         ! Initialize sea and ice model constants
-        call sea_model_init(control_params%isst0)
+        call sea_model_init(control_params%isst0, state)
 
         ! Initialize sea and ice model variables
-        call couple_sea_atm(model_vars, 0, control_params%model_datetime, &
+        call couple_sea_atm(state, 0, control_params%model_datetime, &
                             control_params%start_datetime, control_params%imont1, &
                             control_params%tmonth)
     end subroutine
@@ -38,9 +38,9 @@ contains
         use land_model, only: couple_land_atm
         use sea_model, only: couple_sea_atm
         use date, only: ControlParams_t
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
 
-        type(ModelVars_t) :: model_vars
+        type(ModelState_t) :: model_vars
 
         integer, intent(in) :: day !! The current day of the model integration (starting from 0)
         type(ControlParams_t), intent(in)  :: control_params

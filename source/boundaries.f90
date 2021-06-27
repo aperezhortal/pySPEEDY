@@ -13,47 +13,27 @@ module boundaries
 
     private
     public initialize_boundaries, fillsf, forchk
-    public fmask_orig, phi0, phis0, alb0
-
-    real(p), allocatable :: fmask_orig(:,:) !! Original (fractional) land-sea mask
-
-    ! Time invariant surface fields
-    real(p), allocatable :: phi0(:,:)  !! Unfiltered surface geopotential
-    real(p), allocatable :: phis0(:,:) !! Spectrally-filtered surface geopotential
-    real(p), allocatable :: alb0(:,:)  !! Bare-land annual-mean albedo
 
 contains
     !> Initialize boundary conditions (land-sea mask, surface geopotential
     !  and surface albedo).
-    subroutine initialize_boundaries
+    subroutine initialize_boundaries(state)
+        use model_state, only: ModelState_t
         use physical_constants, only: grav
         use input_output, only: load_boundary_file
-
-        allocate(fmask_orig(ix,il))
-        allocate(phi0(ix,il))
-        allocate(phis0(ix,il))
-        allocate(alb0(ix,il))
+        type(ModelState_t), intent(inout) :: state
 
         ! Read surface geopotential (i.e. orography)
-        phi0 = grav*load_boundary_file("surface.nc", "orog")
+        state%phi0 = grav*load_boundary_file("surface.nc", "orog")
 
         ! Also store spectrally truncated surface geopotential
-        call spectral_truncation(phi0, phis0)
+        call spectral_truncation(state%phi0, state%phis0, state%cosgr)
 
         ! Read land-sea mask
-        fmask_orig = load_boundary_file("surface.nc", "lsm")
+        state%fmask_orig = load_boundary_file("surface.nc", "lsm")
 
         ! Annual-mean surface albedo
-        alb0 = load_boundary_file("surface.nc", "alb")
-    end subroutine
-
-    !> Initialize boundary conditions (land-sea mask, surface geopotential
-    !  and surface albedo).
-    subroutine deinitialize_boundaries
-        deallocate(fmask_orig)
-        deallocate(phi0)
-        deallocate(phis0)
-        deallocate(alb0)
+        state%alb0 = load_boundary_file("surface.nc", "alb")
     end subroutine
 
 
@@ -85,9 +65,9 @@ contains
     end subroutine
 
     !> Compute a spectrally-filtered grid-point field.
-    subroutine spectral_truncation(fg1, fg2)
+    subroutine spectral_truncation(fg1, fg2, cosgr)
         use spectral, only: grid_to_spec, spec_to_grid
-
+        real(p), intent(in) :: cosgr(il)      !! 1/cos(latitude) in radians
         real(p), intent(inout) :: fg1(ix,il) !! Original grid-point field
         real(p), intent(inout) :: fg2(ix,il) !! Filtered grid-point field
 
@@ -103,7 +83,7 @@ contains
             end do
         end do
 
-        fg2 = spec_to_grid(fsp, 1)
+        fg2 = spec_to_grid(fsp, 1, cosgr)
     end subroutine
 
     !> Replace missing values in surface fields.

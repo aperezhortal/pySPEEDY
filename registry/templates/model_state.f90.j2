@@ -1,0 +1,55 @@
+!> author: Andres Perez Hortal
+!  date: 23/06/2021
+!  Module where all the model state variables are declared.
+!  THIS MODULE IS AUTOMATICALLY GENERATED.
+!  DO NOT MODIFY IT DIRECTLY.
+
+module model_state
+    use types, only: p
+
+    implicit none
+
+    private
+    public ModelState_t, ModelState_allocate, ModelState_deallocate
+
+    !> Model state
+    type ModelState_t
+        {% for var in model_state %}
+        {{ var.dtype }}(p), allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
+        {% endfor %}
+    end type
+
+contains
+
+    !> Allocate Model State variables
+    subroutine ModelState_allocate(state)
+        use params, only: mx, nx, kx, ntr, ix, il, iy
+        type(ModelState_t), intent(out) :: state
+
+        !========================================================
+        ! Allocate model state variables
+        {% for var in model_state %}
+        allocate( state%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
+        {% endfor %}
+
+        !=====================================
+        ! Initialize to 0 the allocated arrays
+        {% for var in model_state %}
+        state%{{var.name}}=0
+        {% endfor %}
+
+    end subroutine
+
+    !> Deallocate model state variables
+    subroutine ModelState_deallocate(state)
+        type(ModelState_t), intent(inout) :: state
+
+        !========================================================
+        ! Safely deallocate the model state variables
+        {% for var in model_state %}
+        if( allocated(state%{{var.name}}) ) deallocate( state%{{var.name}} ) ! {{ var.desc }}
+        {% endfor %}
+
+    end subroutine
+
+end module

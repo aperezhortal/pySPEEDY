@@ -20,11 +20,11 @@ contains
     end subroutine
 
     !> Transforms Fourier coefficients to grid-point data.
-    function fourier_inv(input, kcos) result(output)
-        use geometry, only: cosgr
-
+    function fourier_inv(input, kcos, cosgr) result(output)
+        
         real(p), intent(in) :: input(2*mx,il) !! Input field
         integer, intent(in) :: kcos           !! Scale output by cos(lat) (1) or not (0)
+        real(p), intent(in) :: cosgr(il)      !! 1/cos(latitude) in radians
         real(p)             :: output(ix,il)  !! Output field
 
         integer :: j, m

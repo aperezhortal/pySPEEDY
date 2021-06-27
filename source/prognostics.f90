@@ -5,7 +5,7 @@ module prognostics
     use types, only: p
     use params, only: mx, nx, kx, ntr, ix, iy, il, UserParams_t
     use date, only: ControlParams_t
-    use model_vars, only: ModelVars_t
+    use model_state, only: ModelState_t
 
     implicit none
 
@@ -17,24 +17,22 @@ contains
 
     !> Initializes all spectral variables starting from either a reference
     !  atmosphere or a restart file.
-    subroutine initialize_prognostics(prognostic_vars, user_params, control_params)
-        type(ModelVars_t), intent(inout) :: prognostic_vars
+    subroutine initialize_prognostics(state, user_params, control_params)
+        type(ModelState_t), intent(inout) :: state
         type(UserParams_t), intent(in) :: user_params
         type(ControlParams_t), intent(in) :: control_params
-        call initialize_from_rest_state(prognostic_vars, user_params, control_params)
+        call initialize_from_rest_state(state, user_params, control_params)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
-    subroutine initialize_from_rest_state(prognostic_vars, user_params, control_params)
+    subroutine initialize_from_rest_state(state, user_params, control_params)
         use dynamical_constants, only: gamma, hscale, hshum, refrh1
         use physical_constants, only: grav, rgas
-        use geometry, only: fsg
-        use boundaries, only: phis0
         use diagnostics, only: check_diagnostics
         use spectral, only: grid_to_spec, trunct
         use input_output, only: output
 
-        type(ModelVars_t), intent(inout) :: prognostic_vars
+        type(ModelState_t), intent(inout) :: state
         type(UserParams_t), intent(in) :: user_params
         type(ControlParams_t), intent(in) :: control_params
 
@@ -46,15 +44,15 @@ contains
         gam1 = gamma/(1000.0*grav)
 
         ! 1. Compute spectral surface geopotential
-        prognostic_vars%phis = grid_to_spec(phis0)
+        state%phis = grid_to_spec(state%phis0)
 
         ! 2. Start from reference atmosphere (at rest)
         write (*, '(A)') 'Starting from rest'
 
         ! 2.1 Set vorticity, divergence and tracers to zero
-        prognostic_vars%vor(:, :, :, 1) = (0.0, 0.0)
-        prognostic_vars%div(:, :, :, 1) = (0.0, 0.0)
-        prognostic_vars%tr(:, :, :, 1, :) = (0.0, 0.0)
+        state%vor(:, :, :, 1) = (0.0, 0.0)
+        state%div(:, :, :, 1) = (0.0, 0.0)
+        state%tr(:, :, :, 1, :) = (0.0, 0.0)
 
         ! 2.2 Set reference temperature :
         !     tropos:  T = 288 degK at z = 0, constant lapse rate
@@ -66,17 +64,17 @@ contains
         rgamr = 1.0/rgam
 
         ! Surface and stratospheric air temperature
-        prognostic_vars%t(:, :, 1, 1) = (0.0, 0.0)
-        prognostic_vars%t(:, :, 2, 1) = (0.0, 0.0)
-        surfs = -gam1*prognostic_vars%phis
+        state%t(:, :, 1, 1) = (0.0, 0.0)
+        state%t(:, :, 2, 1) = (0.0, 0.0)
+        surfs = -gam1*state%phis
 
-        prognostic_vars%t(1, 1, 1, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
-        prognostic_vars%t(1, 1, 2, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
-        surfs(1, 1) = sqrt(2.0)*(1.0, 0.0)*tref - gam1*prognostic_vars%phis(1, 1)
+        state%t(1, 1, 1, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
+        state%t(1, 1, 2, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
+        surfs(1, 1) = sqrt(2.0)*(1.0, 0.0)*tref - gam1*state%phis(1, 1)
 
         ! Temperature at tropospheric levels
         do k = 3, kx
-            prognostic_vars%t(:, :, k, 1) = surfs*fsg(k)**rgam
+            state%t(:, :, k, 1) = surfs*state%fsg(k)**rgam
         end do
 
         ! 2.3 Set log(ps) consistent with temperature profile
@@ -85,12 +83,12 @@ contains
 
         do j = 1, il
             do i = 1, ix
-                surfg(i, j) = rlog0 + rgamr*log(1.0 - gam2*phis0(i, j))
+                surfg(i, j) = rlog0 + rgamr*log(1.0 - gam2*state%phis0(i, j))
             end do
         end do
 
-        prognostic_vars%ps(:, :, 1) = grid_to_spec(surfg)
-        if (ix == iy*4) call trunct(prognostic_vars%ps)
+        state%ps(:, :, 1) = grid_to_spec(surfg)
+        if (ix == iy*4) call trunct(state%ps)
 
         ! 2.4 Set tropospheric specific humidity in g/kg
         !     Qref = RHref * Qsat(288K, 1013hPa)
@@ -110,17 +108,16 @@ contains
 
         ! Specific humidity at tropospheric levels
         do k = 3, kx
-            prognostic_vars%tr(:, :, k, 1, 1) = surfs*fsg(k)**qexp
+            state%tr(:, :, k, 1, 1) = surfs*state%fsg(k)**qexp
         end do
 
         ! Print diagnostics from initial conditions
-        call check_diagnostics(prognostic_vars%vor(:, :, :, 1), &
-                               prognostic_vars%div(:, :, :, 1), &
-                               prognostic_vars%t(:, :, :, 1), &
+        call check_diagnostics(state%vor(:, :, :, 1), &
+                               state%div(:, :, :, 1), &
+                               state%t(:, :, :, 1), &
                                0, user_params%nstdia)
 
         ! Write initial data
-        call output(0, control_params, prognostic_vars%vor, prognostic_vars%div, prognostic_vars%t, &
-                    prognostic_vars%ps, prognostic_vars%tr, prognostic_vars%phi)
+        call output(state, 0, control_params)
     end subroutine
 end module

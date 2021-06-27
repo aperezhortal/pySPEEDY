@@ -30,16 +30,16 @@ module large_scale_condensation
 contains
     !> Compute large-scale condensation and associated tendencies of temperature
     !  and moisture
-    subroutine get_large_scale_condensation_tendencies(psa, qa, qsat, itop, precls, dtlsc, dqlsc)
+    subroutine get_large_scale_condensation_tendencies(state, psa, qa, qsat, itop, dtlsc, dqlsc)
         use physical_constants, only: p0, cp, alhc, alhs, grav
-        use geometry, only: fsg, dhs
+        use model_state, only: ModelState_t
 
+        type(ModelState_t), intent(inout) :: state
         real(p), intent(in) :: psa(ix,il)       !! Normalised surface pressure [p/p0]
         real(p), intent(in) :: qa(ix,il,kx)     !! Specific humidity [g/kg]
         real(p), intent(in) :: qsat(ix,il,kx)   !! Saturation specific humidity [g/kg]
         integer, intent(inout) :: itop(ix,il)   !! Cloud top diagnosed from precipitation due to
                                                 !! convection and large-scale condensation
-        real(p), intent(out) :: precls(ix,il)   !! Precipitation due to large-scale condensation
         real(p), intent(out) :: dtlsc(ix,il,kx) !! Temperature tendency due to large-scale
                                                 !! condensation
         real(p), intent(out) :: dqlsc(ix,il,kx) !! Specific humidity tendency due to large-scale
@@ -57,7 +57,7 @@ contains
 
         dtlsc(:,:,1) = 0.0
         dqlsc(:,:,1) = 0.0
-        precls  = 0.0
+        state%precls  = 0.0
 
         psa2 = psa**2.0
 
@@ -65,7 +65,7 @@ contains
         ! NB. A maximum heating rate is imposed to avoid grid-point-storm
         ! instability
         do k = 2, kx
-            sig2 = fsg(k)**2.0
+            sig2 = state%fsg(k)**2.0
             rhref = rhlsc + drhlsc*(sig2 - 1.0)
             if (k == kx) rhref = max(rhref, rhblsc)
             dqmax = qsmax*sig2*rtlsc
@@ -87,10 +87,10 @@ contains
 
         ! Large-scale precipitation
         do k = 2, kx
-            pfact = dhs(k)*prg
-            precls = precls - pfact*dqlsc(:,:,k)
+            pfact = state%dhs(k)*prg
+            state%precls = state%precls - pfact*dqlsc(:,:,k)
         end do
 
-        precls = precls*psa
+        state%precls = state%precls*psa
     end
 end module

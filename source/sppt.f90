@@ -42,10 +42,12 @@ module sppt
 
     contains
         !> Generate grid point space SPPT pattern distribution.
-        function gen_sppt() result(sppt_grid)
+        function gen_sppt(state) result(sppt_grid)
             use spectral, only: el2, spec_to_grid
             use physical_constants, only: rearth
+            use model_state, only: ModelState_t
 
+            type(ModelState_t), intent(inout) :: state
             real(p) :: sppt_grid(ix,il,kx) !! The generated grid point pattern
 
             integer :: m, n, k
@@ -91,7 +93,7 @@ module sppt
 
             ! Convert to grid point space
              do k = 1, kx
-                 sppt_grid(:,:,k) = spec_to_grid(sppt_spec(:,:,k), 1)
+                 sppt_grid(:,:,k) = spec_to_grid(sppt_spec(:,:,k), 1, state%cosgr)
              end do
 
              ! Clip to +/- 1.0

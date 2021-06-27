@@ -117,10 +117,11 @@ contains
     end
 
     !> Compute the absorption of upward long-wave radiation fluxes
-    subroutine get_upward_longwave_rad_fluxes(ta, ts, fsfcd, fsfcu, fsfc, ftop, dfabs)
-        use geometry, only: dhs
+    subroutine get_upward_longwave_rad_fluxes(state, ta, ts, fsfcd, fsfcu, fsfc, ftop, dfabs)
         use mod_radcon, only: epslw, emisfc, fband, tau2, st4a, stratc, flux
+        use model_state, only: ModelState_t
 
+        type(ModelState_t), intent(inout) :: state
         real(p), intent(in)    :: ta(ix,il,kx)    !! Absolute temperature
         real(p), intent(in)    :: ts(ix,il)       !! Surface temperature
         real(p), intent(in)    :: fsfcd(ix,il)    !! Downward flux of long-wave radiation at the
@@ -181,8 +182,8 @@ contains
         end do
 
         ! Correction for "black" band and polar night cooling
-        corlw1 = dhs(1)*stratc(:,:,2)*st4a(:,:,1,1) + stratc(:,:,1)
-        corlw2 = dhs(2)*stratc(:,:,2)*st4a(:,:,2,1)
+        corlw1 = state%dhs(1)*stratc(:,:,2)*st4a(:,:,1,1) + stratc(:,:,1)
+        corlw2 = state%dhs(2)*stratc(:,:,2)*st4a(:,:,2,1)
         dfabs(:,:,1) = dfabs(:,:,1) - corlw1
         dfabs(:,:,2) = dfabs(:,:,2) - corlw2
         ftop = corlw1 + corlw2

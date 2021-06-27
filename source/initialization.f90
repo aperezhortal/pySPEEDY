@@ -9,7 +9,7 @@ module initialization
 
 contains
     !> Initializes everything.
-    subroutine initialize(model_vars, user_params, control_params)
+    subroutine initialize(state, user_params, control_params)
         use params, only: issty0, initialize_params, UserParams_t
         use date, only: initialize_date, ControlParams_t
         use coupler, only: initialize_coupler
@@ -22,14 +22,14 @@ contains
         use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
-        use model_vars, only: ModelVars_t
+        use model_state, only: ModelState_t
         use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
-        
+
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
-        type(ModelVars_t), intent(inout) :: model_vars
+        type(ModelState_t), intent(inout) :: state
         type(UserParams_t), intent(out) :: user_params
         type(ControlParams_t), intent(out)  :: control_params
 
@@ -53,41 +53,41 @@ contains
         ! =========================================================================
 
         ! Initialize model geometry
-        call initialize_geometry
+        call initialize_geometry(state)
 
         ! Initialize spectral transforms
-        call initialize_spectral
+        call initialize_spectral(state)
 
         ! Initialize geopotential calculations
-        call initialize_geopotential
+        call initialize_geopotential(state)
 
         ! Initialize horizontal diffusion
-        call initialize_horizontal_diffusion
+        call initialize_horizontal_diffusion(state%fsg)
 
         ! Initialize constants for physical parametrization
-        call initialize_physics()
+        call initialize_physics(state)
 
         ! Initialize boundary conditions (land-sea mask, sea ice etc.)
-        call initialize_boundaries
+        call initialize_boundaries(state)
 
         ! Initialize model variables
-        call initialize_prognostics(model_vars, user_params, control_params)
+        call initialize_prognostics(state, user_params, control_params)
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)
         ! =========================================================================
 
-        call initialize_coupler(model_vars, control_params)
+        call initialize_coupler(state, control_params)
 
         ! =========================================================================
         ! Initialization of first time step
         ! =========================================================================
 
         ! Set up the forcing fields for the first time step
-        call set_forcing(0, control_params%model_datetime, control_params%tyear)
+        call set_forcing(state, 0, control_params%model_datetime, control_params%tyear)
 
         ! Do the initial (2nd-order) time step, initialize the semi-implicit scheme
-        call first_step(model_vars)
+        call first_step(state)
     end subroutine
 
     !> Prints SPEEDY.f90 banner.
