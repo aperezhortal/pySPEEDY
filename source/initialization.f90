@@ -25,7 +25,7 @@ contains
         use model_state, only: ModelState_t
         use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
-
+        
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
@@ -53,19 +53,19 @@ contains
         ! =========================================================================
 
         ! Initialize model geometry
-        call initialize_geometry(state)
+        call initialize_geometry
 
         ! Initialize spectral transforms
-        call initialize_spectral(state)
+        call initialize_spectral
 
         ! Initialize geopotential calculations
-        call initialize_geopotential(state)
+        call initialize_geopotential
 
         ! Initialize horizontal diffusion
-        call initialize_horizontal_diffusion(state%fsg)
+        call initialize_horizontal_diffusion
 
         ! Initialize constants for physical parametrization
-        call initialize_physics(state)
+        call initialize_physics()
 
         ! Initialize boundary conditions (land-sea mask, sea ice etc.)
         call initialize_boundaries(state)

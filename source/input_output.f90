@@ -92,15 +92,21 @@ contains
     end
 
     !> Writes a snapshot of all prognostic variables to a NetCDF file.
-    subroutine output(state, timestep, control_params)
-        use model_state, only: ModelState_t
+    subroutine output(timestep, control_params, vor, div, t, ps, tr, phi)
+        use geometry, only: radang, fsg
         use physical_constants, only: p0, grav
         use spectral, only: spec_to_grid, uvspec
         use date, only: ControlParams_t
 
-        type(ModelState_t), intent(inout) :: state
         integer, intent(in) :: timestep           !! The time step that is being written
         type(ControlParams_t), target, intent(in)  :: control_params
+
+        complex(p), intent(in) :: vor(mx,nx,kx,2)    !! Vorticity
+        complex(p), intent(in) :: div(mx,nx,kx,2)    !! Divergence
+        complex(p), intent(in) :: t(mx,nx,kx,2)      !! Temperature
+        complex(p), intent(in) :: ps(mx,nx,2)        !! log(normalized surface pressure)
+        complex(p), intent(in) :: tr(mx,nx,kx,2,ntr) !! Tracers
+        complex(p), intent(in) :: phi(mx,nx,kx)      !! Geopotential
 
         complex(p), dimension(mx, nx)     :: ucos, vcos
         real(p), dimension(ix, il, kx)  :: u_grid, v_grid, t_grid, q_grid, phi_grid
@@ -173,19 +179,19 @@ contains
         ! Write dimensions to file
         call check(nf90_put_var(ncid, timevar, timestep*24.0/real(nsteps, sp), (/1/)))
         call check(nf90_put_var(ncid, lonvar, (/(3.75*k, k=0, ix - 1)/), (/1/)))
-        call check(nf90_put_var(ncid, latvar, (/(state%radang(k)*90.0/asin(1.0), k=1, il)/), (/1/)))
-        call check(nf90_put_var(ncid, levvar, (/(state%fsg(k), k=1, 8)/), (/1/)))
+        call check(nf90_put_var(ncid, latvar, (/(radang(k)*90.0/asin(1.0), k=1, il)/), (/1/)))
+        call check(nf90_put_var(ncid, levvar, (/(fsg(k), k=1, 8)/), (/1/)))
 
         ! Convert prognostic fields from spectral space to grid point space
         do k = 1, kx
-            call uvspec(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
-            u_grid(:, :, k) = spec_to_grid(ucos, 2, state%cosgr)
-            v_grid(:, :, k) = spec_to_grid(vcos, 2, state%cosgr)
-            t_grid(:, :, k) = spec_to_grid(state%t(:, :, k, 1), 1, state%cosgr)
-            q_grid(:, :, k) = spec_to_grid(state%tr(:, :, k, 1, 1), 1, state%cosgr)
-            phi_grid(:, :, k) = spec_to_grid(state%phi(:, :, k), 1, state%cosgr)
+            call uvspec(vor(:, :, k, 1), div(:, :, k, 1), ucos, vcos)
+            u_grid(:, :, k) = spec_to_grid(ucos, 2)
+            v_grid(:, :, k) = spec_to_grid(vcos, 2)
+            t_grid(:, :, k) = spec_to_grid(t(:, :, k, 1), 1)
+            q_grid(:, :, k) = spec_to_grid(tr(:, :, k, 1, 1), 1)
+            phi_grid(:, :, k) = spec_to_grid(phi(:, :, k), 1)
         end do
-        ps_grid = spec_to_grid(state%ps(:, :, 1), 1, state%cosgr)
+        ps_grid = spec_to_grid(ps(:, :, 1), 1)
 
         ! Output date
         print '(A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2)', &

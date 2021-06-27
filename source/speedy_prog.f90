@@ -6,6 +6,7 @@
 program prog_speedy
     use types, only: p
     use speedy, only: run_speedy
+    use model_state, only: ModelState_allocate, ModelState_t
     use params, only: UserParams_t, kx, ntr, ix, il
 
     implicit none
@@ -16,8 +17,6 @@ program prog_speedy
     real(p), allocatable :: ps(:,:)      !! Log of (normalised) surface pressure (p_s/p0)
     real(p), allocatable :: tr(:,:,:,:) !! Tracers (tr(1): specific humidity in g/kg)
     real(p), allocatable :: phi(:,:,:)  !! Atmospheric geopotential
-    real(p), allocatable :: orography(:,:)
-    real(p), allocatable :: land_sea_mask(:,:), albedo(:,:)
 
     allocate(vor(ix, il, kx))
     allocate(div(ix, il, kx))
@@ -25,12 +24,8 @@ program prog_speedy
     allocate(ps(ix, il))
     allocate(tr(ix, il, kx,ntr))
     allocate(phi(ix, il, kx))
-    allocate(orography(ix, il))
-    allocate(land_sea_mask(ix, il))
-    allocate(albedo(ix, il))
     
-    
-    call run_speedy(vor, div, t, ps, tr, phi,orography,land_sea_mask,albedo, ix, il, kx, ntr)
+    call run_speedy(vor, div, t, ps, tr, phi, ix, il, kx, ntr)
     
     ! call run_speedy( &
     !     ! Prognostic variables

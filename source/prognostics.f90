@@ -17,17 +17,18 @@ contains
 
     !> Initializes all spectral variables starting from either a reference
     !  atmosphere or a restart file.
-    subroutine initialize_prognostics(state, user_params, control_params)
-        type(ModelState_t), intent(inout) :: state
+    subroutine initialize_prognostics(prognostic_vars, user_params, control_params)
+        type(ModelState_t), intent(inout) :: prognostic_vars
         type(UserParams_t), intent(in) :: user_params
         type(ControlParams_t), intent(in) :: control_params
-        call initialize_from_rest_state(state, user_params, control_params)
+        call initialize_from_rest_state(prognostic_vars, user_params, control_params)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
     subroutine initialize_from_rest_state(state, user_params, control_params)
         use dynamical_constants, only: gamma, hscale, hshum, refrh1
         use physical_constants, only: grav, rgas
+        use geometry, only: fsg
         use diagnostics, only: check_diagnostics
         use spectral, only: grid_to_spec, trunct
         use input_output, only: output
@@ -74,7 +75,7 @@ contains
 
         ! Temperature at tropospheric levels
         do k = 3, kx
-            state%t(:, :, k, 1) = surfs*state%fsg(k)**rgam
+            state%t(:, :, k, 1) = surfs*fsg(k)**rgam
         end do
 
         ! 2.3 Set log(ps) consistent with temperature profile
@@ -108,7 +109,7 @@ contains
 
         ! Specific humidity at tropospheric levels
         do k = 3, kx
-            state%tr(:, :, k, 1, 1) = surfs*state%fsg(k)**qexp
+            state%tr(:, :, k, 1, 1) = surfs*fsg(k)**qexp
         end do
 
         ! Print diagnostics from initial conditions
@@ -118,6 +119,7 @@ contains
                                0, user_params%nstdia)
 
         ! Write initial data
-        call output(state, 0, control_params)
+        call output(0, control_params, state%vor, state%div, state%t, &
+                    state%ps, state%tr, state%phi)
     end subroutine
 end module

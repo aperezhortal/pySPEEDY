@@ -13,21 +13,23 @@ module boundaries
 
     private
     public initialize_boundaries, fillsf, forchk
+   
 
 contains
     !> Initialize boundary conditions (land-sea mask, surface geopotential
     !  and surface albedo).
     subroutine initialize_boundaries(state)
-        use model_state, only: ModelState_t
         use physical_constants, only: grav
         use input_output, only: load_boundary_file
+        use model_state, only: ModelState_t
+
         type(ModelState_t), intent(inout) :: state
 
         ! Read surface geopotential (i.e. orography)
         state%phi0 = grav*load_boundary_file("surface.nc", "orog")
 
         ! Also store spectrally truncated surface geopotential
-        call spectral_truncation(state%phi0, state%phis0, state%cosgr)
+        call spectral_truncation(state%phi0, state%phis0)
 
         ! Read land-sea mask
         state%fmask_orig = load_boundary_file("surface.nc", "lsm")
@@ -35,7 +37,6 @@ contains
         ! Annual-mean surface albedo
         state%alb0 = load_boundary_file("surface.nc", "alb")
     end subroutine
-
 
     !> Check consistency of surface fields with land-sea mask and set undefined
     !  values to a constant (to avoid over/underflow).
@@ -65,9 +66,9 @@ contains
     end subroutine
 
     !> Compute a spectrally-filtered grid-point field.
-    subroutine spectral_truncation(fg1, fg2, cosgr)
+    subroutine spectral_truncation(fg1, fg2)
         use spectral, only: grid_to_spec, spec_to_grid
-        real(p), intent(in) :: cosgr(il)      !! 1/cos(latitude) in radians
+
         real(p), intent(inout) :: fg1(ix,il) !! Original grid-point field
         real(p), intent(inout) :: fg2(ix,il) !! Filtered grid-point field
 
@@ -83,7 +84,7 @@ contains
             end do
         end do
 
-        fg2 = spec_to_grid(fsp, 1, cosgr)
+        fg2 = spec_to_grid(fsp, 1)
     end subroutine
 
     !> Replace missing values in surface fields.

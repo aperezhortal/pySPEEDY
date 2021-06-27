@@ -33,11 +33,11 @@ module horizontal_diffusion
 
 contains
     !> Initializes the arrays used for horizontal diffusion.
-    subroutine initialize_horizontal_diffusion(fsg)
+    subroutine initialize_horizontal_diffusion
         use dynamical_constants, only: thd, thdd, thds, gamma, hscale, hshum
         use physical_constants, only: grav, rgas
+        use geometry, only: fsg
 
-        real(p), intent(inout) :: fsg(kx)
         integer :: j, k, npowhd
         real(p) :: elap, elapn, hdifd, hdiff, hdifs, qexp, rgam, rlap, twn
 

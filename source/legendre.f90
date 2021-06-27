@@ -20,11 +20,8 @@ module legendre
 contains
     !> Initializes Legendre transforms and constants used for other subroutines
     !  that manipulate spherical harmonics.
-    subroutine initialize_legendre(state)
-        use model_state, only: ModelState_t
+    subroutine initialize_legendre
         use physical_constants, only: rearth
-        
-        type(ModelState_t), intent(inout) :: state
 
         real(p) :: emm2, ell2, poly(mx,nx)
         integer :: j, n, m, m1, m2, mm(mx), wavenum_tot(mx,nx)
@@ -61,7 +58,7 @@ contains
 
         ! Generate associated Legendre polynomials
         do j = 1, iy
-            poly = get_legendre_poly(j, state%sia_half, state%coa_half)
+            poly = get_legendre_poly(j)
             do n = 1, nx
                 do m = 1, mx
                     m1 = 2*m - 1
@@ -194,10 +191,10 @@ contains
     end function
 
     !> Compute associated Legendre polynomials at given latitude.
-    function get_legendre_poly(j, sia_half, coa_half) result(poly)
-        real(p) , intent(in), dimension(iy) :: sia_half, coa_half
-        integer, intent(in) :: j  !! The latitude to compute the polynomials at
+    function get_legendre_poly(j) result(poly)
+        use geometry, only: sia_half, coa_half
 
+        integer, intent(in) :: j              !! The latitude to compute the polynomials at
         real(p)                :: poly(mx,nx) !! The Legendre polynomials
 
         real(p), parameter :: small = 1.e-30

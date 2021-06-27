@@ -45,9 +45,10 @@ module land_model
 contains
     !> Initializes land model.
     subroutine land_model_init(state)
-        use model_state, only: ModelState_t
         use input_output, only: load_boundary_file
         use boundaries, only: forchk, fillsf
+        use model_state, only: ModelState_t
+
         type(ModelState_t), intent(inout) :: state
 
         ! Auxiliary variables

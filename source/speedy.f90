@@ -4,7 +4,6 @@
 !> until the (continually updated) model datetime (`model_datetime`) equals the
 !> final datetime (`end_datetime`).
 module speedy
-    use types, only: p
     use params, only: UserParams_t
     use date, only: ControlParams_t
     use model_state, only: ModelState_t
@@ -15,35 +14,18 @@ module speedy
     public run_speedy
 
     !> Structure to represent the entire model state at a given time.
-    ! type model_state
-    !     type(UserParams_t)    :: user_params
-    !     type(ControlParams_t) :: control_params
-    !     type(ModelState_t)     :: state_vars
-    ! end type
-
-    !> Model input fields
-    ! type ModelInput_t
-    !     real(p), allocatable :: orography(:, :)       !! Unfiltered surface geopotential
-    !     real(p), allocatable :: land_sea_mask(:, :)   !! Spectrally-filtered surface geopotential
-    !     real(p), allocatable :: albedo(:, :)          !! Bare-land annual-mean albedo
-
-    !     real(p), allocatable :: land_sfc_temp(:, :)   !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: snow_depth(:, :)      !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: vegetation_low(:, :)  !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: vegetation_high(:, :) !! Bare-land annual-mean albedo
-
-    !     real(p), allocatable :: soil_wetness_l1(:, :) !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: soil_wetness_l2(:, :) !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: soil_wetness_l3(:, :) !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: sea_ice_conc(:, :)    !! Bare-land annual-mean albedo
-    !     real(p), allocatable :: sea_surf_temp(:, :)   !! Bare-land annual-mean albedo
-    ! end type
+    type model_state
+        type(UserParams_t)    :: user_params
+        type(ControlParams_t) :: control_params
+        type(ModelState_t)     :: state
+    end type
 
     ! !> Structure to hold the entire model state.
     ! type model_state
 
     ! model_config
 
+    !     ! boundaries
     !     ! geometry
     !     ! geopotential constants
     !     ! horizontal_diffusion
@@ -64,10 +46,7 @@ contains
     ! 2d_vars
     ! 3d_vars
     ! 4d_vars
-    subroutine run_speedy( &
-        vor, div, t, ps, tr, phi, &
-        orography, land_sea_mask, albedo, &
-        ix, il, kx, ntr)
+    subroutine run_speedy( vor, div, t, ps, tr, phi, ix, il, kx, ntr)   
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
 
@@ -83,8 +62,6 @@ contains
         use forcing, only: set_forcing
         use model_state, only: ModelState_t, ModelState_deallocate, ModelState_allocate
         use spectral, only: spec_to_grid
-
-        use physical_constants, only: grav
         implicit none
 
         !============ INPUT VARIABLES ==================================================
@@ -97,16 +74,12 @@ contains
         real(8), intent(inout) :: tr(ix, il, kx, ntr) !! Tracers (tr(1): specific humidity in g/kg)
         real(8), intent(inout) :: phi(ix, il, kx)     !! Atmospheric geopotential
 
-        real(8), intent(in) :: orography(ix, il)
-        real(8), intent(in) :: land_sea_mask(ix, il)
-        real(8), intent(in) :: albedo(ix, il)
-
         ! integer, intent(inout) :: nstdia     !! Period (number of steps) for diagnostic print-out
         ! integer, intent(inout) :: nsteps_out !! Number of time steps between outputs
         !===============================================================================
         type(UserParams_t)     :: user_params
         type(ControlParams_t)  :: control_params
-        type(ModelState_t)     :: state
+        type(ModelState_t) :: state
 
         ! Time step counter
         integer :: model_step = 1
@@ -115,6 +88,7 @@ contains
         ! Step 0: Initialize the grid_t structure with the input data.
         !===============================================================================
 
+        
         !===============================================================================
         ! user_params%nstdia=nstdia
         ! user_params%nsteps_out=nsteps_out
@@ -123,18 +97,13 @@ contains
         call ModelState_allocate(state)
         call initialize(state, user_params, control_params)
 
-        ! phi0(:,:) = grav*orography(:,:)
-        ! fmask_orig(:,:) = land_sea_mask(:,:)
-        ! alb0(:,:) = albedo(:,:)
-
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
 
             ! Daily tasks
             if (mod(model_step - 1, nsteps) == 0) then
                 ! Set forcing terms according to date
-                call set_forcing(state, 1, control_params%model_datetime, &
-                                 control_params%tyear)
+                call set_forcing(state, 1, control_params%model_datetime, control_params%tyear)
             end if
 
             ! Determine whether to compute shortwave radiation on this time step
@@ -157,7 +126,11 @@ contains
 
             ! Output
             if (mod(model_step - 1, user_params%nsteps_out) == 0) then
-                call output(state, model_step - 1, control_params)
+                call output(model_step - 1, control_params, &
+                            state%vor, state%div, &
+                            state%t, &
+                            state%ps, state%tr, &
+                            state%phi)
             end if
 
             ! Exchange data with coupler
@@ -175,18 +148,18 @@ contains
 
         end do
 
-        ! ! Export
-        ! do k = 1, kx
-        !     vor(:, :, k) = spec_to_grid(state%vor(:, :, k, 1), 0, state%cosgr)
-        !     div(:, :, k) = spec_to_grid(state%div(:, :, k, 1), 0, state%cosgr)
-        !     t(:, :, k) = spec_to_grid(state%t(:, :, k, 1), 1, state%cosgr)
-        !     phi(:, :, k) = spec_to_grid(state%phi(:, :, k), 1, state%cosgr)
+        ! Export
+        do k = 1, kx
+            vor(:, :, k) = spec_to_grid(state%vor(:,:,k,1), 0)
+            div(:, :, k) = spec_to_grid(state%div(:,:,k,1), 0)
+            t(:, :, k) = spec_to_grid(state%t(:,:,k,1), 1)
+            phi(:, :, k) = spec_to_grid(state%phi(:, :, k), 1)
 
-        !     do n = 1, ntr
-        !         tr(:, :, k, n) = spec_to_grid(state%tr(:, :, k, 1, n), 1, state%cosgr)
-        !     end do
-        ! end do
-        ! ps(:, :) = spec_to_grid(state%ps(:, :, 1), 1, state%cosgr)
+            do n=1,ntr
+                tr(:, :, k,n) = spec_to_grid(state%tr(:, :, k,1, n), 1)
+            end do
+        end do
+        ps(:,:) = spec_to_grid(state%ps(:, :, 1), 1)
 
         call ModelState_deallocate(state)
     end subroutine

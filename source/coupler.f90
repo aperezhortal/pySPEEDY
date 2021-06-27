@@ -25,7 +25,7 @@ contains
         call couple_land_atm(state, 0, control_params%imont1, control_params%tmonth)
 
         ! Initialize sea and ice model constants
-        call sea_model_init(control_params%isst0, state)
+        call sea_model_init(state, control_params%isst0)
 
         ! Initialize sea and ice model variables
         call couple_sea_atm(state, 0, control_params%model_datetime, &

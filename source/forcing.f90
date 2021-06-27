@@ -16,7 +16,7 @@ contains
         use dynamical_constants, only: refrh1
         use params
         use horizontal_diffusion, only: tcorh, qcorh
-        use physical_constants, only: rgas        
+        use physical_constants, only: rgas
         use surface_fluxes, only: set_orog_land_sfc_drag
         use date, only: Datetime_t
         use land_model, only: stl_am, snowd_am, fmask_l, sd2sc
@@ -33,7 +33,7 @@ contains
         integer, intent(in) :: imode !! Mode -> 0 = initialization step, 1 = daily update
         type(Datetime_t), intent(in) :: model_datetime
         real(p), intent(in)          :: tyear !! The fraction of the current year elapsed
-        
+
         real(p), dimension(ix, il) :: corh, tsfc, tref, psfc, qsfc, qref
         real(p) :: gamlat(il)
 
@@ -52,7 +52,7 @@ contains
 
         ! 2. daily-mean radiative forcing
         ! incoming solar radiation
-        call get_zonal_average_fields(state, tyear)
+        call get_zonal_average_fields(tyear)
 
         ! total surface albedo
 

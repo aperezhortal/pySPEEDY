@@ -76,13 +76,15 @@ module sea_model
 
 contains
     ! Initialization of sea model
-    subroutine sea_model_init(isst0, state)
+    subroutine sea_model_init(state, isst0)
         use boundaries, only: fillsf, forchk
         ! use date, only: isst0
+        use geometry, only: radang
         use input_output, only: load_boundary_file
         use model_state, only: ModelState_t
 
         type(ModelState_t), intent(inout) :: state
+
         integer, intent(in) :: isst0 !! Initial month of SST anomalies
 
         ! Domain mask
@@ -153,7 +155,7 @@ contains
         end do
 
         ! Grid latitudes for sea-surface variables
-        deglat_s = state%radang*90.0/asin(1.0)
+        deglat_s = radang*90.0/asin(1.0)
 
         ! SST
         do month = 1, 12
