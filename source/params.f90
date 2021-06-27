@@ -7,7 +7,7 @@ module params
     implicit none
 
     private
-    public trunc, ix, iy, il, kx, nx, mx, ntr
+    public trunc, ix, iy, il, kx, nx, mx, ntr, t_levs, aux_dim
     public nsteps, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
     public initialize_params
     public UserParams_t
@@ -26,6 +26,9 @@ module params
     integer, parameter :: mx = trunc + 1 !! Number of zonal wavenumbers for spectral storage arrays
     integer, parameter :: ntr = 1      !! Number of tracers (specific humidity is considered a
                                        !! tracer)
+
+    integer, parameter :: t_levs = 2   !! Number of time levels for the variable.
+    integer, parameter :: aux_dim = 3  !! Auxiliary dimension: 1:land, 2:sea, 3: weighted average
 
     ! Time stepping parameters
     integer, parameter    :: nsteps = 36           !! Number of time steps in one day

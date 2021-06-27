@@ -11,5 +11,5 @@ test:
 .PHONY:clean
 clean:
 	$(MAKE) -C source clean
-	@rm -f speedy_f90/_speedy*.so
+	@rm -f pyspeedy/_speedy*.so
 

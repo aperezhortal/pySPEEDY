@@ -1,3 +1,8 @@
 *.swp
 rundir
+rundir_ref
 bin
+*.so
+source/model_state.f90
+source/pyspeedy.f90
+

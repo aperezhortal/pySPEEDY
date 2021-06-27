@@ -63,7 +63,9 @@ FILES= \
 	   time_stepping.o \
 	   types.o \
 	   vertical_diffusion.o \
-	   speedy.o
+	   speedy.o \
+	   pyspeedy.o
+
 
 %.o: %.f90
 	gfortran $(COMPOPTS) -c $< $(INC)
@@ -76,10 +78,11 @@ base_target: $(FILES)
 clean:
 	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
+pyspeedy.o             : model_state.o speedy.o
 speedy.o               : params.o date.o prognostics.o input_output.o \
 				         shortwave_radiation.o time_stepping.o\
                          diagnostics.o model_state.o 
-model_state.o           : types.o params.o
+model_state.o          : types.o params.o
 boundaries.o           : physical_constants.o params.o input_output.o spectral.o types.o
 convection.o           : params.o physical_constants.o types.o
 coupler.o              : land_model.o sea_model.o

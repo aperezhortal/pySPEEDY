@@ -1,7 +1,7 @@
 !> author: Andres Perez Hortal
 !  date: 23/06/2021
 !  Module where all the model state variables are declared.
-!  THIS MODULE IS AUTOMATICALLY GENERATED.
+!  THIS CODE IS AUTOMATICALLY GENERATED.
 !  DO NOT MODIFY IT DIRECTLY.
 
 module model_state
@@ -10,20 +10,25 @@ module model_state
     implicit none
 
     private
-    public ModelState_t, ModelState_allocate, ModelState_deallocate
+    public ModelState_t, ModelState_Ptr_t
+    public ModelState_allocate, ModelState_deallocate
 
     !> Model state
     type ModelState_t
         {% for var in model_state %}
-        {{ var.dtype }}(p), allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
+        {{ var.dtype }}(8), allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
         {% endfor %}
+    end type
+
+    type ModelState_Ptr_t
+        type(ModelState_t), pointer :: p => NULL()
     end type
 
 contains
 
     !> Allocate Model State variables
     subroutine ModelState_allocate(state)
-        use params, only: mx, nx, kx, ntr, ix, il, iy
+        use params, only: mx, nx, kx, ntr, ix, il, iy, t_levs, aux_dim
         type(ModelState_t), intent(out) :: state
 
         !========================================================

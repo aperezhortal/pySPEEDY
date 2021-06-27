@@ -46,7 +46,7 @@ contains
     ! 2d_vars
     ! 3d_vars
     ! 4d_vars
-    subroutine run_speedy( vor, div, t, ps, tr, phi, ix, il, kx, ntr)   
+    subroutine run_speedy(state)   
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
 
@@ -64,22 +64,15 @@ contains
         use spectral, only: spec_to_grid
         implicit none
 
-        !============ INPUT VARIABLES ==================================================
-        ! Prognostic variables
-        integer, intent(in)    :: kx, ntr, ix, il
-        real(8), intent(inout) :: vor(ix, il, kx)     !! Vorticity
-        real(8), intent(inout) :: div(ix, il, kx)     !! Divergence
-        real(8), intent(inout) :: t(ix, il, kx)       !! Absolute temperature
-        real(8), intent(inout) :: ps(ix, il)          !! Log of (normalised) surface pressure (p_s/p0)
-        real(8), intent(inout) :: tr(ix, il, kx, ntr) !! Tracers (tr(1): specific humidity in g/kg)
-        real(8), intent(inout) :: phi(ix, il, kx)     !! Atmospheric geopotential
+        !> The model state needs to be initilialized before calling this function.
+        type(ModelState_t), intent(inout) :: state
 
         ! integer, intent(inout) :: nstdia     !! Period (number of steps) for diagnostic print-out
         ! integer, intent(inout) :: nsteps_out !! Number of time steps between outputs
         !===============================================================================
         type(UserParams_t)     :: user_params
         type(ControlParams_t)  :: control_params
-        type(ModelState_t) :: state
+
 
         ! Time step counter
         integer :: model_step = 1
@@ -94,7 +87,7 @@ contains
         ! user_params%nsteps_out=nsteps_out
 
         ! Initialization
-        call ModelState_allocate(state)
+        ! call ModelState_allocate(state)
         call initialize(state, user_params, control_params)
 
         ! Model main loop
@@ -148,19 +141,6 @@ contains
 
         end do
 
-        ! Export
-        do k = 1, kx
-            vor(:, :, k) = spec_to_grid(state%vor(:,:,k,1), 0)
-            div(:, :, k) = spec_to_grid(state%div(:,:,k,1), 0)
-            t(:, :, k) = spec_to_grid(state%t(:,:,k,1), 1)
-            phi(:, :, k) = spec_to_grid(state%phi(:, :, k), 1)
-
-            do n=1,ntr
-                tr(:, :, k,n) = spec_to_grid(state%tr(:, :, k,1, n), 1)
-            end do
-        end do
-        ps(:,:) = spec_to_grid(state%ps(:, :, 1), 1)
-
-        call ModelState_deallocate(state)
+        ! call ModelState_deallocate(state)
     end subroutine
 end module

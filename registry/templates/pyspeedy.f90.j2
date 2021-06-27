@@ -1,0 +1,71 @@
+!
+!  THIS CODE IS AUTOMATICALLY GENERATED.
+!  DO NOT MODIFY IT DIRECTLY.
+!
+! Interface for the fortran speedy module.
+!
+!
+! This interface follows the ideas presented in this paper:
+! "Exposing Fortran Derived Types to C and Other Languages"
+! S. Kruger, S. Muszala, A. Pletzer, S. Vadlamani and D. McCune,
+! Computing in Science & Engineering, vol. 10, no. 04, pp. 86-92, 2008.
+! doi: 10.1109/MCSE.2008.94
+!
+! https://doi.ieeecomputersociety.org/10.1109/MCSE.2008.94
+
+module pyspeedy
+    use model_state, only: ModelState_allocate, ModelState_deallocate, ModelState_t, ModelState_Ptr_t
+    use types, only : p
+
+    implicit none
+
+contains
+
+    !> Initialize the ModelState and return the container with the object.
+    subroutine initialize(this)
+        integer(8), intent(out) :: this !! Container for the ModelState_Ptr_t object.
+
+        type(ModelState_Ptr_t) :: this_ptr
+        allocate (this_ptr%p)
+        call ModelState_allocate(this_ptr%p)
+        this = transfer(this_ptr, this)
+    end subroutine
+
+    !> Deallocate the ModelState
+    subroutine close(this)
+        
+        integer(8), intent(in) :: this
+
+        type(ModelState_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        call ModelState_deallocate(this_ptr%p)
+    end subroutine
+
+    subroutine run(this)
+        use speedy, only: run_speedy
+        
+        integer(8), intent(in) :: this
+
+        type(ModelState_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        call run_speedy(this_ptr%p)
+    end subroutine
+
+    {% for var in model_state %}
+
+    subroutine get_{{var.name}}({{ var.name }}_out, this)
+        use params
+        integer(8), intent(in) :: this
+        !> {{ var.desc }}
+{#        {{ var.dimension_args_declaration }}#}
+        {{ var.dtype }}(8), intent(out) :: {{ var.name }}_out{{ var.dims }}
+        type(ModelState_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        {{ var.name }}_out=this_ptr%p%{{ var.name }}
+    end subroutine
+    {% endfor %}
+end module
+
