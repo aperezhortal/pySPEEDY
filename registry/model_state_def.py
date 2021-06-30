@@ -1,5 +1,9 @@
 from collections import namedtuple
 from jinja2 import FileSystemLoader, Environment
+from pathlib import Path
+
+THIS_FILE_DIR = Path(__file__).parent
+SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
 
 _VarDef = namedtuple("VariableDefinition", ["name", "dtype", "dims", "desc"])
 
@@ -7,8 +11,7 @@ _VarDef = namedtuple("VariableDefinition", ["name", "dtype", "dims", "desc"])
 class VarDef(_VarDef):
     @property
     def dimension(self):
-        ndims = len(self.dims.split(","))
-        dimension = ", ".join(":" * ndims)
+        dimension = ", ".join(":" * self.ndim)
         return f"dimension({dimension})"
 
     @property
@@ -19,6 +22,9 @@ class VarDef(_VarDef):
     def dimension_args_declaration(self):
         return f"integer, intent(in) :: {self.dimension_args}"
 
+    @property
+    def ndim(self):
+        return len(self.dims.split(","))
 
 model_state = [
     ########################################
@@ -77,6 +83,7 @@ model_state = [
     ###########################
     VarDef("fmask_orig", "real", "(ix, il)", "Original (fractional) land-sea mask"),
     VarDef("phi0", "real", "(ix, il)", "Unfiltered surface geopotential"),
+    VarDef("orog", "real", "(ix, il)", "Orography [m]"),    
     VarDef("phis0", "real", "(ix, il)", "Spectrally-filtered surface geopotential"),
     VarDef("alb0", "real", "(ix, il)", "Bare-land annual-mean albedo"),
     ###########################
@@ -101,10 +108,10 @@ model_state = [
     #     VarDef("cosgr2", "real", "(il)", "1/coa^2"),
 ]
 
-file_loader = FileSystemLoader("templates")
+file_loader = FileSystemLoader(THIS_FILE_DIR/"templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
 template = env.get_template("model_state.f90.j2")
-output = template.stream(model_state=model_state).dump("../source/model_state.f90")
+output = template.stream(model_state=model_state).dump(str(SOURCES_DIR/"model_state.f90"))
 
 template = env.get_template("pyspeedy.f90.j2")
-output = template.stream(model_state=model_state).dump("../source/pyspeedy.f90")
+output = template.stream(model_state=model_state).dump(str(SOURCES_DIR/"pyspeedy.f90"))

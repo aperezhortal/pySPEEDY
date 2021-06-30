@@ -55,16 +55,37 @@ contains
 
     {% for var in model_state %}
 
-    subroutine get_{{var.name}}({{ var.name }}_out, this)
+    subroutine get_{{var.name}}(this, {{ var.name }}_out)
         use params
         integer(8), intent(in) :: this
         !> {{ var.desc }}
-{#        {{ var.dimension_args_declaration }}#}
         {{ var.dtype }}(8), intent(out) :: {{ var.name }}_out{{ var.dims }}
         type(ModelState_Ptr_t):: this_ptr
 
         this_ptr = transfer(this, this_ptr)
         {{ var.name }}_out=this_ptr%p%{{ var.name }}
+    end subroutine
+
+    subroutine set_{{var.name}}(this, {{ var.name }}_in)
+        use params
+        integer(8), intent(in) :: this
+        !> {{ var.desc }}
+        {{ var.dtype }}(8), intent(in) :: {{ var.name }}_in{{ var.dims }}
+        type(ModelState_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        this_ptr%p%{{ var.name }}={{ var.name }}_in
+    end subroutine
+
+    subroutine get_{{var.name}}_shape(this, array_shape)
+        use params
+        integer(8), intent(in) :: this
+        !> {{ var.desc }}
+        integer, intent(out) :: array_shape({{ var.ndim }})
+        type(ModelState_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        array_shape=shape(this_ptr%p%{{ var.name }})
     end subroutine
     {% endfor %}
 end module

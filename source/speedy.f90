@@ -25,7 +25,6 @@ module speedy
 
     ! model_config
 
-    !     ! boundaries
     !     ! geometry
     !     ! geopotential constants
     !     ! horizontal_diffusion

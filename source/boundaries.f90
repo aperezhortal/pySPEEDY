@@ -1,10 +1,11 @@
 !> author: Sam Hatfield, Fred Kucharski, Franco Molteni
 !  date: 29/04/2019
-!  For reading and storing boundary conditions.
 !
-!  This module handles the reading and storing of the land-sea mask, the
-!  surface geopotential (i.e. the orography), the filtered surface geopotential
-!  (i.e. the smoothed orography) and the bare-land annual-mean albedo.
+!  contributor: Andres Perez Hortal
+!     
+!  This module initialize the land-sea mask, the surface geopotential 
+!  (i.e. the orography), the filtered surface geopotential (i.e. the smoothed orography)
+!   and the bare-land annual-mean albedo.
 module boundaries
     use types, only: p
     use params
@@ -22,20 +23,18 @@ contains
         use physical_constants, only: grav
         use input_output, only: load_boundary_file
         use model_state, only: ModelState_t
-
         type(ModelState_t), intent(inout) :: state
 
-        ! Read surface geopotential (i.e. orography)
-        state%phi0 = grav*load_boundary_file("surface.nc", "orog")
+        state%phi0 = grav*state%orog
+        
+        ! IMPORTANT: The following variables show be initilized in the model state
+        ! before calling this function. 
+        ! - Annual-mean surface albedo (state%alb0)
+        ! - Land-sea mask (state%fmask_orig)
+        ! - Annual-mean surface albedo (state%alb0)
 
-        ! Also store spectrally truncated surface geopotential
-        call spectral_truncation(state%phi0, state%phis0)
-
-        ! Read land-sea mask
-        state%fmask_orig = load_boundary_file("surface.nc", "lsm")
-
-        ! Annual-mean surface albedo
-        state%alb0 = load_boundary_file("surface.nc", "alb")
+        ! Initialize the spectrally truncated surface geopotential
+        call spectral_truncation(state%phi0, state%phis0)        
     end subroutine
 
     !> Check consistency of surface fields with land-sea mask and set undefined

@@ -12,7 +12,7 @@ F2CMAP = os.path.join(os.path.realpath(SPEEDY_SOURCE_DIR), "f2py_f2cmap")
 
 pyspeedy_extension = Extension(
     name="pyspeedy._speedy",
-    sources=["source/pyspeedy.f90"],
+    sources=["source/types.f90", "source/params.f90", "source/pyspeedy.f90"],
     extra_compile_args=[
         "-O2",
         "-ffast-math",
