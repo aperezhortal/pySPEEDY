@@ -23,13 +23,39 @@ class Speedy:
         self["orog"] = ds["orog"].values.swapaxes(0, 1)[:, ::-1]
         self["fmask_orig"] = ds["lsm"].values.swapaxes(0, 1)[:, ::-1]
         self["alb0"] = ds["alb"].values.swapaxes(0, 1)[:, ::-1]
-        
 
-        # ds = xr.load_dataset("land.nc")
-        # self["stl12"] = ds["stl"].values.swapaxes(0, 1)[:, :, ::-1]
+        self["veg_high"] = ds["vegh"].transpose("lon", "lat").values[:, ::-1]
+        self["veg_low"] = ds["vegl"].transpose("lon", "lat").values[:, ::-1]
 
-        # float stl(time, lat, lon)        
+        ds = xr.load_dataset("land.nc")
+        self["stl12"] = ds["stl"].transpose("lon", "lat", "time").values[:, ::-1, :]
 
+        ds = xr.load_dataset("snow.nc")
+        self["snowd12"] = ds["snowd"].transpose("lon", "lat", "time").values[:, ::-1, :]
+
+        ds = xr.load_dataset("soil.nc")
+        self["soil_wc_l1"] = (
+            ds["swl1"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        )
+        self["soil_wc_l2"] = (
+            ds["swl2"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        )
+        self["soil_wc_l3"] = (
+            ds["swl3"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        )
+
+        ds = xr.load_dataset("sea_surface_temperature.nc")
+        self["sst12"] = ds["sst"].transpose("lon", "lat", "time").values[:, ::-1, :]
+
+        ds = xr.load_dataset("sea_ice.nc")
+        self["sea_ice_frac12"] = (
+            ds["icec"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        )
+
+        ds = xr.load_dataset("sea_surface_temperature_anomaly.nc")
+
+    def load_anomalies(self):
+        pass
 
     def run(self):
         """
@@ -40,7 +66,7 @@ class Speedy:
     def __getitem__(self, var_name):
         """
         Itemgetter
-        
+
         """
         _getter = getattr(pyspeedy, f"get_{var_name}", None)
         if _getter is None:
@@ -50,8 +76,10 @@ class Speedy:
     def get_shape(self, var_name):
         _getter = getattr(pyspeedy, f"get_{var_name}_shape", None)
         if _getter is None:
-            raise AttributeError(f"The 'get-shape' method for the state variable '"
-                                 f"{var_name}' does not exist.")
+            raise AttributeError(
+                f"The 'get-shape' method for the state variable '"
+                f"{var_name}' does not exist."
+            )
         return tuple(_getter(self._state))
 
     def __setitem__(self, var_name, value):
@@ -60,7 +88,6 @@ class Speedy:
             raise AttributeError(
                 f"The setter for the state variable '{var_name}' does not exist."
             )
-
         if self.get_shape(var_name) != value.shape:
             raise ValueError("Array shape missmatch")
         value = np.asfortranarray(value)

@@ -13,7 +13,7 @@ module boundaries
     implicit none
 
     private
-    public initialize_boundaries, fillsf, check_surface_fields
+    public initialize_boundaries, fill_missing_values, check_surface_fields
    
 
 contains
@@ -88,7 +88,7 @@ contains
 
     !> Replace missing values in surface fields.
     !  @note It is assumed that non-missing values exist near the Equator.
-    subroutine fillsf(sf, fmis)
+    subroutine fill_missing_values(sf, fmis)
         real(p), intent(inout) :: sf(ix,il) !! Field to replace missing values in
         real(p), intent(in)    :: fmis      !! Replacement for missing values
 

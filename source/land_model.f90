@@ -14,29 +14,26 @@ module land_model
     public land_coupling_flag
     public sd2sc
 
-    real(p) :: rhcapl(ix, il) !! 1/heat capacity (land)
-    real(p) :: cdland(ix, il) !! 1/dissipation time (land)
+    !TODO: Make these variables allocatable.
+    real(p), save :: rhcapl(ix, il) !! 1/heat capacity (land)
+    real(p), save :: cdland(ix, il) !! 1/dissipation time (land)
 
     ! Daily observed climatological fields over land
-    real(p) :: stlcl_ob(ix, il)   !! Climatological land surface temperature
-    real(p) :: snowdcl_ob(ix, il) !! Climatological snow depth (water equivalent)
-    real(p) :: soilwcl_ob(ix, il) !! Climatological soil water availability
+    real(p), save :: stlcl_ob(ix, il)   !! Climatological land surface temperature
+    real(p), save :: snowdcl_ob(ix, il) !! Climatological snow depth (water equivalent)
+    real(p), save :: soilwcl_ob(ix, il) !! Climatological soil water availability
 
     ! Land surface fields used by atmospheric model
-    real(p) :: stl_am(ix, il)   !! Land surface temperature
-    real(p) :: snowd_am(ix, il) !! Snow depth (water equivalent)
-    real(p) :: soilw_am(ix, il) !! Soil water availability
+    real(p), save :: stl_am(ix, il)   !! Land surface temperature
+    real(p), save :: snowd_am(ix, il) !! Snow depth (water equivalent)
+    real(p), save :: soilw_am(ix, il) !! Soil water availability
 
     ! Land surface fields from land model
-    real(p) :: stl_lm(ix, il) !! Land-model surface temperature
+    real(p), save :: stl_lm(ix, il) !! Land-model surface temperature
 
     ! Land masks
-    real(p) :: fmask_l(ix, il) !! Fraction of land
-    real(p) :: bmask_l(ix, il) !! Binary land mask
-
-    real(p) :: stl12(ix, il, 12)   !! Land surface temperature monthly-mean climatology
-    real(p) :: snowd12(ix, il, 12) !! Snow depth (water equivalent) monthly-mean climatology
-    real(p) :: soilw12(ix, il, 12) !! Soil water availability monthly-mean climatology
+    real(p), save :: fmask_l(ix, il) !! Fraction of land
+    real(p), save :: bmask_l(ix, il) !! Binary land mask
 
     integer :: land_coupling_flag = 1 !! Flag for land-coupling (0: off, 1: on)
 
@@ -45,8 +42,7 @@ module land_model
 contains
     !> Initializes land model.
     subroutine land_model_init(state)
-        use input_output, only: load_boundary_file
-        use boundaries, only: check_surface_fields, fillsf
+        use boundaries, only: check_surface_fields, fill_missing_values
         use model_state, only: ModelState_t
 
         type(ModelState_t), intent(inout) :: state
@@ -68,8 +64,10 @@ contains
         real(p) :: thrsh = 0.1
 
         real(p) :: rsw, sdep1, sdep2, swroot, swwil2
-        real(p), dimension(ix, il) :: veg_low, veg_high, veg, swl1, swl2
+        real(p), allocatable, dimension(:, :) :: veg
         integer :: idep2
+
+        allocate (veg(ix, il))
 
         ! =========================================================================
         ! Initialize land-surface boundary conditions
@@ -91,27 +89,18 @@ contains
 
         ! Land-surface temperature
         do month = 1, 12
-            stl12(:, :, month) = load_boundary_file("land.nc", "stl", month)
-
-            call fillsf(stl12(:, :, month), 0.0_p)
+            call fill_missing_values(state%stl12(:, :, month), 0.0_p)
         end do
 
-        call check_surface_fields(bmask_l, 12, 0.0_p, 400.0_p, 273.0_p, stl12)
+        call check_surface_fields(bmask_l, 12, 0.0_p, 400.0_p, 273.0_p, state%stl12)
 
-        ! Snow depth
-        do month = 1, 12
-            snowd12(:, :, month) = load_boundary_file("snow.nc", "snowd", month)
-        end do
-
-        call check_surface_fields(bmask_l, 12, 0.0_p, 20000.0_p, 0.0_p, snowd12)
+        call check_surface_fields(bmask_l, 12, 0.0_p, 20000.0_p, 0.0_p, state%snowd12)
 
         ! Read soil moisture and compute soil water availability using vegetation fraction
         ! Read vegetation fraction
-        veg_high = load_boundary_file("surface.nc", "vegh")
-        veg_low = load_boundary_file("surface.nc", "vegl")
 
         ! Combine high and low vegetation fractions
-        veg = max(0.0, veg_high + 0.8*veg_low)
+        veg = max(0.0, state%veg_high + 0.8*state%veg_low)
 
         ! Read soil moisture
         sdep1 = 70.0
@@ -123,19 +112,18 @@ contains
 
         do month = 1, 12
             ! Combine soil water content from two top layers
-            swl1 = load_boundary_file("soil.nc", "swl1", month)
-            swl2 = load_boundary_file("soil.nc", "swl2", month)
-
             do j = 1, il
                 do i = 1, ix
-                    swroot = idep2*swl2(i, j)
-                    soilw12(i, j, month) = min(1.0, rsw*(swl1(i, j) + veg(i, j) &
-                                                        & *max(0.0, swroot - swwil2)))
+                    swroot = idep2*state%soil_wc_l2(i, j, month)
+                    state%soilw12(i, j, month) = min( &
+                        & 1.0, rsw*(state%soil_wc_l1(i, j,month) &
+                        + veg(i, j)*max(0.0, swroot - swwil2)) &
+                    )
                 end do
             end do
         end do
 
-        call check_surface_fields(bmask_l, 12, 0.0_p, 10.0_p, 0.0_p, soilw12)
+        call check_surface_fields(bmask_l, 12, 0.0_p, 10.0_p, 0.0_p, state%soilw12)
 
         ! =========================================================================
         ! Set heat capacities and dissipation times for soil and ice-sheet layers
@@ -181,14 +169,16 @@ contains
         end do
 
         cdland(:, :) = dmask(:, :)*tdland/(1.+dmask(:, :)*tdland)
+
+        deallocate (veg)
     end subroutine
 
     !> Exchanges fluxes between land and atmosphere.
-    subroutine couple_land_atm(model_vars, day, imont1, tmonth)
+    subroutine couple_land_atm(state, day, imont1, tmonth)
         use interpolation, only: forin5, forint
         use model_state, only: ModelState_t
 
-        type(ModelState_t) :: model_vars
+        type(ModelState_t) :: state
 
         integer, intent(in) :: day    !! The day (starting at 0 for the first time step)
         real(p), intent(in) :: tmonth !! The fraction of the current month elapsed
@@ -197,13 +187,13 @@ contains
         ! Interpolate climatological fields to actual date
 
         ! Climatological land surface temperature
-        call forin5(imont1, stl12, stlcl_ob, tmonth)
+        call forin5(imont1, state%stl12, stlcl_ob, tmonth)
 
         ! Climatological snow depth
-        call forint(imont1, snowd12, snowdcl_ob, tmonth)
+        call forint(imont1, state%snowd12, snowdcl_ob, tmonth)
 
         ! Climatological soil water availability
-        call forint(imont1, soilw12, soilwcl_ob, tmonth)
+        call forint(imont1, state%soilw12, soilwcl_ob, tmonth)
 
         ! If it's the first day then initialise the land surface
         ! temperature from climatology
@@ -213,7 +203,7 @@ contains
         else
             ! Run the land model if the land model flags is switched on
             if (land_coupling_flag == 1) then
-                call run_land_model(model_vars)
+                call run_land_model(state)
 
                 stl_am = stl_lm
                 ! Otherwise get the land surface from climatology
@@ -228,10 +218,10 @@ contains
     end subroutine
 
     !> Integrates slab land-surface model for one day.
-    subroutine run_land_model(model_vars)
+    subroutine run_land_model(state)
         use model_state, only: ModelState_t
 
-        type(ModelState_t), intent(in) :: model_vars
+        type(ModelState_t), intent(inout) :: state
 
         ! Surface temperature anomaly
         real(p) :: tanom(ix, il)
@@ -241,7 +231,7 @@ contains
         tanom = stl_lm - stlcl_ob
 
         ! Time evolution of temperature anomaly
-        tanom = cdland*(tanom + rhcapl*model_vars%hfluxn(:, :, 1))
+        tanom = cdland*(tanom + rhcapl*state%hfluxn(:, :, 1))
 
         ! Full surface temperature at final time
         stl_lm = tanom + stlcl_ob

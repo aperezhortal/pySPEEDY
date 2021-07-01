@@ -6,9 +6,11 @@ from distutils.errors import DistutilsSetupError
 import numpy
 from numpy.distutils.command.build_ext import build_ext
 from numpy.distutils.core import Extension
+from pathlib import Path
 
-SPEEDY_SOURCE_DIR = os.path.join(os.path.dirname(__file__), "source")
-F2CMAP = os.path.join(os.path.realpath(SPEEDY_SOURCE_DIR), "f2py_f2cmap")
+PROJECT_ROOT_DIR = Path(__file__).parent
+SPEEDY_SOURCE_DIR = PROJECT_ROOT_DIR / "source"
+F2CMAP = SPEEDY_SOURCE_DIR.resolve() / "f2py_f2cmap"
 
 pyspeedy_extension = Extension(
     name="pyspeedy._speedy",
@@ -39,7 +41,7 @@ class specialized_build_ext(build_ext):
             # Handle unspecial extensions with the parent class' method
             super(specialized_build_ext, self).build_extension(ext)
         else:
-            make_process = subprocess.Popen("make", cwd=SPEEDY_SOURCE_DIR)
+            make_process = subprocess.Popen("make", cwd=PROJECT_ROOT_DIR)
             stdout, stderr = make_process.communicate()
             print(stdout)
             print(stderr)

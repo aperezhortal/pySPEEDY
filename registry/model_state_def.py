@@ -26,6 +26,7 @@ class VarDef(_VarDef):
     def ndim(self):
         return len(self.dims.split(","))
 
+
 model_state = [
     ########################################
     # Prognostic variables (spectral domain)
@@ -83,21 +84,55 @@ model_state = [
     ###########################
     VarDef("fmask_orig", "real", "(ix, il)", "Original (fractional) land-sea mask"),
     VarDef("phi0", "real", "(ix, il)", "Unfiltered surface geopotential"),
-    VarDef("orog", "real", "(ix, il)", "Orography [m]"),    
+    VarDef("orog", "real", "(ix, il)", "Orography [m]"),
     VarDef("phis0", "real", "(ix, il)", "Spectrally-filtered surface geopotential"),
     VarDef("alb0", "real", "(ix, il)", "Bare-land annual-mean albedo"),
-    
     ###############################
     # Geopotential module variables
     ###############################
-    VarDef("xgeop1", "real", "(kx)", "Constant 1 for hydrostatic equation"),    
-    VarDef("xgeop2", "real", "(kx)", "Constant 2 for hydrostatic equation"),    
+    VarDef("xgeop1", "real", "(kx)", "Constant 1 for hydrostatic equation"),
+    VarDef("xgeop2", "real", "(kx)", "Constant 2 for hydrostatic equation"),
+    ##########################
+    # Bounday module variables
+    ##########################
+    VarDef(
+        "stl12",
+        "real",
+        "(ix, il, 12)",
+        "Land surface temperature monthly-mean climatology",
+    ),
+    VarDef(
+        "snowd12",
+        "real",
+        "(ix, il, 12)",
+        "Snow depth (water equivalent) monthly-mean climatology",
+    ),
+    VarDef(
+        "soilw12",
+        "real",
+        "(ix, il, 12)",
+        "Soil water availability monthly-mean climatology",
+    ),
+    VarDef("veg_low", "real", "(ix, il)", "Low vegetation fraction"),
+    VarDef("veg_high", "real", "(ix, il)", "High vegetation fraction"),
+    VarDef("soil_wc_l1", "real", "(ix, il, 12)", "Soil water content: Layer 1"),
+    VarDef("soil_wc_l2", "real", "(ix, il, 12)", "Soil water content: Layer 2"),
+    VarDef("soil_wc_l3", "real", "(ix, il, 12)", "Soil water content: Layer 3"),
+    ##########################
+    # Bounday module variables
+    ##########################
+    VarDef("sst12", "real", "(ix, il, 12)", "Sea/ice surface temperature [K]"),
+    VarDef("sea_ice_frac12", "real", "(ix, il, 12)", "Sea ice fraction"),
 ]
 
-file_loader = FileSystemLoader(THIS_FILE_DIR/"templates")
+file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
 template = env.get_template("model_state.f90.j2")
-output = template.stream(model_state=model_state).dump(str(SOURCES_DIR/"model_state.f90"))
+output = template.stream(model_state=model_state).dump(
+    str(SOURCES_DIR / "model_state.f90")
+)
 
 template = env.get_template("pyspeedy.f90.j2")
-output = template.stream(model_state=model_state).dump(str(SOURCES_DIR/"pyspeedy.f90"))
+output = template.stream(model_state=model_state).dump(
+    str(SOURCES_DIR / "pyspeedy.f90")
+)
