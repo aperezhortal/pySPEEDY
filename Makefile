@@ -2,6 +2,7 @@
 
 .PHONY:clean
 all: 
+	python registry/model_state_def.py
 	$(MAKE) -C source
 
 .PHONY:clean
