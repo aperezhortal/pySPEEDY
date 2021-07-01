@@ -24,7 +24,8 @@ contains
         integer :: k
 
         if (geopotential_mod_initialized_flag) then
-            return
+            !Do nothing, the module is already initialized.
+            return            
         end if
 
         ! Coefficients to compute geopotential
@@ -32,7 +33,9 @@ contains
             xgeop1(k) = rgas*log(hsg(k + 1)/fsg(k))
             if (k /= kx) xgeop2(k + 1) = rgas*log(fsg(k + 1)/hsg(k + 1))
         end do
+
         geopotential_mod_initialized_flag = .true.
+
     end subroutine
 
     !> Computes spectral geopotential from spectral temperature T and spectral

@@ -5,45 +5,15 @@ module physics
     implicit none
 
     private
-    public initialize_physics, get_physical_tendencies
+    public get_physical_tendencies
 
 contains
-    ! Initialize physical parametrization routines
-    subroutine initialize_physics()
-        use physical_constants, only: grav, cp, p0, sigl, sigh, grdsig, grdscp, wvi
-        use geometry, only: hsg, fsg, dhs
-        use model_state, only: ModelState_t
-
-        integer :: k
-
-        ! 1.2 Functions of sigma and latitude
-        sigh(0) = hsg(1)
-
-        do k = 1, kx
-            sigl(k) = log(fsg(k))
-            sigh(k) = hsg(k + 1)
-            grdsig(k) = grav/(dhs(k)*p0)
-            grdscp(k) = grdsig(k)/cp
-        end do
-
-        ! Weights for vertical interpolation at half-levels(1,kx) and surface
-        ! Note that for phys.par. half-lev(k) is between full-lev k and k+1
-        ! Fhalf(k) = Ffull(k)+WVI(K,2)*(Ffull(k+1)-Ffull(k))
-        ! Fsurf = Ffull(kx)+WVI(kx,2)*(Ffull(kx)-Ffull(kx-1))
-        do k = 1, kx - 1
-            wvi(k, 1) = 1./(sigl(k + 1) - sigl(k))
-            wvi(k, 2) = (log(sigh(k)) - sigl(k))*wvi(k, 1)
-        end do
-
-        wvi(kx, 1) = 0.
-        wvi(kx, 2) = (log(0.99) - sigl(kx))*wvi(kx - 1, 1)
-    end
 
     !> Compute physical parametrization tendencies for u, v, t, q and add them
     !  to the dynamical grid-point tendencies
     subroutine get_physical_tendencies(state, j1, utend, vtend, ttend, qtend)
-        use physical_constants, only: sigh, grdsig, grdscp, cp
-        use geometry, only: fsg
+        use physical_constants, only: cp
+        use geometry, only: fsg, sigh, grdsig, grdscp
         use land_model, only: fmask_l
         use sea_model, only: sst_am, ssti_om, sea_coupling_flag
         use sppt, only: mu, gen_sppt
@@ -69,11 +39,14 @@ contains
         !TODO: Make these variables allocatables
         complex(p), dimension(mx, nx) :: ucos, vcos
         real(p), dimension(ix, il) :: pslg, rps, gse
-        real(p), dimension(ix, il, kx) :: ug, vg, tg, qg, phig, utend_dyn, vtend_dyn, ttend_dyn, qtend_dyn
-        real(p), dimension(ix, il, kx) :: se, rh, qsat
-        real(p), dimension(ix, il) :: psg, ts, tskin, u0, v0, t0, cloudc, clstr, cltop, prtop
-        real(p), dimension(ix, il, kx) :: tt_cnv, qt_cnv, tt_lsc, qt_lsc, tt_rsw, tt_rlw, ut_pbl, vt_pbl,&
-            & tt_pbl, qt_pbl
+        real(p), dimension(ix, il, kx) :: ug, vg, tg, qg, phig
+        real(p), dimension(ix, il, kx) :: utend_dyn, vtend_dyn, ttend_dyn, qtend_dyn, &
+                                          se, rh, qsat
+        real(p), dimension(ix, il) :: psg, ts, tskin, u0, v0, t0, &
+                                      cloudc, clstr, cltop, prtop
+        real(p), dimension(ix, il, kx) :: tt_cnv, qt_cnv, tt_lsc, qt_lsc, &
+                                          tt_rsw, tt_rlw, ut_pbl, vt_pbl, &
+                                          tt_pbl, qt_pbl
         integer :: iptop(ix, il), icltop(ix, il, 2), icnv(ix, il), i, j, k
         real(p) :: sppt_pattern(ix, il, kx)
 
@@ -86,14 +59,6 @@ contains
         ! =========================================================================
         ! Compute grid-point fields
         ! =========================================================================
-
-        ! call get_physical_tendencies(prognostic_vars%vor(:, :, :, j1), &
-        ! prognostic_vars%div(:, :, :, j1), prognostic_vars%t(:, :, :, j1), &
-        ! prognostic_vars%tr(:, :, :, j1, 1), &
-        ! prognostic_vars%phi, &
-        ! prognostic_vars%ps(:, :, j1), &
-        ! utend, vtend, ttend, trtend)
-
         ! Convert model spectral variables to grid-point variables
         do k = 1, kx
             call uvspec(state%vor(:, :, k, j1), state%div(:, :, k, j1), ucos, vcos)

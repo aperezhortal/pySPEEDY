@@ -14,7 +14,8 @@ module longwave_radiation
 contains
     !> Compute the downward flux of long-wave radiation
     subroutine get_downward_longwave_rad_fluxes(ta, fsfcd, dfabs)
-        use physical_constants, only: sbc, wvi
+        use physical_constants, only: sbc
+        use geometry, only : wvi
         use mod_radcon, only: epslw, emisfc, fband, tau2, st4a, flux
 
         real(p), intent(in)  :: ta(ix,il,kx)    !! Absolute temperature [K]

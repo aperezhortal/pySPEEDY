@@ -120,6 +120,7 @@ contains
 
         if ( allocated(tcorh)) deallocate (tcorh)
         if ( allocated(qcorh)) deallocate (qcorh)
+        horizontal_diffusion_mod_initialized_flag = .false.
     end subroutine
 
     !> Adds horizontal diffusion tendency of field to spectral tendency fdt

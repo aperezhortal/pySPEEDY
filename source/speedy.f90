@@ -48,7 +48,7 @@ contains
         use shortwave_radiation, only: compute_shortwave
         use input_output, only: output
         use coupler, only: couple_sea_land
-        use initialization, only: initialize
+        use initialization, only: initialize_state
         use time_stepping, only: step
         use diagnostics, only: check_diagnostics
         use forcing, only: set_forcing
@@ -68,18 +68,18 @@ contains
 
         ! Time step counter
         integer :: model_step = 1
-
+        integer :: iii=0
         !===============================================================================
         ! user_params%nstdia=nstdia
         ! user_params%nsteps_out=nsteps_out
 
         ! Initialization
         ! call ModelState_allocate(state)
-        call initialize(state, user_params, control_params)
-
+        call initialize_state(state, user_params, control_params)
+        
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
-
+            iii = iii + 1    
             ! Daily tasks
             if (mod(model_step - 1, nsteps) == 0) then
                 ! Set forcing terms according to date
@@ -127,7 +127,7 @@ contains
             & control_params%end_datetime%hour, ':', control_params%end_datetime%minute
 
         end do
-
+        write(*,*) "-----", iii
         ! call ModelState_deallocate(state)
     end subroutine
 

@@ -5,27 +5,63 @@ module initialization
     implicit none
 
     private
-    public initialize
+    public initialize_state, initialize_modules, deinitialize_modules
+
+    logical, save :: modules_initialized_flag = .false.
 
 contains
-    !> Initializes everything.
-    subroutine initialize(state, user_params, control_params)
-        use params, only: issty0, initialize_params, UserParams_t
-        use date, only: initialize_date, ControlParams_t
-        use coupler, only: initialize_coupler
-        use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
+
+    ! Intialize global variables in the modules. This is done only once.
+    subroutine initialize_modules()
         use geometry, only: initialize_geometry
         use spectral, only: initialize_spectral
         use geopotential, only: initialize_geopotential
         use horizontal_diffusion, only: initialize_horizontal_diffusion
-        use physics, only: initialize_physics
+
+        if (modules_initialized_flag) then
+            !Do nothing, the module is already initialized.
+            return
+        end if 
+        
+        ! Initialize model geometry
+        call initialize_geometry
+
+        ! Initialize spectral transforms
+        call initialize_spectral
+
+        ! Initialize geopotential calculations
+        call initialize_geopotential
+
+        ! Initialize horizontal diffusion
+        call initialize_horizontal_diffusion
+
+        modules_initialized_flag = .true.
+    end subroutine
+
+    ! Deinitialize the allocatable global variables in the different modules.
+    subroutine deinitialize_modules()
+        use spectral, only: deinitialize_spectral
+        use horizontal_diffusion, only: deinitialize_horizontal_diffusion
+
+        call deinitialize_spectral
+        call deinitialize_horizontal_diffusion
+
+        modules_initialized_flag = .false.
+    end subroutine
+
+    !> Initializes everything.
+    subroutine initialize_state(state, user_params, control_params)
+        use params, only: issty0, initialize_params, UserParams_t
+        use date, only: initialize_date, ControlParams_t
+        use coupler, only: initialize_coupler
+        use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
         use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
         use model_state, only: ModelState_t
         use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
-        
+
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
@@ -34,6 +70,9 @@ contains
         type(ControlParams_t), intent(out)  :: control_params
 
         call print_speedy_title
+        
+        ! Intialize modules if they were not initialized.
+        call initialize_modules()
 
         ! Initialize model parameters
         call initialize_params(user_params)
@@ -51,21 +90,6 @@ contains
         ! =========================================================================
         ! Initialization of atmospheric model constants and variables
         ! =========================================================================
-
-        ! Initialize model geometry
-        call initialize_geometry
-
-        ! Initialize spectral transforms
-        call initialize_spectral
-
-        ! Initialize geopotential calculations
-        call initialize_geopotential
-
-        ! Initialize horizontal diffusion
-        call initialize_horizontal_diffusion
-
-        ! Initialize constants for physical parametrization
-        call initialize_physics()
 
         ! Initialize boundary conditions (land-sea mask, sea ice etc.)
         call initialize_boundaries(state)

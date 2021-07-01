@@ -29,8 +29,8 @@ contains
     !  and shallow convection
     subroutine get_vertical_diffusion_tend(se, rh, qa, qsat, phi, icnv, utenvd, vtenvd, &
         & ttenvd, qtenvd)
-        use physical_constants, only: cp, alhc, sigh
-        use geometry, only: fsg, dhs
+        use physical_constants, only: cp, alhc
+        use geometry, only: fsg, dhs, sigh
 
         real(p), intent(in)    :: se(ix,il,kx)     !! Dry static energy
         real(p), intent(in)    :: rh(ix,il,kx)     !! Relative humidity

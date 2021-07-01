@@ -9,8 +9,7 @@ module physical_constants
 
     private
     public rearth, omega, grav
-    public p0, cp, akap, rgas, alhc, alhs, sbc
-    public sigl, sigh, grdsig, grdscp, wvi
+    public p0, cp, akap, rgas, alhc, alhs, sbc    
 
     ! Physical constants for dynamics
     real(p), parameter :: rearth = 6.371e+6    !! Radius of Earth (m)
@@ -28,11 +27,4 @@ module physical_constants
     real(p), parameter :: alhs = 2801.0  !! Latent heat of sublimation
     real(p), parameter :: sbc  = 5.67e-8 !! Stefan-Boltzmann constant
 
-    !   Functions of sigma and latitude (initial. in INPHYS)
-    real(p), dimension(kx)   :: sigl   !! Logarithm of full-level sigma
-    real(p), dimension(0:kx) :: sigh   !! Half-level sigma
-    real(p), dimension(kx)   :: grdsig !! g/(d_sigma p0) : to convert fluxes of u,v,q into
-                                       !! d(u,v,q)/dt
-    real(p), dimension(kx)   :: grdscp !! g/(d_sigma p0 c_p): to convert energy fluxes into dT/dt
-    real(p), dimension(kx,2) :: wvi    !! Weights for vertical interpolation
 end module

@@ -6,7 +6,7 @@ module spectral
 
     private
     public el2
-    public initialize_spectral
+    public initialize_spectral, deinitialize_spectral
     public laplacian, inverse_laplacian, spec_to_grid, grid_to_spec
     public grad, vds, uvspec, vdspec, trunct
 
@@ -30,7 +30,7 @@ contains
         integer :: m, m1, m2, n, wavenum_tot(mx,nx), mm(mx)
 
         if (spectral_mod_initialized_flag) then
-            ! Do nothing, this module was initialized
+            !Do nothing, the module is already initialized.
             return 
         end if 
 
@@ -105,7 +105,9 @@ contains
                 vddyp(m,n)  = el1*epsi(m2,n+1)/rearth
             end do
         end do
+
         spectral_mod_initialized_flag = .true.
+        
     end subroutine
 
     ! Deinitialize global variables
@@ -126,6 +128,8 @@ contains
         if (allocated(vddyp)) deallocate (vddyp)
 
         if (allocated(gradx)) deallocate (gradx)
+
+        spectral_mod_initialized_flag = .false.
     end subroutine
 
     function laplacian(input) result(output)
