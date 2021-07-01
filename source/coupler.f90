@@ -12,7 +12,7 @@ contains
     subroutine initialize_coupler(state, control_params)
         use land_model, only: land_model_init, couple_land_atm
         use sea_model, only: sea_model_init, couple_sea_atm
-        use date, only: ControlParams_t
+        use model_control, only: ControlParams_t
         use model_state, only: ModelState_t
 
         type(ModelState_t) :: state
@@ -37,7 +37,7 @@ contains
     subroutine couple_sea_land(model_vars, day, control_params)
         use land_model, only: couple_land_atm
         use sea_model, only: couple_sea_atm
-        use date, only: ControlParams_t
+        use model_control, only: ControlParams_t
         use model_state, only: ModelState_t
 
         type(ModelState_t) :: model_vars

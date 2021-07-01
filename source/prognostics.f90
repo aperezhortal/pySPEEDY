@@ -4,7 +4,7 @@
 module prognostics
     use types, only: p
     use params, only: mx, nx, kx, ntr, ix, iy, il
-    use date, only: ControlParams_t
+    use model_control, only: ControlParams_t
     use model_state, only: ModelState_t
 
     implicit none
@@ -114,7 +114,7 @@ contains
         call check_diagnostics(state%vor(:, :, :, 1), &
                                state%div(:, :, :, 1), &
                                state%t(:, :, :, 1), &
-                               0, control_params%nstdia)
+                               0, control_params%diag_interval)
 
         ! Write initial data
         call output(0, control_params, state%vor, state%div, state%t, &

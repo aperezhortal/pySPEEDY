@@ -3,27 +3,43 @@ import xarray as xr
 import numpy as np
 from datetime import datetime
 
+_DEFAULT_PARAMS = dict(
+    history_interval=1,
+    diag_interval=180,
+    start_date=datetime(1982, 1, 1),
+    end_date=datetime(1982, 1, 2),
+)
+
+# Make this constant immutable.
+_DEFAULT_PARAMS = tuple(_DEFAULT_PARAMS.items())
+
 
 class Speedy:
     """
     Speedy model.
     """
 
-    def __init__(self):
+    def __init__(self, **control_params):
         """
         Constructor. Initializes the model.
         """
-
         self._start_date = None
         self._end_date = None
 
-        self._state = pyspeedy.modelstate_initialize()
 
-        # User Parameters
-        self.history_interval = 1
-        self.diagnostic_interval = 180
-        self.start_date = datetime(1982, 1, 1)
-        self.end_date = datetime(1982, 1, 2)
+        _control_params = dict(_DEFAULT_PARAMS)
+        _control_params.update(control_params)
+
+        for key, value in _control_params.items():
+            setattr(self, key, value)
+
+        self._state = pyspeedy.modelstate_init()
+        self._control = pyspeedy.controlparams_init(
+            self._start_date,
+            self._end_date,
+            self.history_interval,
+            self.diag_interval,
+        )
 
     @staticmethod
     def _dealloc_date(container):
@@ -65,7 +81,12 @@ class Speedy:
 
     def __del__(self):
         """Clean up."""
-        self._state = pyspeedy.modelstate_close(self._state)
+        pyspeedy.modelstate_close(self._state)
+        pyspeedy.controlparams_close(self._control)
+
+        self._control = None
+        self._state = None
+
         self._start_date = self._dealloc_date(self._start_date)
         self._end_date = self._dealloc_date(self._end_date)
 
@@ -151,20 +172,20 @@ class Speedy:
         """
         Run the model.
         """
-        pyspeedy.run(self._state, self.history_interval, self.diagnostic_interval)
+        pyspeedy.run(self._state, self._control)
 
 
 if __name__ == "__main__":
 
     model = Speedy()
-    model.start_date = datetime(2010, 1, 2, 4, 5)
-    print(model.start_date)
-    model.start_date = datetime(2010, 1, 2, 4, 6)
-    print(model.start_date)
-    print(model["vor"].shape)
-    print(model["phi0"].shape)
+    # model.start_date = datetime(2010, 1, 2, 4, 5)
+    # print(model.start_date)
+    # model.start_date = datetime(2010, 1, 2, 4, 6)
+    # print(model.start_date)
+    # print(model["vor"].shape)
+    # print(model["phi0"].shape)
     model.default_init()
-    print(model.get_shape("phi0"))
+    # print(model.get_shape("phi0"))
     model.run()
 
     # from matplotlib import pyplot as plt

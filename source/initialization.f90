@@ -51,8 +51,7 @@ contains
 
     !> Initializes everything.
     subroutine initialize_state(state, control_params)
-        use params, only: issty0
-        use date, only: initialize_date, ControlParams_t
+        use model_control, only: ControlParams_t
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
         use input_output, only: output
@@ -71,14 +70,7 @@ contains
         call print_speedy_title
         
         ! Intialize modules if they were not initialized.
-        call initialize_modules()
-
-        ! Initialize date
-        call initialize_date(control_params)
-
-        ! Initialize month index for reading SST anomaly file
-        control_params%isst0 = (control_params%start_datetime%year - issty0)*12 &
-                               + control_params%start_datetime%month
+        call initialize_modules()       
 
         ! Check consistency of coupling and prescribed SST anomaly flags
         if (sea_coupling_flag >= 4) sst_anomaly_coupling_flag = 1

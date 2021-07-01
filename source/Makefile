@@ -30,7 +30,7 @@ FILES= \
 	   boundaries.o \
 	   convection.o \
        coupler.o \
-	   date.o \
+	   model_control.o \
 	   diagnostics.o \
 	   dynamical_constants.o \
 	   forcing.o \
@@ -78,14 +78,14 @@ clean:
 	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
 pyspeedy.o             : model_state.o speedy.o
-speedy.o               : params.o date.o prognostics.o input_output.o \
+speedy.o               : params.o model_control.o prognostics.o input_output.o \
 				         shortwave_radiation.o time_stepping.o\
                          diagnostics.o model_state.o 
 model_state.o          : types.o params.o
 boundaries.o           : physical_constants.o params.o input_output.o spectral.o types.o
 convection.o           : params.o physical_constants.o types.o
 coupler.o              : land_model.o sea_model.o
-date.o                 : types.o
+model_control.o        : types.o
 dynamical_constants.o  : types.o
 fourier.o              : params.o geometry.o fftpack.o types.o
 geometry.o             : params.o physical_constants.o types.o
@@ -94,14 +94,14 @@ horizontal_diffusion.o : params.o dynamical_constants.o types.o
 humidity.o             : params.o types.o
 implicit.o             : params.o dynamical_constants.o physical_constants.o geometry.o\
                          horizontal_diffusion.o matrix_inversion.o types.o
-initialization.o       : coupler.o params.o date.o input_output.o time_stepping.o boundaries.o\
+initialization.o       : coupler.o params.o model_control.o input_output.o time_stepping.o boundaries.o\
                          spectral.o sea_model.o physics.o geopotential.o \
 						 prognostics.o forcing.o model_state.o
 forcing.o              : dynamical_constants.o shortwave_radiation.o params.o \
-                         physical_constants.o boundaries.o date.o land_model.o mod_radcon.o\
-						 surface_fluxes.o date.o sea_model.o longwave_radiation.o humidity.o\
+                         physical_constants.o boundaries.o model_control.o land_model.o mod_radcon.o\
+						 surface_fluxes.o model_control.o sea_model.o longwave_radiation.o humidity.o\
 						 horizontal_diffusion.o types.o
-land_model.o           : params.o date.o interpolation.o input_output.o boundaries.o\
+land_model.o           : params.o model_control.o interpolation.o input_output.o boundaries.o\
                          types.o model_state.o
 large_scale_condensation.o : params.o physical_constants.o types.o
 legendre.o             : params.o physical_constants.o geometry.o types.o
@@ -109,8 +109,8 @@ matrix_inversion.o     : types.o
 diagnostics.o          : params.o spectral.o types.o
 prognostics.o          : params.o dynamical_constants.o physical_constants.o geometry.o\
                          boundaries.o diagnostics.o spectral.o input_output.o types.o
-input_output.o         : params.o  physical_constants.o date.o spectral.o geometry.o types.o
-interpolation.o        : params.o date.o types.o
+input_output.o         : params.o  physical_constants.o model_control.o spectral.o geometry.o types.o
+interpolation.o        : params.o model_control.o types.o
 physical_constants.o   : params.o types.o
 mod_radcon.o           : params.o types.o
 params.o               : types.o
@@ -121,7 +121,7 @@ physics.o              : params.o coupler.o physical_constants.o boundaries.o la
 longwave_radiation.o   : params.o physical_constants.o mod_radcon.o geometry.o types.o \
 						 model_state.o
 sea_model.o            : params.o input_output.o boundaries.o geometry.o interpolation.o\
- 						 date.o  mod_radcon.o types.o model_state.o
+ 						 model_control.o  mod_radcon.o types.o model_state.o
 shortwave_radiation.o  : params.o mod_radcon.o geometry.o types.o model_state.o
 surface_fluxes.o       : params.o physical_constants.o mod_radcon.o land_model.o humidity.o types.o
 spectral.o             : params.o physical_constants.o legendre.o fourier.o types.o

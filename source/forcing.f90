@@ -18,7 +18,7 @@ contains
         use horizontal_diffusion, only: tcorh, qcorh
         use physical_constants, only: rgas
         use surface_fluxes, only: set_orog_land_sfc_drag
-        use date, only: Datetime_t
+        use model_control, only: Datetime_t
         use land_model, only: stl_am, snowd_am, fmask_l, sd2sc
         use sea_model, only: fmask_s, sst_am, sice_am
         use mod_radcon, only: ablco2_ref, albsea, albice, snowc, albsn, alb_l, alb_s, albsfc

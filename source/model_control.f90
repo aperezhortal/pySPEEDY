@@ -1,13 +1,20 @@
 !> author: Sam Hatfield, Fred Kucharski, Franco Molteni
 !  date: 01/05/2019
-!  For keeping track of the model's date and time.
-module date
+!
+!  Change history:
+!
+!  author: Andres Perez Hortal
+!  date: 01/07/2021
+!
+!  Model control module
+
+module model_control
     use types, only: p
     implicit none
 
     private
-    public datetime_equal, initialize_date, advance_date
-    public Datetime_t, ControlParams_t, Datetime_Ptr_t
+    public datetime_equal, initialize_control, advance_date
+    public Datetime_t, ControlParams_t, Datetime_Ptr_t, ControlParams_Ptr_t
 
     !> For storing dates and times.
     type Datetime_t
@@ -39,14 +46,19 @@ module date
         integer              :: isst0            !! Initial month of SST anomalies
         integer              :: ndaycal(12, 2)   !! The model calendar
 
-        integer :: nstdia     !! Period (number of steps) for diagnostic print-out
-        integer :: nsteps_out !! Number of time steps between outputs
+        integer :: diag_interval     !! Period (number of steps) for diagnostic print-out
+        integer :: history_interval !! Number of time steps between outputs
+    end type
+
+    ! Container for a ControlParams object. Used for the python interface.
+    type ControlParams_Ptr_t
+        type(ControlParams_t), pointer :: p => NULL()
     end type
 
     integer, parameter :: ncal = 365     !! The number of days in a year
 
     !> The number of days in each month
-    integer :: ncal365(12) = (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/)
+    integer, save :: ncal365(12) = (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/)
 
 contains
     !> Checks whether two datetimes are equal.
@@ -64,53 +76,30 @@ contains
         end if
     end function
 
-    !> Initializes model date and calendar.
-    subroutine initialize_date(control_params)
-        type(ControlParams_t), target  :: control_params
+    !> Initializes control structure with the default parameters.
+    subroutine initialize_control(control_params, &
+                                  start_datetime, end_datetime, &
+                                  history_interval , diag_interval)
+        !TODO: Remove the issty0 parameter
+        use params, only: issty0
+        type(ControlParams_t), intent(inout), target  :: control_params
+        type(Datetime_t), intent(in)  :: start_datetime, end_datetime
+        integer, intent(in) :: diag_interval, history_interval
 
-        type(Datetime_t), pointer  :: model_datetime
-        type(Datetime_t)   :: start_datetime, end_datetime
-        integer, pointer   :: imont1
-        real(p), pointer   :: tmonth
-        real(p), pointer   :: tyear
         integer, pointer   :: ndaycal(:, :)
 
-        namelist /date/ start_datetime, end_datetime
         integer :: jm
-        logical :: namelist_file_exists
-
-        ! Set default values for start and end datetime
-        control_params%start_datetime = Datetime_t(1982, 1, 1, 0, 0)
-        control_params%end_datetime = Datetime_t(1982, 2, 2, 0, 0)
 
         ! Some mappings to improve code redability
         ndaycal => control_params%ndaycal
-        tyear => control_params%tyear
-        tmonth => control_params%tmonth
-        imont1 => control_params%imont1
-        model_datetime => control_params%model_datetime
-
-        ! Read namelist file
-        inquire (file="namelist.nml", exist=namelist_file_exists)
-        if (namelist_file_exists) then
-            open (10, file="namelist.nml")
-            read (10, nml=date)
-            close (10)
-        end if
 
         control_params%start_datetime = start_datetime
         control_params%end_datetime = end_datetime
-
         ! Current model datetime is start datetime
-        model_datetime = start_datetime
+        control_params%model_datetime = control_params%start_datetime
 
-        ! Print values to screen
-        write (*, '(A12,I4,A,I0.2,A,I0.2,A,I0.2,A,I0.2)') 'Start date: ', &
-            & start_datetime%year, '/', start_datetime%month, '/', start_datetime%day, ' ', &
-            & start_datetime%hour, ':', start_datetime%minute
-        write (*, '(A12,I4,A,I0.2,A,I0.2,A,I0.2,A,I0.2)') 'End date: ', &
-            & end_datetime%year, '/', end_datetime%month, '/', end_datetime%day, ' ', &
-            & end_datetime%hour, ':', end_datetime%minute
+        control_params%diag_interval =diag_interval
+        control_params%history_interval = history_interval
 
         ! Set calendar
         if (ncal == 365) then
@@ -124,6 +113,10 @@ contains
             ndaycal(jm, 2) = ndaycal(jm - 1, 1) + ndaycal(jm - 1, 2)
         end do
 
+        ! Initialize month index for reading SST anomaly file
+        control_params%isst0 = (control_params%start_datetime%year - issty0)*12 &
+                               + control_params%start_datetime%month
+
         call update_forcing_params(control_params)
 
     end subroutine
@@ -132,17 +125,8 @@ contains
     subroutine advance_date(control_params)
         use params, only: nsteps
         type(ControlParams_t), target, intent(inout)  :: control_params
-        type(Datetime_t), pointer  :: model_datetime
-        integer, pointer   :: imont1
-        real(p), pointer   :: tmonth
-        real(p), pointer   :: tyear
-        integer, pointer   :: ndaycal(:, :)
 
-        ! Some mappings to improve code redability
-        ndaycal => control_params%ndaycal
-        tyear => control_params%tyear
-        tmonth => control_params%tmonth
-        imont1 => control_params%imont1
+        type(Datetime_t), pointer  :: model_datetime
         model_datetime => control_params%model_datetime
 
         ! Increment minute counter
@@ -168,7 +152,7 @@ contains
                 model_datetime%month = model_datetime%month + 1
             end if
         else
-            if (model_datetime%day > ndaycal(model_datetime%month, 1)) then
+            if (model_datetime%day > control_params%ndaycal(model_datetime%month, 1)) then
                 model_datetime%day = 1
                 model_datetime%month = model_datetime%month + 1
             end if

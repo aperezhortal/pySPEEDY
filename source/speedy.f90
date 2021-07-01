@@ -25,13 +25,13 @@ module speedy
 
 contains
 
-    subroutine run_speedy(state, history_interval, diagnostic_interval)
+    subroutine run_speedy(state, control_params)
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
 
         use types, only: p
         use params, only: nsteps, delt, nsteps, nstrad
-        use date, only: advance_date, datetime_equal, ControlParams_t
+        use model_control, only: advance_date, datetime_equal, ControlParams_t
         use shortwave_radiation, only: compute_shortwave
         use input_output, only: output
         use coupler, only: couple_sea_land
@@ -45,16 +45,11 @@ contains
 
         !> The model state needs to be initilialized before calling this function.
         type(ModelState_t), intent(inout) :: state
-        integer, intent(in) :: history_interval, diagnostic_interval
-        type(ControlParams_t)  :: control_params
+        type(ControlParams_t), intent(inout)  :: control_params
 
         ! Time step counter
         integer :: model_step = 1
         
-        !===============================================================================
-        control_params%nstdia=diagnostic_interval
-        control_params%nsteps_out=history_interval
-
         ! Initialization
         call initialize_state(state, control_params)
 
@@ -77,7 +72,7 @@ contains
             call check_diagnostics(state%vor(:, :, :, 2), &
                                    state%div(:, :, :, 2), &
                                    state%t(:, :, :, 2), &
-                                   model_step, control_params%nstdia)
+                                   model_step, control_params%diag_interval)
 
             ! Increment time step counter
             model_step = model_step + 1
@@ -86,7 +81,7 @@ contains
             call advance_date(control_params)
 
             ! Output
-            if (mod(model_step - 1, control_params%nsteps_out) == 0) then
+            if (mod(model_step - 1, control_params%history_interval) == 0) then
                 call output(model_step - 1, control_params, &
                             state%vor, state%div, &
                             state%t, &

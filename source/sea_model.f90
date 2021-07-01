@@ -249,9 +249,9 @@ contains
     end
 
     subroutine couple_sea_atm(state, day, model_datetime, start_datetime, imont1, tmonth)
-        use date, only:
+        use model_control, only:
         use interpolation, only: forin5, forint
-        use date, only: Datetime_t
+        use model_control, only: Datetime_t
         use model_state, only: ModelState_t
 
         type(ModelState_t), intent(in) :: state
@@ -370,7 +370,7 @@ contains
 
     ! Update observed SST anomaly array
     subroutine update_observed_sst_anomaly(model_datetime, start_datetime)
-        use date, only: Datetime_t
+        use model_control, only: Datetime_t
         use input_output, only: load_boundary_file
         use boundaries, only: check_surface_fields
 

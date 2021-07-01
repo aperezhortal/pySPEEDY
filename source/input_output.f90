@@ -96,7 +96,7 @@ contains
         use geometry, only: radang, fsg
         use physical_constants, only: p0, grav
         use spectral, only: spec_to_grid, uvspec
-        use date, only: ControlParams_t
+        use model_control, only: ControlParams_t
 
         integer, intent(in) :: timestep           !! The time step that is being written
         type(ControlParams_t), target, intent(in)  :: control_params

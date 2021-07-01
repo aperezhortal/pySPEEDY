@@ -15,12 +15,17 @@
 
 module pyspeedy
     use model_state, only: ModelState_allocate, ModelState_deallocate, ModelState_t, ModelState_Ptr_t
+    use model_control, only: ControlParams_Ptr_t, ControlParams_t, initialize_control
+    use model_control, only: Datetime_t, Datetime_Ptr_t
     use types, only : p
 
     implicit none
 
 contains
 
+    ! =========================================================================
+    ! Speedy interface + init/close
+    ! =========================================================================    
     !> Initialize the Speedy modules. This needs to be run once.
     subroutine initialize()
         use initialization, only: initialize_modules
@@ -33,43 +38,61 @@ contains
         call deinitialize_modules()
     end subroutine
 
-
-    !> Initialize the ModelState and return the container with the object.
-    subroutine modelstate_initialize(this)
-        integer(8), intent(out) :: this !! Container for the ModelState_Ptr_t object.
-
-        type(ModelState_Ptr_t) :: this_ptr
-        allocate (this_ptr%p)
-        call ModelState_allocate(this_ptr%p)
-        this = transfer(this_ptr, this)
-    end subroutine
-
-    !> Deallocate the ModelState
-    subroutine modelstate_close(this)
-        
-        integer(8), intent(in) :: this
-
-        type(ModelState_Ptr_t):: this_ptr
-
-        this_ptr = transfer(this, this_ptr)
-        call ModelState_deallocate(this_ptr%p)
-    end subroutine
-
-    subroutine run(this, history_interval, diagnostic_interval)
+    subroutine run(state_container, control_container)
         use speedy, only: run_speedy
         
-        integer(8), intent(in) :: this
-        integer, intent(in) :: history_interval, diagnostic_interval
+        integer(8), intent(in) :: state_container, control_container
 
-        type(ModelState_Ptr_t):: this_ptr
+        type(ModelState_Ptr_t):: state_ptr
+        type(ControlParams_Ptr_t):: control_ptr
 
-        this_ptr = transfer(this, this_ptr)
-        call run_speedy(this_ptr%p, history_interval, diagnostic_interval)
+        state_ptr = transfer(state_container, state_ptr)
+        control_ptr = transfer(control_container, control_ptr)
+        call run_speedy(state_ptr%p, control_ptr%p)
+    end subroutine
+    
+    ! =========================================================================
+    ! ControlParams interface
+    ! =========================================================================
+    !> Initialize the ControlParams and return the container with the object.
+    subroutine controlparams_init(control_cnt, &
+                                  start_datetime_cnt, end_datetime_cnt, &
+                                  history_interval, diag_interval)
+
+        integer(8), intent(out) :: control_cnt !! Container for the ControlParams_Ptr_t object.
+        integer(8), intent(in) :: start_datetime_cnt
+        integer(8), intent(in) :: end_datetime_cnt
+        integer, intent(in)    :: history_interval, diag_interval
+
+        type(ControlParams_Ptr_t) :: control_ptr
+        type(Datetime_Ptr_t) :: start_datetime_ptr, end_datetime_ptr
+
+        control_ptr = transfer(control_cnt, control_ptr)
+        start_datetime_ptr = transfer(start_datetime_cnt, start_datetime_ptr)
+        end_datetime_ptr = transfer(end_datetime_cnt, end_datetime_ptr)
+
+        allocate (control_ptr%p)
+        call initialize_control(control_ptr%p, &
+                                start_datetime_ptr%p, end_datetime_ptr%p, &
+                                history_interval, diag_interval)
+
+        control_cnt = transfer(control_ptr, control_cnt)
     end subroutine
 
-    subroutine create_datetime(year, month, day, hour, minute, datetime_container)
-        use date, only: Datetime_t, Datetime_Ptr_t
+    !> Deallocate the ControlParams
+    subroutine controlparams_close(this)        
+        integer(8), intent(in) :: this
 
+        type(ControlParams_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        deallocate(this_ptr%p)
+    end subroutine
+
+    ! =========================================================================
+    ! Datetime interface
+    ! =========================================================================
+    subroutine create_datetime(year, month, day, hour, minute, datetime_container)
         integer, intent(in) :: year, month, day,hour, minute
         integer(8), intent(out) :: datetime_container       
 
@@ -95,7 +118,7 @@ contains
     end subroutine
 
     subroutine get_datetime(this, year, month, day, hour, minute)
-        use date, only: Datetime_t, Datetime_Ptr_t
+
        
         integer(8), intent(in) :: this
         
@@ -111,8 +134,7 @@ contains
         minute = this_ptr%p%minute       
     end subroutine
 
-    subroutine close_datetime(this)
-        use date, only: Datetime_t, Datetime_Ptr_t       
+    subroutine close_datetime(this)  
         integer(8), intent(in) :: this
 
         type(Datetime_Ptr_t):: this_ptr
@@ -121,6 +143,29 @@ contains
         if (this_ptr%p%allocated) deallocate(this_ptr%p)
     end subroutine
 
+    ! =========================================================================
+    ! ModelState interface
+    ! =========================================================================  
+    !> Initialize the ModelState and return the container with the object.
+    subroutine modelstate_init(this)
+        integer(8), intent(out) :: this !! Container for the ModelState_Ptr_t object.
+
+        type(ModelState_Ptr_t) :: this_ptr
+        allocate (this_ptr%p)
+        call ModelState_allocate(this_ptr%p)
+        this = transfer(this_ptr, this)
+    end subroutine
+    
+    !> Deallocate the ModelState
+    subroutine modelstate_close(this)        
+        integer(8), intent(in) :: this
+
+        type(ModelState_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        call ModelState_deallocate(this_ptr%p)
+        deallocate(this_ptr%p)
+    end subroutine
 
     {% for var in model_state %}
 
@@ -157,5 +202,11 @@ contains
         array_shape=shape(this_ptr%p%{{ var.name }})
     end subroutine
     {% endfor %}
+    
+
+    
+
+
+    
 end module
 
