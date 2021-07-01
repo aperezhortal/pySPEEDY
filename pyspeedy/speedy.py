@@ -22,11 +22,30 @@ class Speedy:
     def __init__(self, **control_params):
         """
         Constructor. Initializes the model.
+
+        For a complete list of the accepted initialization parameters, see:
+        :py:meth:`set_params`.
         """
         self._start_date = None
         self._end_date = None
 
+        self.set_params(**control_params)
 
+    def set_params(self, **control_params):
+        """
+        Set the model's control parameters.
+
+        Parameters
+        ----------
+        history_interval: int
+            Interval, in time steps, for which the model variables are saved.
+        diag_interval: int
+            Interval, in time steps, for which the diagnostic variables are saved.
+        start_date: datetime
+            Model start date.
+        end_date: datetime
+            Model end date.
+        """
         _control_params = dict(_DEFAULT_PARAMS)
         _control_params.update(control_params)
 
@@ -100,7 +119,6 @@ class Speedy:
         """Create a datetime object from a fortran datetime"""
 
         Speedy._dealloc_date(container)
-
         if isinstance(date_value, datetime):
             return pyspeedy.create_datetime(
                 date_value.year,
@@ -130,39 +148,28 @@ class Speedy:
 
     def default_init(self):
         # In the model state, the variables follow the lon/lat dimension ordering.
-        ds = xr.load_dataset("surface.nc")
-        # Surface geopotential (i.e. orography)
-        self["orog"] = ds["orog"].values.swapaxes(0, 1)[:, ::-1]
-        self["fmask_orig"] = ds["lsm"].values.swapaxes(0, 1)[:, ::-1]
-        self["alb0"] = ds["alb"].values.swapaxes(0, 1)[:, ::-1]
 
-        self["veg_high"] = ds["vegh"].transpose("lon", "lat").values[:, ::-1]
-        self["veg_low"] = ds["vegl"].transpose("lon", "lat").values[:, ::-1]
+        from pathlib import Path
+        ds = xr.load_dataset(str(Path(__file__).parent / "data/example_bc.nc"))
 
-        ds = xr.load_dataset("land.nc")
-        self["stl12"] = ds["stl"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        self["orog"] = ds["orog"].values
+        self["fmask_orig"] = ds["lsm"].values
+        self["alb0"] = ds["alb"].values
 
-        ds = xr.load_dataset("snow.nc")
-        self["snowd12"] = ds["snowd"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        self["veg_high"] = ds["vegh"].values
+        self["veg_low"] = ds["vegl"].values
 
-        ds = xr.load_dataset("soil.nc")
-        self["soil_wc_l1"] = (
-            ds["swl1"].transpose("lon", "lat", "time").values[:, ::-1, :]
-        )
-        self["soil_wc_l2"] = (
-            ds["swl2"].transpose("lon", "lat", "time").values[:, ::-1, :]
-        )
-        self["soil_wc_l3"] = (
-            ds["swl3"].transpose("lon", "lat", "time").values[:, ::-1, :]
-        )
+        self["stl12"] = ds["stl"].values
+        self["snowd12"] = ds["snowd"].values
 
-        ds = xr.load_dataset("sea_surface_temperature.nc")
-        self["sst12"] = ds["sst"].transpose("lon", "lat", "time").values[:, ::-1, :]
+        self["soil_wc_l1"] = ds["swl1"].values
 
-        ds = xr.load_dataset("sea_ice.nc")
-        self["sea_ice_frac12"] = (
-            ds["icec"].transpose("lon", "lat", "time").values[:, ::-1, :]
-        )
+        self["soil_wc_l2"] = ds["swl2"].values
+        self["soil_wc_l3"] = ds["swl3"].values
+
+        self["sst12"] = ds["sst"].values
+
+        self["sea_ice_frac12"] = ds["icec"].values
 
     def load_anomalies(self):
         # ds = xr.load_dataset("sea_surface_temperature_anomaly.nc")

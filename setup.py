@@ -63,4 +63,7 @@ if __name__ == "__main__":
         ext_modules=[pyspeedy_extension],
         packages=["pyspeedy"],
         cmdclass={"build_ext": specialized_build_ext},
+        package_data={
+            "pyspeedy": ["data/*.nc"],
+        },
     )
