@@ -6,7 +6,8 @@ module date
     implicit none
 
     private
-    public datetime_equal, initialize_date, advance_date, ControlParams_t, Datetime_t
+    public datetime_equal, initialize_date, advance_date
+    public Datetime_t, ControlParams_t, Datetime_Ptr_t
 
     !> For storing dates and times.
     type Datetime_t
@@ -15,19 +16,28 @@ module date
         integer :: day
         integer :: hour
         integer :: minute
+        logical :: allocated = .false.
     end type
 
-    !> For storing dates and times.
+    ! Container for a Datetime object. Used for the python interface.
+    type Datetime_Ptr_t
+        type(Datetime_t), pointer :: p => NULL()
+    end type
+
+    ! ============================
+    ! Model time control variables
+    ! ============================
+    !> Structure used to store the model control parameter,
+    !  like start datem current date, end date, etc.
     type ControlParams_t
-        ! Date and time variables
         type(Datetime_t)     :: model_datetime !! The model's current datetime (continuously updated)
         type(Datetime_t)     :: start_datetime !! The start datetime
         type(Datetime_t)     :: end_datetime   !! The end datetime
-        integer            :: imont1         !! The month used for computing seasonal forcing fields
-        real(p)            :: tmonth         !! The fraction of the current month elapsed
-        real(p)            :: tyear          !! The fraction of the current year elapsed
-        integer            :: isst0          !! Initial month of SST anomalies
-        integer            :: ndaycal(12, 2)  !! The model calendar
+        integer              :: imont1           !! The month used for computing seasonal forcing fields
+        real(p)              :: tmonth           !! The fraction of the current month elapsed
+        real(p)              :: tyear            !! The fraction of the current year elapsed
+        integer              :: isst0            !! Initial month of SST anomalies
+        integer              :: ndaycal(12, 2)   !! The model calendar
     end type
 
     integer, parameter :: ncal = 365     !! The number of days in a year
@@ -53,7 +63,6 @@ contains
 
     !> Initializes model date and calendar.
     subroutine initialize_date(control_params)
-        use params, only: iseasc
         type(ControlParams_t), target  :: control_params
 
         type(Datetime_t), pointer  :: model_datetime
@@ -118,7 +127,7 @@ contains
 
     !> Updates the current datetime and related date variables.
     subroutine advance_date(control_params)
-        use params, only: iseasc, nsteps
+        use params, only: nsteps
         type(ControlParams_t), target, intent(inout)  :: control_params
         type(Datetime_t), pointer  :: model_datetime
         integer, pointer   :: imont1

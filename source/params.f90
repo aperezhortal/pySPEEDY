@@ -9,7 +9,6 @@ module params
     private
     public trunc, ix, iy, il, kx, nx, mx, ntr, t_levs, aux_dim
     public nsteps, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
-    public initialize_params
     public UserParams_t
 
     ! =========================================================================
@@ -49,38 +48,11 @@ module params
     ! =========================================================================
     ! User-specified parameters (through the namelist file)
     ! =========================================================================
+    !> Structure used to store the model control parameter, 
+    !  like start datem current date, end date, etc.
     type UserParams_t
         integer :: nstdia     !! Period (number of steps) for diagnostic print-out
         integer :: nsteps_out !! Number of time steps between outputs
     end type
-
-contains
-    !> Initializes user-defined parameters from namelist file.
-    subroutine initialize_params(user_params)
-        class(UserParams_t), intent(out) :: user_params
-        integer :: nstdia !! Period (number of steps) for diagnostic print
-        integer :: nsteps_out !! Number of time steps between outputs
-
-        namelist /params/ nsteps_out, nstdia
-        logical :: namelist_file_exists
-
-        ! Set default values
-        nsteps_out = 1
-        nstdia = 36*5
-
-        ! Read namelist file, if it exists
-        inquire (file="namelist.nml", exist=namelist_file_exists)
-        if (namelist_file_exists) then
-            open (10, file="namelist.nml")
-            read (10, nml=params)
-            close (10)
-        end if
-
-        user_params%nsteps_out = nsteps_out
-        user_params%nstdia = nstdia
-
-        ! Print values to screen
-        write (*, '(A,I5)') 'nsteps_out (frequency of output)=', user_params%nsteps_out
-        write (*, '(A,I5)') 'nstdia (frequency of diagnostics)=', user_params%nstdia
-    end subroutine
+   
 end module

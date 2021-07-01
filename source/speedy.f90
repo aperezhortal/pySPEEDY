@@ -4,24 +4,11 @@
 !> until the (continually updated) model datetime (`model_datetime`) equals the
 !> final datetime (`end_datetime`).
 module speedy
-    use params, only: UserParams_t
-    use date, only: ControlParams_t
-    use model_state, only: ModelState_t
 
     implicit none
 
     private
     public run_speedy
-
-    !> Structure to represent the entire model state at a given time.
-    type model_state
-        type(UserParams_t)    :: user_params
-        type(ControlParams_t) :: control_params
-        type(ModelState_t)     :: state
-    end type
-
-    ! !> Structure to hold the entire model state.
-    ! type model_state
 
     ! model_config
     !     ! implicit
@@ -37,8 +24,8 @@ module speedy
     ! end type
 
 contains
-    
-    subroutine run_speedy(state)   
+
+    subroutine run_speedy(state, history_interval, diagnostic_interval)
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
 
@@ -58,6 +45,7 @@ contains
 
         !> The model state needs to be initilialized before calling this function.
         type(ModelState_t), intent(inout) :: state
+        integer, intent(in) :: history_interval, diagnostic_interval
 
         ! integer, intent(inout) :: nstdia     !! Period (number of steps) for diagnostic print-out
         ! integer, intent(inout) :: nsteps_out !! Number of time steps between outputs
@@ -65,20 +53,18 @@ contains
         type(UserParams_t)     :: user_params
         type(ControlParams_t)  :: control_params
 
-
         ! Time step counter
         integer :: model_step = 1
         !===============================================================================
-        ! user_params%nstdia=nstdia
-        ! user_params%nsteps_out=nsteps_out
+        user_params%nstdia=diagnostic_interval
+        user_params%nsteps_out=history_interval
 
         ! Initialization
-        ! call ModelState_allocate(state)
         call initialize_state(state, user_params, control_params)
-        
+
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
-    
+
             ! Daily tasks
             if (mod(model_step - 1, nsteps) == 0) then
                 ! Set forcing terms according to date
@@ -127,7 +113,6 @@ contains
 
         end do
 
-        ! call ModelState_deallocate(state)
     end subroutine
 
 end module

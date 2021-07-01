@@ -1,6 +1,7 @@
 from _speedy import pyspeedy
 import xarray as xr
 import numpy as np
+from datetime import datetime
 
 
 class Speedy:
@@ -12,12 +13,102 @@ class Speedy:
         """
         Constructor. Initializes the model.
         """
+
+        self._start_date = None
+        self._end_date = None
+
         self._state = pyspeedy.modelstate_initialize()
 
+        # User Parameters
+        self.history_interval = 1
+        self.diagnostic_interval = 180
+        self.start_date = datetime(1982, 1, 1)
+        self.end_date = datetime(1982, 1, 2)
+
+    @staticmethod
+    def _dealloc_date(container):
+        if container is not None:
+            pyspeedy.close_datetime(container)
+
+        return None
+
+    def __getitem__(self, var_name):
+        """
+        Getter for state variables
+        """
+        _getter = getattr(pyspeedy, f"get_{var_name}", None)
+        if _getter is None:
+            raise AttributeError(f"The state variable '{var_name}' does not exist.")
+        return _getter(self._state)
+
+    def get_shape(self, var_name):
+        """Get state variable shape."""
+        _getter = getattr(pyspeedy, f"get_{var_name}_shape", None)
+        if _getter is None:
+            raise AttributeError(
+                f"The 'get-shape' method for the state variable '"
+                f"{var_name}' does not exist."
+            )
+        return tuple(_getter(self._state))
+
+    def __setitem__(self, var_name, value):
+        """Setter for state variables."""
+        _setter = getattr(pyspeedy, f"set_{var_name}")
+        if _setter is None:
+            raise AttributeError(
+                f"The setter for the state variable '{var_name}' does not exist."
+            )
+        if self.get_shape(var_name) != value.shape:
+            raise ValueError("Array shape missmatch")
+        value = np.asfortranarray(value)
+        return _setter(self._state, value)
+
+    def __del__(self):
+        """Clean up."""
+        self._state = pyspeedy.modelstate_close(self._state)
+        self._start_date = self._dealloc_date(self._start_date)
+        self._end_date = self._dealloc_date(self._end_date)
+
+    @staticmethod
+    def _get_fortran_date(container):
+        """Get a datetime object from a fortran datetime"""
+        return datetime(*pyspeedy.get_datetime(container))
+
+    @staticmethod
+    def _set_fortran_date(container, date_value):
+        """Create a datetime object from a fortran datetime"""
+
+        Speedy._dealloc_date(container)
+
+        if isinstance(date_value, datetime):
+            return pyspeedy.create_datetime(
+                date_value.year,
+                date_value.month,
+                date_value.day,
+                date_value.hour,
+                date_value.minute,
+            )
+        else:
+            raise TypeError("The input value is not a datetime object.")
+
+    @property
+    def start_date(self):
+        return self._get_fortran_date(self._start_date)
+
+    @start_date.setter
+    def start_date(self, value):
+        self._start_date = self._set_fortran_date(self._start_date, value)
+
+    @property
+    def end_date(self):
+        return self._get_fortran_date(self._end_date)
+
+    @end_date.setter
+    def end_date(self, value):
+        self._end_date = self._set_fortran_date(self._end_date, value)
+
     def default_init(self):
-
         # In the model state, the variables follow the lon/lat dimension ordering.
-
         ds = xr.load_dataset("surface.nc")
         # Surface geopotential (i.e. orography)
         self["orog"] = ds["orog"].values.swapaxes(0, 1)[:, ::-1]
@@ -52,52 +143,24 @@ class Speedy:
             ds["icec"].transpose("lon", "lat", "time").values[:, ::-1, :]
         )
 
-        ds = xr.load_dataset("sea_surface_temperature_anomaly.nc")
-
     def load_anomalies(self):
+        # ds = xr.load_dataset("sea_surface_temperature_anomaly.nc")
         pass
 
     def run(self):
         """
         Run the model.
         """
-        pyspeedy.run(self._state)
+        pyspeedy.run(self._state, self.history_interval, self.diagnostic_interval)
 
-    def __getitem__(self, var_name):
-        """
-        Itemgetter
-
-        """
-        _getter = getattr(pyspeedy, f"get_{var_name}", None)
-        if _getter is None:
-            raise AttributeError(f"The state variable '{var_name}' does not exist.")
-        return _getter(self._state)
-
-    def get_shape(self, var_name):
-        _getter = getattr(pyspeedy, f"get_{var_name}_shape", None)
-        if _getter is None:
-            raise AttributeError(
-                f"The 'get-shape' method for the state variable '"
-                f"{var_name}' does not exist."
-            )
-        return tuple(_getter(self._state))
-
-    def __setitem__(self, var_name, value):
-        _setter = getattr(pyspeedy, f"set_{var_name}")
-        if _setter is None:
-            raise AttributeError(
-                f"The setter for the state variable '{var_name}' does not exist."
-            )
-        if self.get_shape(var_name) != value.shape:
-            raise ValueError("Array shape missmatch")
-        value = np.asfortranarray(value)
-        return _setter(self._state, value)
-
-    def __del__(self):
-        self._state = pyspeedy.modelstate_close(self._state)
 
 if __name__ == "__main__":
+
     model = Speedy()
+    model.start_date = datetime(2010, 1, 2, 4, 5)
+    print(model.start_date)
+    model.start_date = datetime(2010, 1, 2, 4, 6)
+    print(model.start_date)
     print(model["vor"].shape)
     print(model["phi0"].shape)
     model.default_init()

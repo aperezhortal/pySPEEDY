@@ -55,16 +55,72 @@ contains
         call ModelState_deallocate(this_ptr%p)
     end subroutine
 
-    subroutine run(this)
+    subroutine run(this, history_interval, diagnostic_interval)
         use speedy, only: run_speedy
         
         integer(8), intent(in) :: this
+        integer, intent(in) :: history_interval, diagnostic_interval
 
         type(ModelState_Ptr_t):: this_ptr
 
         this_ptr = transfer(this, this_ptr)
-        call run_speedy(this_ptr%p)
+        call run_speedy(this_ptr%p, history_interval, diagnostic_interval)
     end subroutine
+
+    subroutine create_datetime(year, month, day, hour, minute, datetime_container)
+        use date, only: Datetime_t, Datetime_Ptr_t
+
+        integer, intent(in) :: year, month, day,hour, minute
+        integer(8), intent(out) :: datetime_container       
+
+        type(Datetime_Ptr_t):: datetime_out
+        type(Datetime_t), pointer :: my_datetime
+
+        ! 1. Create the fortran datetime_t object.
+        ! We make it allocatable because we want to return the reference pointing to
+        ! this object.        
+        allocate(my_datetime)
+        my_datetime%allocated = .true.
+        my_datetime%year = year
+        my_datetime%month = month
+        my_datetime%day = day
+        my_datetime%hour = hour
+        my_datetime%minute = minute
+        
+        ! 2. Make the container point to that object.
+        datetime_out%p => my_datetime
+
+        ! 3. Return the container with the memory address to the datetime object.
+        datetime_container = transfer(datetime_out, datetime_container)
+    end subroutine
+
+    subroutine get_datetime(this, year, month, day, hour, minute)
+        use date, only: Datetime_t, Datetime_Ptr_t
+       
+        integer(8), intent(in) :: this
+        
+        integer, intent(out) :: year, month, day, hour, minute
+        type(Datetime_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+
+        year = this_ptr%p%year
+        month = this_ptr%p%month
+        day = this_ptr%p%day
+        hour = this_ptr%p%hour
+        minute = this_ptr%p%minute       
+    end subroutine
+
+    subroutine close_datetime(this)
+        use date, only: Datetime_t, Datetime_Ptr_t       
+        integer(8), intent(in) :: this
+
+        type(Datetime_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        if (this_ptr%p%allocated) deallocate(this_ptr%p)
+    end subroutine
+
 
     {% for var in model_state %}
 

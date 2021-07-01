@@ -51,7 +51,7 @@ contains
 
     !> Initializes everything.
     subroutine initialize_state(state, user_params, control_params)
-        use params, only: issty0, initialize_params, UserParams_t
+        use params, only: issty0, UserParams_t
         use date, only: initialize_date, ControlParams_t
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
@@ -73,9 +73,6 @@ contains
         
         ! Intialize modules if they were not initialized.
         call initialize_modules()
-
-        ! Initialize model parameters
-        call initialize_params(user_params)
 
         ! Initialize date
         call initialize_date(control_params)
