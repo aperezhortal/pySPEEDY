@@ -72,7 +72,6 @@ FILES= \
 
 base_target: $(FILES)
 	ar rcs libspeedy.a $(FILES)
-	gfortran $(COMPOPTS) $(FILES) -o speedy $(LIB) speedy_prog.f90
 
 .PHONY: clean
 clean:

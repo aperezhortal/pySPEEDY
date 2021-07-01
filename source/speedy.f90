@@ -11,7 +11,7 @@ module speedy
     implicit none
 
     private
-    public run_speedy, deinitialize_speedy
+    public run_speedy
 
     !> Structure to represent the entire model state at a given time.
     type model_state
@@ -37,7 +37,7 @@ module speedy
     ! end type
 
 contains
-
+    
     subroutine run_speedy(state)   
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
@@ -68,7 +68,6 @@ contains
 
         ! Time step counter
         integer :: model_step = 1
-        integer :: iii=0
         !===============================================================================
         ! user_params%nstdia=nstdia
         ! user_params%nsteps_out=nsteps_out
@@ -79,7 +78,7 @@ contains
         
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
-            iii = iii + 1    
+    
             ! Daily tasks
             if (mod(model_step - 1, nsteps) == 0) then
                 ! Set forcing terms according to date
@@ -127,13 +126,8 @@ contains
             & control_params%end_datetime%hour, ':', control_params%end_datetime%minute
 
         end do
-        write(*,*) "-----", iii
+
         ! call ModelState_deallocate(state)
     end subroutine
 
-
-    subroutine deinitialize_speedy()
-        use horizontal_diffusion, only: deinitialize_horizontal_diffusion
-        call deinitialize_horizontal_diffusion()
-    end subroutine
 end module

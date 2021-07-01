@@ -21,8 +21,21 @@ module pyspeedy
 
 contains
 
+    !> Initialize the Speedy modules. This needs to be run once.
+    subroutine initialize()
+        use initialization, only: initialize_modules
+        call initialize_modules()
+    end subroutine
+
+    !> Deinitialize the Speedy modules.
+    subroutine close()
+        use initialization, only: deinitialize_modules
+        call deinitialize_modules()
+    end subroutine
+
+
     !> Initialize the ModelState and return the container with the object.
-    subroutine initialize(this)
+    subroutine modelstate_initialize(this)
         integer(8), intent(out) :: this !! Container for the ModelState_Ptr_t object.
 
         type(ModelState_Ptr_t) :: this_ptr
@@ -32,7 +45,7 @@ contains
     end subroutine
 
     !> Deallocate the ModelState
-    subroutine close(this)
+    subroutine modelstate_close(this)
         
         integer(8), intent(in) :: this
 

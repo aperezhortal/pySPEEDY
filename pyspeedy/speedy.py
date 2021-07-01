@@ -12,7 +12,7 @@ class Speedy:
         """
         Constructor. Initializes the model.
         """
-        self._state = pyspeedy.initialize()
+        self._state = pyspeedy.modelstate_initialize()
 
     def default_init(self):
 
@@ -93,6 +93,8 @@ class Speedy:
         value = np.asfortranarray(value)
         return _setter(self._state, value)
 
+    def __del__(self):
+        self._state = pyspeedy.modelstate_close(self._state)
 
 if __name__ == "__main__":
     model = Speedy()
