@@ -30,7 +30,7 @@ contains
         ! to facilitate the python-fortran interface.
 
         use types, only: p
-        use params, only: nsteps, delt, nsteps, nstrad, UserParams_t
+        use params, only: nsteps, delt, nsteps, nstrad
         use date, only: advance_date, datetime_equal, ControlParams_t
         use shortwave_radiation, only: compute_shortwave
         use input_output, only: output
@@ -46,21 +46,17 @@ contains
         !> The model state needs to be initilialized before calling this function.
         type(ModelState_t), intent(inout) :: state
         integer, intent(in) :: history_interval, diagnostic_interval
-
-        ! integer, intent(inout) :: nstdia     !! Period (number of steps) for diagnostic print-out
-        ! integer, intent(inout) :: nsteps_out !! Number of time steps between outputs
-        !===============================================================================
-        type(UserParams_t)     :: user_params
         type(ControlParams_t)  :: control_params
 
         ! Time step counter
         integer :: model_step = 1
+        
         !===============================================================================
-        user_params%nstdia=diagnostic_interval
-        user_params%nsteps_out=history_interval
+        control_params%nstdia=diagnostic_interval
+        control_params%nsteps_out=history_interval
 
         ! Initialization
-        call initialize_state(state, user_params, control_params)
+        call initialize_state(state, control_params)
 
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
@@ -81,7 +77,7 @@ contains
             call check_diagnostics(state%vor(:, :, :, 2), &
                                    state%div(:, :, :, 2), &
                                    state%t(:, :, :, 2), &
-                                   model_step, user_params%nstdia)
+                                   model_step, control_params%nstdia)
 
             ! Increment time step counter
             model_step = model_step + 1
@@ -90,7 +86,7 @@ contains
             call advance_date(control_params)
 
             ! Output
-            if (mod(model_step - 1, user_params%nsteps_out) == 0) then
+            if (mod(model_step - 1, control_params%nsteps_out) == 0) then
                 call output(model_step - 1, control_params, &
                             state%vor, state%div, &
                             state%t, &

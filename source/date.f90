@@ -38,6 +38,9 @@ module date
         real(p)              :: tyear            !! The fraction of the current year elapsed
         integer              :: isst0            !! Initial month of SST anomalies
         integer              :: ndaycal(12, 2)   !! The model calendar
+
+        integer :: nstdia     !! Period (number of steps) for diagnostic print-out
+        integer :: nsteps_out !! Number of time steps between outputs
     end type
 
     integer, parameter :: ncal = 365     !! The number of days in a year
@@ -66,7 +69,7 @@ contains
         type(ControlParams_t), target  :: control_params
 
         type(Datetime_t), pointer  :: model_datetime
-        type(Datetime_t)     :: start_datetime, end_datetime
+        type(Datetime_t)   :: start_datetime, end_datetime
         integer, pointer   :: imont1
         real(p), pointer   :: tmonth
         real(p), pointer   :: tyear

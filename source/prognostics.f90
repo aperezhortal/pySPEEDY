@@ -3,7 +3,7 @@
 !  For storing and initializing prognostic spectral variables for model dynamics, and geopotential.
 module prognostics
     use types, only: p
-    use params, only: mx, nx, kx, ntr, ix, iy, il, UserParams_t
+    use params, only: mx, nx, kx, ntr, ix, iy, il
     use date, only: ControlParams_t
     use model_state, only: ModelState_t
 
@@ -17,15 +17,14 @@ contains
 
     !> Initializes all spectral variables starting from either a reference
     !  atmosphere or a restart file.
-    subroutine initialize_prognostics(prognostic_vars, user_params, control_params)
+    subroutine initialize_prognostics(prognostic_vars, control_params)
         type(ModelState_t), intent(inout) :: prognostic_vars
-        type(UserParams_t), intent(in) :: user_params
         type(ControlParams_t), intent(in) :: control_params
-        call initialize_from_rest_state(prognostic_vars, user_params, control_params)
+        call initialize_from_rest_state(prognostic_vars, control_params)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
-    subroutine initialize_from_rest_state(state, user_params, control_params)
+    subroutine initialize_from_rest_state(state, control_params)
         use dynamical_constants, only: gamma, hscale, hshum, refrh1
         use physical_constants, only: grav, rgas
         use geometry, only: fsg
@@ -34,7 +33,6 @@ contains
         use input_output, only: output
 
         type(ModelState_t), intent(inout) :: state
-        type(UserParams_t), intent(in) :: user_params
         type(ControlParams_t), intent(in) :: control_params
 
         complex(p) :: surfs(mx, nx)
@@ -116,7 +114,7 @@ contains
         call check_diagnostics(state%vor(:, :, :, 1), &
                                state%div(:, :, :, 1), &
                                state%t(:, :, :, 1), &
-                               0, user_params%nstdia)
+                               0, control_params%nstdia)
 
         ! Write initial data
         call output(0, control_params, state%vor, state%div, state%t, &

@@ -50,8 +50,8 @@ contains
     end subroutine
 
     !> Initializes everything.
-    subroutine initialize_state(state, user_params, control_params)
-        use params, only: issty0, UserParams_t
+    subroutine initialize_state(state, control_params)
+        use params, only: issty0
         use date, only: initialize_date, ControlParams_t
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
@@ -66,7 +66,6 @@ contains
         ! Subroutine definitions
         ! =========================================================================
         type(ModelState_t), intent(inout) :: state
-        type(UserParams_t), intent(out) :: user_params
         type(ControlParams_t), intent(out)  :: control_params
 
         call print_speedy_title
@@ -92,7 +91,7 @@ contains
         call initialize_boundaries(state)
 
         ! Initialize model variables
-        call initialize_prognostics(state, user_params, control_params)
+        call initialize_prognostics(state, control_params)
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)

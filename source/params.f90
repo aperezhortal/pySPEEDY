@@ -9,7 +9,6 @@ module params
     private
     public trunc, ix, iy, il, kx, nx, mx, ntr, t_levs, aux_dim
     public nsteps, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
-    public UserParams_t
 
     ! =========================================================================
     ! Constant parameters
@@ -43,16 +42,6 @@ module params
     integer, parameter :: iseasc = 1        !! Seasonal cycle flag (0=no, 1=yes)
     integer, parameter :: nstrad = 3        !! Period (number of steps) for shortwave radiation
     logical, parameter :: sppt_on = .false. !! Turn on SPPT?
-    integer, parameter :: issty0 = 1979     !! Starting year for SST anomaly file
-
-    ! =========================================================================
-    ! User-specified parameters (through the namelist file)
-    ! =========================================================================
-    !> Structure used to store the model control parameter, 
-    !  like start datem current date, end date, etc.
-    type UserParams_t
-        integer :: nstdia     !! Period (number of steps) for diagnostic print-out
-        integer :: nsteps_out !! Number of time steps between outputs
-    end type
+    integer, parameter :: issty0 = 1979     !! Starting year for SST anomaly file    
    
 end module
