@@ -6,3 +6,7 @@ bin
 source/model_state.f90
 source/pyspeedy.f90
 
+.idea
+.vscode
+build
+rundir*
