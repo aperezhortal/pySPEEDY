@@ -15,11 +15,20 @@ class Speedy:
         self._state = pyspeedy.initialize()
 
     def default_init(self):
+
+        # In the model state, the variables follow the lon/lat dimension ordering.
+
         ds = xr.load_dataset("surface.nc")
         # Surface geopotential (i.e. orography)
         self["orog"] = ds["orog"].values.swapaxes(0, 1)[:, ::-1]
         self["fmask_orig"] = ds["lsm"].values.swapaxes(0, 1)[:, ::-1]
         self["alb0"] = ds["alb"].values.swapaxes(0, 1)[:, ::-1]
+        
+
+        # ds = xr.load_dataset("land.nc")
+        # self["stl12"] = ds["stl"].values.swapaxes(0, 1)[:, :, ::-1]
+
+        # float stl(time, lat, lon)        
 
 
     def run(self):
@@ -64,8 +73,7 @@ if __name__ == "__main__":
     print(model["phi0"].shape)
     model.default_init()
     print(model.get_shape("phi0"))
-
-    # model.run()
+    model.run()
 
     # from matplotlib import pyplot as plt
     # plt.pcolormesh(t[:,:,4])

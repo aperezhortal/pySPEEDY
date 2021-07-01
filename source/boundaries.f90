@@ -13,7 +13,7 @@ module boundaries
     implicit none
 
     private
-    public initialize_boundaries, fillsf, forchk
+    public initialize_boundaries, fillsf, check_surface_fields
    
 
 contains
@@ -39,7 +39,7 @@ contains
 
     !> Check consistency of surface fields with land-sea mask and set undefined
     !  values to a constant (to avoid over/underflow).
-    subroutine forchk(fmask, nf, fmin, fmax, fset, field)
+    subroutine check_surface_fields(fmask, nf, fmin, fmax, fset, field)
         real(p), intent(in)    :: fmask(ix,il)    !! The fractional land-sea mask
         integer, intent(in)    :: nf              !! The number of input 2D fields
         real(p), intent(in)    :: fmin            !! The minimum allowable value
@@ -95,7 +95,7 @@ contains
         real(p) :: sf2(0:ix+1)
 
         integer :: hemisphere, j, j1, j2, j3, i, nmis
-        real(p) :: fmean
+        real(p) :: fmean = 0 
 
         do hemisphere = 1, 2
            if (hemisphere == 1) then

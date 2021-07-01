@@ -11,7 +11,7 @@ module speedy
     implicit none
 
     private
-    public run_speedy
+    public run_speedy, deinitialize_speedy
 
     !> Structure to represent the entire model state at a given time.
     type model_state
@@ -24,10 +24,6 @@ module speedy
     ! type model_state
 
     ! model_config
-
-    !     ! geometry
-    !     ! geopotential constants
-    !     ! horizontal_diffusion
     !     ! implicit
     !     ! land_model
     !     ! legendre
@@ -42,9 +38,6 @@ module speedy
 
 contains
 
-    ! 2d_vars
-    ! 3d_vars
-    ! 4d_vars
     subroutine run_speedy(state)   
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
@@ -75,12 +68,7 @@ contains
 
         ! Time step counter
         integer :: model_step = 1
-        integer :: n, k
-        !===============================================================================
-        ! Step 0: Initialize the grid_t structure with the input data.
-        !===============================================================================
 
-        
         !===============================================================================
         ! user_params%nstdia=nstdia
         ! user_params%nsteps_out=nsteps_out
@@ -141,5 +129,11 @@ contains
         end do
 
         ! call ModelState_deallocate(state)
+    end subroutine
+
+
+    subroutine deinitialize_speedy()
+        use horizontal_diffusion, only: deinitialize_horizontal_diffusion
+        call deinitialize_horizontal_diffusion()
     end subroutine
 end module

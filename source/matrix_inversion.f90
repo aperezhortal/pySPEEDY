@@ -17,7 +17,8 @@ contains
         real(p) :: vv(nmax), aamax, dum, sum
 
         d = 1.0
-
+        imax = 0
+        
         do i=1,n
             aamax=0.
             do j=1,n

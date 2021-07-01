@@ -43,7 +43,7 @@ module shortwave_radiation
 
     ! Longwave absorptivities (per dp = 10^5 Pa)
     real(p), parameter :: ablwin =  0.3 !! Absorptivity of air in "window" band
-    real(p)            :: ablco2 =  6.0 !! Absorptivity of air in CO2 band
+    real(p), save:: ablco2 =  6.0 !! Absorptivity of air in CO2 band
     real(p), parameter :: ablwv1 =  0.7 !! Absorptivity of water vapour in H2O band 1 (weak),
                                         !! (for dq = 1 g/kg)
     real(p), parameter :: ablwv2 = 50.0 !! Absorptivity of water vapour in H2O band 2 (strong),
@@ -54,13 +54,13 @@ module shortwave_radiation
                                         !! bands
 
     ! Zonally-averaged fields for SW/LW scheme (updated in sol_oz)
-    real(p), dimension(ix,il) :: fsol   !! Flux of incoming solar radiation
-    real(p), dimension(ix,il) :: ozone  !! Flux absorbed by ozone (lower stratosphere)
-    real(p), dimension(ix,il) :: ozupp  !! Flux absorbed by ozone (upper stratosphere)
-    real(p), dimension(ix,il) :: zenit  !! Optical depth ratio (function of solar zenith angle)
-    real(p), dimension(ix,il) :: stratz !! Stratospheric correction for polar night
+    real(p),save, dimension(ix,il) :: fsol   !! Flux of incoming solar radiation
+    real(p),save, dimension(ix,il) :: ozone  !! Flux absorbed by ozone (lower stratosphere)
+    real(p),save, dimension(ix,il) :: ozupp  !! Flux absorbed by ozone (upper stratosphere)
+    real(p),save, dimension(ix,il) :: zenit  !! Optical depth ratio (function of solar zenith angle)
+    real(p),save, dimension(ix,il) :: stratz !! Stratospheric correction for polar night
 
-    real(p), dimension(ix,il) :: qcloud !! Equivalent specific humidity of clouds
+    real(p),save, dimension(ix,il) :: qcloud !! Equivalent specific humidity of clouds
 
     ! Logical flags to control shortwave radiation behaviour
     logical, parameter :: increase_co2 = .false. !! Flag for CO2 optical thickness increase

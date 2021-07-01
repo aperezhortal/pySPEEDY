@@ -9,31 +9,31 @@ module surface_fluxes
     public get_surface_fluxes, set_orog_land_sfc_drag
 
     !  Constants for surface fluxes
-    real(p) :: fwind0 = 0.95 !! Ratio of near-sfc wind to lowest-level wind
+    real(p), parameter :: fwind0 = 0.95 !! Ratio of near-sfc wind to lowest-level wind
 
     !> Weight for near-sfc temperature extrapolation (0-1) :
     !  1 : linear extrapolation from two lowest levels
     !  0 : constant potential temperature ( = lowest level)
-    real(p) :: ftemp0 = 1.0
+    real(p), parameter :: ftemp0 = 1.0
 
     !> Weight for near-sfc specific humidity extrapolation (0-1) :
     !  1 : extrap. with constant relative hum. ( = lowest level)
     !  0 : constant specific hum. ( = lowest level)
-    real(p) :: fhum0 = 0.0
+    real(p), parameter :: fhum0 = 0.0
 
-    real(p) :: cdl = 2.4e-3   !! Drag coefficient for momentum over land
-    real(p) :: cds = 1.0e-3   !! Drag coefficient for momentum over sea
-    real(p) :: chl = 1.2e-3   !! Heat exchange coefficient over land
-    real(p) :: chs = 0.9e-3   !! Heat exchange coefficient over sea
-    real(p) :: vgust = 5.0    !! Wind speed for sub-grid-scale gusts
-    real(p) :: ctday = 1.0e-2 !! Daily-cycle correction (dTskin/dSSRad)
-    real(p) :: dtheta = 3.0   !! Potential temp. gradient for stability correction
-    real(p) :: fstab = 0.67   !! Amplitude of stability correction (fraction)
-    real(p) :: hdrag = 2000.0 !! Height scale for orographic correction
-    real(p) :: clambda = 7.0  !! Heat conductivity in skin-to-root soil layer
-    real(p) :: clambsn = 7.0  !! Heat conductivity in soil for snow cover = 1
+    real(p), parameter :: cdl = 2.4e-3   !! Drag coefficient for momentum over land
+    real(p), parameter :: cds = 1.0e-3   !! Drag coefficient for momentum over sea
+    real(p), parameter :: chl = 1.2e-3   !! Heat exchange coefficient over land
+    real(p), parameter :: chs = 0.9e-3   !! Heat exchange coefficient over sea
+    real(p), parameter :: vgust = 5.0    !! Wind speed for sub-grid-scale gusts
+    real(p), parameter :: ctday = 1.0e-2 !! Daily-cycle correction (dTskin/dSSRad)
+    real(p), parameter :: dtheta = 3.0   !! Potential temp. gradient for stability correction
+    real(p), parameter :: fstab = 0.67   !! Amplitude of stability correction (fraction)
+    real(p), parameter :: hdrag = 2000.0 !! Height scale for orographic correction
+    real(p), parameter :: clambda = 7.0  !! Heat conductivity in skin-to-root soil layer
+    real(p), parameter :: clambsn = 7.0  !! Heat conductivity in soil for snow cover = 1
 
-
+    !TODO: Move to state
     real(p) :: forog(ix,il) ! Time-invariant fields (initial. in SFLSET)
 
 contains

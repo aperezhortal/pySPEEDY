@@ -11,14 +11,14 @@ module implicit
     public initialize_implicit, implicit_terms
     public tref, tref2, tref3
 
-    real(p), dimension(kx) :: tref  ! Temperature profile for semi-implicit scheme
-    real(p), dimension(kx) :: tref1 ! Gas constant * tref
-    real(p), dimension(kx) :: tref2 ! akap * tref
-    real(p), dimension(kx) :: tref3 ! Full sigma-levels * tref
+    real(p),save, dimension(kx) :: tref  ! Temperature profile for semi-implicit scheme
+    real(p),save, dimension(kx) :: tref1 ! Gas constant * tref
+    real(p),save, dimension(kx) :: tref2 ! akap * tref
+    real(p),save, dimension(kx) :: tref3 ! Full sigma-levels * tref
 
-    real(p), dimension(kx,kx) :: xa, xb, xc, xd, xe
-    real(p), dimension(kx,kx,mx+nx+1) :: xf, xj
-    real(p) :: dhsx(kx), elz(mx,nx)
+    real(p),save, dimension(kx,kx) :: xa, xb, xc, xd, xe
+    real(p),save, dimension(kx,kx,mx+nx+1) :: xf, xj
+    real(p),save :: dhsx(kx), elz(mx,nx)
 
 contains
     !> Initialize constants for implicit computation of horizontal diffusion and

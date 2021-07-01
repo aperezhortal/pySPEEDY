@@ -6,9 +6,6 @@ module date
     implicit none
 
     private
-    ! public model_datetime, start_datetime, end_datetime
-    ! public imont1, tmonth, tyear, ndaycal
-    ! public isst0
     public datetime_equal, initialize_date, advance_date, ControlParams_t, Datetime_t
 
     !> For storing dates and times.

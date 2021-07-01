@@ -86,26 +86,12 @@ model_state = [
     VarDef("orog", "real", "(ix, il)", "Orography [m]"),    
     VarDef("phis0", "real", "(ix, il)", "Spectrally-filtered surface geopotential"),
     VarDef("alb0", "real", "(ix, il)", "Bare-land annual-mean albedo"),
-    ###########################
-    # Geometry module variables
-    ###########################
-    #
-    ## Geometry: Vertical level parameters
-    #     VarDef("hsg", "real", "(kx+1)", "Half sigma levels"),
-    #     VarDef("dhs", "real", "(kx)", "Sigma level thicknesses"),
-    #     VarDef("fsg", "real", "(kx)", "Full sigma levels"),
-    #     VarDef("dhsr", "real", "(kx)", "1/(2*sigma level thicknesses)"),
-    #     VarDef("fsgr", "real", "(kx)", "akap/(2*full sigma levels)"),
-    #     ## Geometry: vars as a function of latitude and longitude
-    #     VarDef("radang", "real", "(il)", "Latitudes in radians"),
-    #     VarDef("coriol", "real", "(il)", "Coriolis parameter as a function of latitude"),
-    #     VarDef("sia", "real", "(il)", "sine(latitude)"),
-    #     VarDef("coa", "real", "(il)", "cosine(latitude)"),
-    #     VarDef("sia_half", "real", "(iy)", "sine(latitude) over one hemisphere only"),
-    #     VarDef("coa_half", "real", "(il)", "cosine(latitude) over one hemisphere only"),
-    #     VarDef("cosg", "real", "(il)", "Same as coa (TODO: remove)"),
-    #     VarDef("cosgr", "real", "(il)", "1/coa"),
-    #     VarDef("cosgr2", "real", "(il)", "1/coa^2"),
+    
+    ###############################
+    # Geopotential module variables
+    ###############################
+    VarDef("xgeop1", "real", "(kx)", "Constant 1 for hydrostatic equation"),    
+    VarDef("xgeop2", "real", "(kx)", "Constant 2 for hydrostatic equation"),    
 ]
 
 file_loader = FileSystemLoader(THIS_FILE_DIR/"templates")

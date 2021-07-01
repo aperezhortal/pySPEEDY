@@ -77,7 +77,7 @@ module sea_model
 contains
     ! Initialization of sea model
     subroutine sea_model_init(state, isst0)
-        use boundaries, only: fillsf, forchk
+        use boundaries, only: fillsf, check_surface_fields
         ! use date, only: isst0
         use geometry, only: radang
         use input_output, only: load_boundary_file
@@ -164,14 +164,14 @@ contains
             call fillsf(sst12(:, :, month), 0.0_p)
         end do
 
-        call forchk(bmask_s, 12, 100.0_p, 400.0_p, 273.0_p, sst12)
+        call check_surface_fields(bmask_s, 12, 100.0_p, 400.0_p, 273.0_p, sst12)
 
         ! Sea ice concentration
         do month = 1, 12
             sice12(:, :, month) = max(load_boundary_file("sea_ice.nc", "icec", month), 0.0)
         end do
 
-        call forchk(bmask_s, 12, 0.0_p, 1.0_p, 0.0_p, sice12)
+        call check_surface_fields(bmask_s, 12, 0.0_p, 1.0_p, 0.0_p, sice12)
 
         ! SST anomalies for initial and preceding/following months
         if (sst_anomaly_coupling_flag > 0) then
@@ -183,7 +183,7 @@ contains
                 end if
             end do
 
-            call forchk(bmask_s, 3, -50.0_p, 50.0_p, 0.0_p, sstan3)
+            call check_surface_fields(bmask_s, 3, -50.0_p, 50.0_p, 0.0_p, sstan3)
         end if
 
         ! Climatological fields for the ocean model (TO BE RECODED)
@@ -379,7 +379,7 @@ contains
     subroutine obs_ssta(model_datetime, start_datetime)
         use date, only: Datetime_t
         use input_output, only: load_boundary_file
-        use boundaries, only: forchk
+        use boundaries, only: check_surface_fields
 
         type(Datetime_t), intent(in) :: model_datetime, start_datetime
 
@@ -395,7 +395,7 @@ contains
         sstan3(:, :, 3) = load_boundary_file("sea_surface_temperature_anomaly.nc", "ssta", &
             & next_month, 420)
 
-        call forchk(bmask_s, 1, -50.0_p, 50.0_p, 0.0_p, sstan3(:, :, 3))
+        call check_surface_fields(bmask_s, 1, -50.0_p, 50.0_p, 0.0_p, sstan3(:, :, 3))
     end
 
     ! Purpose : Integrate slab ocean and sea-ice models for one day

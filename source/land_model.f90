@@ -46,7 +46,7 @@ contains
     !> Initializes land model.
     subroutine land_model_init(state)
         use input_output, only: load_boundary_file
-        use boundaries, only: forchk, fillsf
+        use boundaries, only: check_surface_fields, fillsf
         use model_state, only: ModelState_t
 
         type(ModelState_t), intent(inout) :: state
@@ -96,14 +96,14 @@ contains
             call fillsf(stl12(:, :, month), 0.0_p)
         end do
 
-        call forchk(bmask_l, 12, 0.0_p, 400.0_p, 273.0_p, stl12)
+        call check_surface_fields(bmask_l, 12, 0.0_p, 400.0_p, 273.0_p, stl12)
 
         ! Snow depth
         do month = 1, 12
             snowd12(:, :, month) = load_boundary_file("snow.nc", "snowd", month)
         end do
 
-        call forchk(bmask_l, 12, 0.0_p, 20000.0_p, 0.0_p, snowd12)
+        call check_surface_fields(bmask_l, 12, 0.0_p, 20000.0_p, 0.0_p, snowd12)
 
         ! Read soil moisture and compute soil water availability using vegetation fraction
         ! Read vegetation fraction
@@ -135,7 +135,7 @@ contains
             end do
         end do
 
-        call forchk(bmask_l, 12, 0.0_p, 10.0_p, 0.0_p, soilw12)
+        call check_surface_fields(bmask_l, 12, 0.0_p, 10.0_p, 0.0_p, soilw12)
 
         ! =========================================================================
         ! Set heat capacities and dissipation times for soil and ice-sheet layers
@@ -231,7 +231,7 @@ contains
     subroutine run_land_model(model_vars)
         use model_state, only: ModelState_t
 
-        type(ModelState_t), intent(in) :: model_vars     
+        type(ModelState_t), intent(in) :: model_vars
 
         ! Surface temperature anomaly
         real(p) :: tanom(ix, il)

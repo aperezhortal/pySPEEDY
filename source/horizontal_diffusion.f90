@@ -8,7 +8,8 @@ module horizontal_diffusion
     implicit none
 
     private
-    public initialize_horizontal_diffusion, do_horizontal_diffusion
+    public initialize_horizontal_diffusion, deinitialize_horizontal_diffusion 
+    public do_horizontal_diffusion
     public dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
 
     interface do_horizontal_diffusion
@@ -16,20 +17,23 @@ module horizontal_diffusion
         module procedure do_horizontal_diffusion_3d
     end interface
 
-    real(p) :: dmp(mx, nx)  !! Damping coefficient for temperature and vorticity (explicit)
-    real(p) :: dmpd(mx, nx) !! Damping coefficient for divergence (explicit)
-    real(p) :: dmps(mx, nx) !! Damping coefficient for extra diffusion in the stratosphere (explicit)
+    ! Make this variables allocatable and initialize them only once.
+    real(p), save, allocatable :: dmp(:, :)  !! Damping coefficient for temperature and vorticity (explicit)
+    real(p), save, allocatable :: dmpd(:, :) !! Damping coefficient for divergence (explicit)
+    real(p), save, allocatable :: dmps(:, :) !! Damping coefficient for extra diffusion in the stratosphere (explicit)
 
-    real(p) :: dmp1(mx, nx)  !! Damping coefficient for temperature and vorticity (implicit)
-    real(p) :: dmp1d(mx, nx) !! Damping coefficient for divergence (implicit)
-    real(p) :: dmp1s(mx, nx) !! Damping coefficient for extra diffusion in the stratosphere
-                            !! (implicit)
+    real(p), save, allocatable :: dmp1(:, :)  !! Damping coefficient for temperature and vorticity (implicit)
+    real(p), save, allocatable :: dmp1d(:, :) !! Damping coefficient for divergence (implicit)
+    real(p), save, allocatable :: dmp1s(:, :) !! Damping coefficient for extra diffusion in the stratosphere
+                                              !! (implicit)
 
-    real(p) :: tcorv(kx) !! Vertical component of orographic correction for temperature
-    real(p) :: qcorv(kx) !! Vertical component of orographic correction for humidity
+    real(p), save, allocatable :: tcorv(:) !! Vertical component of orographic correction for temperature
+    real(p), save, allocatable :: qcorv(:) !! Vertical component of orographic correction for humidity
 
-    complex(p) :: tcorh(mx, nx) !! Horizontal component of orographic correction for temperature
-    complex(p) :: qcorh(mx, nx) !! Horizontal component of orographic correction for humidity
+    complex(p), save, allocatable :: tcorh(:, :) !! Horizontal component of orographic correction for temperature
+    complex(p), save, allocatable :: qcorh(:, :) !! Horizontal component of orographic correction for humidity
+
+    logical, save :: horizontal_diffusion_mod_initialized_flag = .false.
 
 contains
     !> Initializes the arrays used for horizontal diffusion.
@@ -40,6 +44,24 @@ contains
 
         integer :: j, k, npowhd
         real(p) :: elap, elapn, hdifd, hdiff, hdifs, qexp, rgam, rlap, twn
+
+        if (horizontal_diffusion_mod_initialized_flag) then
+            return
+        end if
+
+        if (.not. allocated(dmp)) allocate (dmp(mx, nx))
+        if (.not. allocated(dmpd)) allocate (dmpd(mx, nx))
+        if (.not. allocated(dmps)) allocate (dmps(mx, nx))
+        if (.not. allocated(dmp1)) allocate (dmp1(mx, nx))
+        if (.not. allocated(dmp1d)) allocate (dmp1d(mx, nx))
+        if (.not. allocated(dmp1s)) allocate (dmp1s(mx, nx))
+        if (.not. allocated(dmp1d)) allocate (dmp1d(mx, nx))
+
+        if (.not. allocated(tcorv)) allocate (tcorv(kx))
+        if (.not. allocated(qcorv)) allocate (qcorv(kx))
+
+        if (.not. allocated(tcorh)) allocate (tcorh(mx, nx))
+        if (.not. allocated(qcorh)) allocate (qcorh(mx, nx))
 
         ! 1. Definition of constants
         if (mod(nsteps, 2) /= 0) stop ' Invalid no. of time steps'
@@ -79,6 +101,25 @@ contains
             tcorv(k) = fsg(k)**rgam
             if (k .gt. 2) qcorv(k) = fsg(k)**qexp
         end do
+
+        horizontal_diffusion_mod_initialized_flag = .true.
+    end subroutine
+
+    ! Deallocate the module data to release memory.
+    subroutine deinitialize_horizontal_diffusion()
+        if ( allocated(dmp)) deallocate (dmp)
+        if ( allocated(dmpd)) deallocate (dmpd)
+        if ( allocated(dmps)) deallocate (dmps)
+        if ( allocated(dmp1)) deallocate (dmp1)
+        if ( allocated(dmp1d)) deallocate (dmp1d)
+        if ( allocated(dmp1s)) deallocate (dmp1s)
+        if ( allocated(dmp1d)) deallocate (dmp1d)
+
+        if ( allocated(tcorv)) deallocate (tcorv)
+        if ( allocated(qcorv)) deallocate (qcorv)
+
+        if ( allocated(tcorh)) deallocate (tcorh)
+        if ( allocated(qcorh)) deallocate (qcorh)
     end subroutine
 
     !> Adds horizontal diffusion tendency of field to spectral tendency fdt

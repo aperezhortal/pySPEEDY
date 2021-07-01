@@ -178,10 +178,16 @@ contains
         real(p), intent(out) :: qdif(ix,il)    !! Excess humidity in convective gridboxes
 
         integer :: i, j, k, ktop1, ktop2, nl1, nlp
-        real(p) :: mss(ix,il,2:kx), mse0, mse1, mss0, mss2, msthr
+        real(p) :: mse0, mse1, mss0, mss2, msthr
         real(p) :: qthr0, qthr1, rlhc
         logical :: lqthr
 
+        real(p), allocatable :: mss(:,:,:)
+
+        allocate(mss(ix,il,2:kx))
+        
+        msthr = 0 
+        
         nl1 = kx - 1
         nlp = kx + 1
 
@@ -242,5 +248,6 @@ contains
                 end if
             end do
         end do
-    end
+        deallocate(mss)
+    end subroutine
 end module

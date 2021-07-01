@@ -1,6 +1,7 @@
 !> author: Sam Hatfield, Fred Kucharski, Franco Molteni
 !  date: 01/05/2019
 !  For storing all variables related to the model's grid space.
+
 module geometry
     use types, only: p
     use params
@@ -13,29 +14,36 @@ module geometry
         cosg, cosgr, cosgr2
 
     ! Vertical level parameters
-    real(p) :: hsg(kx+1) !! Half sigma levels
-    real(p) :: dhs(kx)   !! Sigma level thicknesses
-    real(p) :: fsg(kx)   !! Full sigma levels
-    real(p) :: dhsr(kx)  !! 1/(2*sigma level thicknesses)
-    real(p) :: fsgr(kx)  !! akap/(2*full sigma levels)
+    real(p),save :: hsg(kx+1) !! Half sigma levels
+    real(p),save :: dhs(kx)   !! Sigma level thicknesses
+    real(p),save :: fsg(kx)   !! Full sigma levels
+    real(p),save :: dhsr(kx)  !! 1/(2*sigma level thicknesses)
+    real(p),save :: fsgr(kx)  !! akap/(2*full sigma levels)
 
     ! Functions of latitude and longitude
-    real(p), dimension(il) :: radang   !! Latitudes in radians
-    real(p), dimension(il) :: coriol   !! Coriolis parameter as a function of latitude
-    real(p), dimension(il) :: sia      !! sine(latitude)
-    real(p), dimension(il) :: coa      !! cosine(latitude)
-    real(p), dimension(iy) :: sia_half !! sine(latitude) over one hemisphere only
-    real(p), dimension(il) :: coa_half !! cosine(latitude) over one hemisphere only
-    real(p), dimension(il) :: cosg     !! Same as coa (TODO: remove)
-    real(p), dimension(il) :: cosgr    !! 1/coa
-    real(p), dimension(il) :: cosgr2   !! 1/coa^2
+    real(p),save, dimension(il) :: radang   !! Latitudes in radians
+    real(p),save, dimension(il) :: coriol   !! Coriolis parameter as a function of latitude
+    real(p),save, dimension(il) :: sia      !! sine(latitude)
+    real(p),save, dimension(il) :: coa      !! cosine(latitude)
+    real(p),save, dimension(iy) :: sia_half !! sine(latitude) over one hemisphere only
+    real(p),save, dimension(il) :: coa_half !! cosine(latitude) over one hemisphere only
+    real(p),save, dimension(il) :: cosg     !! Same as coa (TODO: remove)
+    real(p),save, dimension(il) :: cosgr    !! 1/coa
+    real(p),save, dimension(il) :: cosgr2   !! 1/coa^2
+
+    logical, save :: geometry_mod_initialized_flag = .false.
 
 contains
     !> Initializes all of the model geometry variables.
     subroutine initialize_geometry
         use physical_constants, only: akap, omega
-
+        
         integer j, jj, k
+
+        if (geometry_mod_initialized_flag) then
+            !Do nothing
+            return
+        end if
 
         ! Definition of model levels
         ! Half (vertical velocity) levels
@@ -87,5 +95,7 @@ contains
         end do
 
         coriol = 2.0*omega*sia
+
+        geometry_mod_initialized_flag = .true.
     end subroutine
 end module

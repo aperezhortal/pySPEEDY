@@ -11,11 +11,11 @@ module legendre
     public initialize_legendre, legendre_dir, legendre_inv
     public epsi
 
-    real(p) :: cpol(2*mx,nx,iy)  !! The Legendre polynomials
-    real(p) :: epsi(mx+1,nx+1)   !! Epsilon function used for various spectral calculations
-    real(p) :: repsi(mx+1,nx+1)  !! 1/epsi
-    integer :: nsh2(nx)       !! Used for defining shape of spectral triangle
-    real(p), dimension(iy) :: wt !! Gaussian weights used for integration in direct Legendre transform
+    real(p),save :: cpol(2*mx,nx,iy)  !! The Legendre polynomials
+    real(p),save :: epsi(mx+1,nx+1)   !! Epsilon function used for various spectral calculations
+    real(p),save :: repsi(mx+1,nx+1)  !! 1/epsi
+    integer,save :: nsh2(nx)       !! Used for defining shape of spectral triangle
+    real(p),save, dimension(iy) :: wt !! Gaussian weights used for integration in direct Legendre transform
 
 contains
     !> Initializes Legendre transforms and constants used for other subroutines
@@ -161,7 +161,7 @@ contains
 
         real(p) :: w(iy) !! Weights in gaussian quadrature (sum should equal 1.0)
 
-        real(p) :: z,z1,p1,p2,p3,pp
+        real(p) :: z,z1,p1,p2,p3,pp=0
         integer :: n, j, i
 
         n = 2*iy

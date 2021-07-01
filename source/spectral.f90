@@ -10,20 +10,46 @@ module spectral
     public laplacian, inverse_laplacian, spec_to_grid, grid_to_spec
     public grad, vds, uvspec, vdspec, trunct
 
-    real(p), dimension(mx,nx) :: el2, elm2, el4, trfilt
-    real(p) :: gradx(mx), gradym(mx,nx), gradyp(mx,nx)
-    real(p), dimension(mx,nx) :: uvdx, uvdym, uvdyp
-    real(p), dimension(mx,nx) :: vddym, vddyp
-
+    ! Make them allocatable to avoid declaring them statically.
+    ! This suppresses some warnings in the compiler.
+    real(p), allocatable, dimension(:,:), save :: el2, elm2, el4, trfilt
+    real(p), allocatable, dimension(:,:), save :: gradym, gradyp
+    real(p), allocatable, dimension(:,:), save :: uvdx, uvdym, uvdyp
+    real(p), allocatable, dimension(:,:), save :: vddym, vddyp
+    real(p), allocatable, dimension(:), save :: gradx
+    
+    logical, save :: spectral_mod_initialized_flag = .false.
 contains
     ! Initialize spectral transforms
     subroutine initialize_spectral
         use physical_constants, only: rearth
         use fourier, only: initialize_fourier
         use legendre, only: initialize_legendre, epsi
-
+        
         real(p) :: el1
         integer :: m, m1, m2, n, wavenum_tot(mx,nx), mm(mx)
+
+        if (spectral_mod_initialized_flag) then
+            ! Do nothing, this module was initialized
+            return 
+        end if 
+
+        if (.not. allocated(el2)) allocate (el2(mx,nx))
+        if (.not. allocated(elm2)) allocate (elm2(mx,nx))
+        if (.not. allocated(el4)) allocate (el4(mx,nx))
+        if (.not. allocated(trfilt)) allocate (trfilt(mx,nx))
+
+        if (.not. allocated(gradym)) allocate (gradym(mx,nx))
+        if (.not. allocated(gradyp)) allocate (gradyp(mx,nx))
+        
+        if (.not. allocated(uvdx)) allocate (uvdx(mx,nx))
+        if (.not. allocated(uvdym)) allocate (uvdym(mx,nx))        
+        if (.not. allocated(uvdyp)) allocate (uvdyp(mx,nx))
+
+        if (.not. allocated(vddym)) allocate (vddym(mx,nx))
+        if (.not. allocated(vddyp)) allocate (vddyp(mx,nx))
+
+        if (.not. allocated(gradx)) allocate (gradx(mx))
 
         ! Initialize Fourier transforms
         call initialize_fourier
@@ -79,7 +105,28 @@ contains
                 vddyp(m,n)  = el1*epsi(m2,n+1)/rearth
             end do
         end do
-    end
+        spectral_mod_initialized_flag = .true.
+    end subroutine
+
+    ! Deinitialize global variables
+    subroutine deinitialize_spectral
+        if (allocated(el2)) deallocate (el2)
+        if (allocated(elm2)) deallocate (elm2)
+        if (allocated(el4)) deallocate (el4)
+        if (allocated(trfilt)) deallocate (trfilt)
+
+        if (allocated(gradym)) deallocate (gradym)
+        if (allocated(gradyp)) deallocate (gradyp)
+        
+        if (allocated(uvdx)) deallocate (uvdx)
+        if (allocated(uvdym)) deallocate (uvdym)        
+        if (allocated(uvdyp)) deallocate (uvdyp)
+
+        if (allocated(vddym)) deallocate (vddym)
+        if (allocated(vddyp)) deallocate (vddyp)
+
+        if (allocated(gradx)) deallocate (gradx)
+    end subroutine
 
     function laplacian(input) result(output)
         complex(p), intent(in) :: input(mx,nx)
