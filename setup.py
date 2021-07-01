@@ -25,7 +25,7 @@ pyspeedy_extension = Extension(
     ],
     extra_link_args=["-fopenmp", "-L./source", "-lspeedy", "-lnetcdf", "-lnetcdff"],
     include_dirs=[numpy.get_include()],
-    f2py_options=["--f2cmap", F2CMAP],
+    f2py_options=["--f2cmap", str(F2CMAP)],
 )
 
 
