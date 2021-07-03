@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
 import xarray as xr
 import numpy as np
 from datetime import datetime
-
-from pyspeedy import _speedy, example_bc_file
+from dateutil.relativedelta import relativedelta
+import json 
+from pyspeedy import _speedy, example_bc_file, example_sst_anomaly_file, PACKAGE_DATA_DIR
 
 _DEFAULT_PARAMS = dict(
     history_interval=1,
@@ -12,9 +14,10 @@ _DEFAULT_PARAMS = dict(
     end_date=datetime(1982, 1, 2),
 )
 
-# Make this constant immutable.
+# Make this dict immutable.
 _DEFAULT_PARAMS = tuple(_DEFAULT_PARAMS.items())
-
+with open(PACKAGE_DATA_DIR/"model_state.json") as fp:
+    MODEL_STATE_DEF = json.load(fp)
 
 class Speedy:
     """
@@ -32,6 +35,7 @@ class Speedy:
         self._end_date = None
 
         self.set_params(**control_params)
+
 
     def set_params(self, **control_params):
         """
@@ -54,12 +58,18 @@ class Speedy:
         for key, value in _control_params.items():
             setattr(self, key, value)
 
-        self._state = _speedy.modelstate_init()
-        self._control = _speedy.controlparams_init(
+        self._state_cnt = _speedy.modelstate_init()
+        self._control_cnt = _speedy.controlparams_init(
             self._start_date,
             self._end_date,
             self.history_interval,
             self.diag_interval,
+        )
+
+        self.n_months = (
+            (self.end_date.year - self.start_date.year) * 12
+            + (self.end_date.month - self.start_date.month)
+            + 1
         )
 
     @staticmethod
@@ -76,17 +86,21 @@ class Speedy:
         _getter = getattr(_speedy, f"get_{var_name}", None)
         if _getter is None:
             raise AttributeError(f"The state variable '{var_name}' does not exist.")
-        return _getter(self._state)
+        time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
+        if time_dim:
+            return _getter(self._state_cnt, getattr(self, time_dim))
+
+        return _getter(self._state_cnt)
 
     def get_shape(self, var_name):
         """Get state variable shape."""
         _getter = getattr(_speedy, f"get_{var_name}_shape", None)
         if _getter is None:
             raise AttributeError(
-                f"The 'get-shape' method for the state variable '"
+                f"The 'get-shape' method for the state variable "
                 f"{var_name}' does not exist."
             )
-        return tuple(_getter(self._state))
+        return tuple(_getter(self._state_cnt))
 
     def __setitem__(self, var_name, value):
         """Setter for state variables."""
@@ -98,15 +112,21 @@ class Speedy:
         if self.get_shape(var_name) != value.shape:
             raise ValueError("Array shape missmatch")
         value = np.asfortranarray(value)
-        return _setter(self._state, value)
+
+        time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
+        if time_dim:
+            print(time_dim)
+            return _setter(self._state_cnt, value, getattr(self, time_dim))
+
+        return _setter(self._state_cnt, value)
 
     def __del__(self):
         """Clean up."""
-        _speedy.modelstate_close(self._state)
-        _speedy.controlparams_close(self._control)
+        _speedy.modelstate_close(self._state_cnt)
+        _speedy.controlparams_close(self._control_cnt)
 
-        self._control = None
-        self._state = None
+        self._control_cnt = None
+        self._state_cnt = None
 
         self._start_date = self._dealloc_date(self._start_date)
         self._end_date = self._dealloc_date(self._end_date)
@@ -151,8 +171,6 @@ class Speedy:
     def default_init(self, bc_file=None):
         # In the model state, the variables follow the lon/lat dimension ordering.
 
-        from pathlib import Path
-
         if bc_file is None:
             bc_file = example_bc_file()
 
@@ -182,21 +200,82 @@ class Speedy:
 
         self["sea_ice_frac12"] = ds["icec"].values
 
-    def load_anomalies(self):
-        # ds = xr.load_dataset("sea_surface_temperature_anomaly.nc")
-        pass
+        _speedy.init(self._state_cnt, self._control_cnt)
+
+    def set_sst_anomalies(self, sst_anomaly=None):
+        """Load SST anomalies from file."""
+        if sst_anomaly is None:
+            sst_anomaly = example_sst_anomaly_file()
+
+        if isinstance(sst_anomaly, str):
+            if not os.path.isfile(sst_anomaly):
+                raise RuntimeError(
+                    "The SST anomaly file does not exist.\n" f"File: {sst_anomaly}"
+                )
+            ds = xr.load_dataset(sst_anomaly)
+        elif isinstance(sst_anomaly, xr.Dataset):
+            ds = sst_anomaly
+        else:
+            raise TypeError(f"Unsupported sst_anomaly input: {type(sst_anomaly)}")
+
+        #########################################################################
+        # Select only the times in the dataset between the start and the end date
+
+        # At each timestep, Speedy uses a 3-month window for the computations.
+        # Correct the start/end dates to account for those dates.
+        start_date = self.start_date.replace(
+            day=1, hour=0, minute=0, microsecond=0
+        ) - relativedelta(months=1)
+
+        end_date = self.end_date.replace(
+            day=1, hour=0, minute=0, microsecond=0
+        ) + relativedelta(months=1)
+
+        ds = ds.loc[
+            dict(
+                lon=slice(None),
+                lat=slice(None),
+                time=slice(start_date, end_date),
+            )
+        ]
+
+        expected_months = (
+            (end_date.year - start_date.year) * 12
+            + (end_date.month - start_date.month)
+            + 1
+        )
+
+        missing_months = expected_months - len(ds["time"])
+
+        if missing_months > 0:
+            raise RuntimeError(
+                f"{missing_months} months are missing in the SST anomalies file for the period: "
+                + start_date.strftime("%Y/%m/%d")
+                + " , "
+                + end_date.strftime("%Y/%m/%d")
+                + ".\n "
+            )
+
+        _speedy.modelstate_init_sst_anom(self._state_cnt, expected_months - 2)
+        # self["sst_anom"] = ds["ssta"]
 
     def run(self):
         """
         Run the model.
         """
-        _speedy.run(self._state, self._control)
+        error_code = _speedy.run(self._state_cnt, self._control_cnt)
+        if error_code == -1:
+            raise RuntimeError(
+                "Model state not initialized. Initialize it before running the model."
+            )
 
 
 if __name__ == "__main__":
 
     model = Speedy()
     model.default_init()
+    # print(model.get_shape("sst_anom"))
+    model.set_sst_anomalies()
     model.run()
 
     # from matplotlib import pyplot as plt

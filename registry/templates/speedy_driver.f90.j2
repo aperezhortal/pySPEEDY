@@ -1,0 +1,239 @@
+!
+!  THIS CODE IS AUTOMATICALLY GENERATED.
+!  DO NOT MODIFY IT DIRECTLY.
+!
+! Interface for the fortran speedy module.
+!
+!
+! This interface follows the ideas presented in this paper:
+! "Exposing Fortran Derived Types to C and Other Languages"
+! S. Kruger, S. Muszala, A. Pletzer, S. Vadlamani and D. McCune,
+! Computing in Science & Engineering, vol. 10, no. 04, pp. 86-92, 2008.
+! doi: 10.1109/MCSE.2008.94
+!
+! https://doi.ieeecomputersociety.org/10.1109/MCSE.2008.94
+
+module speedy_driver
+    use model_state, only: ModelState_allocate, ModelState_deallocate, ModelState_t, ModelState_Ptr_t
+    use model_control, only: ControlParams_Ptr_t, ControlParams_t, initialize_control
+    use model_control, only: Datetime_t, Datetime_Ptr_t
+    use types, only : p
+
+    implicit none
+
+contains
+
+    ! =========================================================================
+    ! Speedy interface + init/close
+    ! =========================================================================    
+    !> Initialize the Speedy modules. This needs to be run once.
+    subroutine initialize_module()
+        use initialization, only: initialize_modules
+        call initialize_modules()
+    end subroutine
+
+    !> Deinitialize the Speedy modules.
+    subroutine close_module()
+        use initialization, only: deinitialize_modules
+        call deinitialize_modules()
+    end subroutine
+
+    subroutine init(state_container, control_container)
+        use initialization, only: initialize_state
+        
+        integer(8), intent(in) :: state_container, control_container
+
+        type(ModelState_Ptr_t):: state_ptr
+        type(ControlParams_Ptr_t):: control_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        control_ptr = transfer(control_container, control_ptr)
+        call initialize_state(state_ptr%p, control_ptr%p)
+    end subroutine
+
+    subroutine run(state_container, control_container, error_code)
+        use speedy, only: run_speedy
+        
+        integer(8), intent(in) :: state_container, control_container
+        integer, intent(out)   :: error_code
+
+        type(ModelState_Ptr_t):: state_ptr
+        type(ControlParams_Ptr_t):: control_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        control_ptr = transfer(control_container, control_ptr)
+        call run_speedy(state_ptr%p, control_ptr%p, error_code)
+    end subroutine
+    
+    ! =========================================================================
+    ! ControlParams interface
+    ! =========================================================================
+    !> Initialize the ControlParams and return the container with the object.
+    subroutine controlparams_init(control_cnt, &
+                                  start_datetime_cnt, end_datetime_cnt, &
+                                  history_interval, diag_interval)
+
+        integer(8), intent(out) :: control_cnt !! Container for the ControlParams_Ptr_t object.
+        integer(8), intent(in) :: start_datetime_cnt
+        integer(8), intent(in) :: end_datetime_cnt
+        integer, intent(in)    :: history_interval, diag_interval
+
+        type(ControlParams_Ptr_t) :: control_ptr
+        type(Datetime_Ptr_t) :: start_datetime_ptr, end_datetime_ptr
+
+        control_ptr = transfer(control_cnt, control_ptr)
+        start_datetime_ptr = transfer(start_datetime_cnt, start_datetime_ptr)
+        end_datetime_ptr = transfer(end_datetime_cnt, end_datetime_ptr)
+
+        allocate (control_ptr%p)
+        call initialize_control(control_ptr%p, &
+                                start_datetime_ptr%p, end_datetime_ptr%p, &
+                                history_interval, diag_interval)
+
+        control_cnt = transfer(control_ptr, control_cnt)
+    end subroutine
+
+    !> Deallocate the ControlParams
+    subroutine controlparams_close(this)        
+        integer(8), intent(in) :: this
+
+        type(ControlParams_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        deallocate(this_ptr%p)
+    end subroutine
+
+    ! =========================================================================
+    ! Datetime interface
+    ! =========================================================================
+    subroutine create_datetime(year, month, day, hour, minute, datetime_cnt)
+        integer, intent(in) :: year, month, day,hour, minute
+        integer(8), intent(out) :: datetime_cnt       
+
+        type(Datetime_Ptr_t):: datetime_out
+        type(Datetime_t), pointer :: my_datetime
+
+        ! 1. Create the fortran datetime_t object.
+        ! We make it allocatable because we want to return the reference pointing to
+        ! this object.        
+        allocate(my_datetime)
+        my_datetime%allocated = .true.
+        my_datetime%year = year
+        my_datetime%month = month
+        my_datetime%day = day
+        my_datetime%hour = hour
+        my_datetime%minute = minute
+        
+        ! 2. Make the container point to that object.
+        datetime_out%p => my_datetime
+
+        ! 3. Return the container with the memory address to the datetime object.
+        datetime_cnt = transfer(datetime_out, datetime_cnt)
+    end subroutine
+
+    subroutine get_datetime(this, year, month, day, hour, minute)       
+        integer(8), intent(in) :: this
+        
+        integer, intent(out) :: year, month, day, hour, minute
+        type(Datetime_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+
+        year = this_ptr%p%year
+        month = this_ptr%p%month
+        day = this_ptr%p%day
+        hour = this_ptr%p%hour
+        minute = this_ptr%p%minute       
+    end subroutine
+
+    subroutine close_datetime(this)  
+        integer(8), intent(in) :: this
+
+        type(Datetime_Ptr_t):: this_ptr
+
+        this_ptr = transfer(this, this_ptr)
+        if (this_ptr%p%allocated) deallocate(this_ptr%p)
+    end subroutine
+
+    ! =========================================================================
+    ! ModelState interface
+    ! =========================================================================  
+    !> Initialize the ModelState and return the container with the object.
+    subroutine modelstate_init(state_cnt)
+        integer(8), intent(out) :: state_cnt !! Container for the ModelState_Ptr_t object.
+
+        type(ModelState_Ptr_t) :: state_ptr
+        allocate (state_ptr%p)
+        call ModelState_allocate(state_ptr%p)
+        state_cnt = transfer(state_ptr, state_cnt)
+    end subroutine
+    
+    {% for var in model_state if var.time_dim %}
+    !> Allocate {{var.name}}
+    subroutine modelstate_init_{{var.name}}(state_cnt, {{var.time_dim}})
+        use model_state, only: ModelState_allocate_{{var.name}}
+        integer(8), intent(in) :: state_cnt !! Container for the ModelState_Ptr_t object.
+        integer, intent(in) :: {{var.time_dim}}
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        call ModelState_allocate_{{var.name}}(state_ptr%p, {{var.time_dim}})
+    end subroutine
+    {% endfor %}
+
+    !> Deallocate the ModelState
+    subroutine modelstate_close(state_cnt)        
+        integer(8), intent(in) :: state_cnt
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        call ModelState_deallocate(state_ptr%p)
+        deallocate(state_ptr%p)
+    end subroutine
+
+    {% for var in model_state %}
+
+    subroutine get_{{var.name}}(state_cnt, {{ var.name }}_out {% if var.time_dim %}, {{var.time_dim}} {% endif %})
+        use params
+        integer(8), intent(in) :: state_cnt
+        {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
+        !> {{ var.desc }}
+        {{ var.dtype }}(8), intent(out) :: {{ var.name }}_out{{ var.dims }}
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        {{ var.name }}_out=state_ptr%p%{{ var.name }}
+    end subroutine
+
+    subroutine set_{{var.name}}(state_cnt, {{ var.name }}_in {% if var.time_dim %}, {{var.time_dim}} {% endif %})
+        use params
+        integer(8), intent(in) :: state_cnt
+        {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
+        !> {{ var.desc }}
+        {{ var.dtype }}(8), intent(in) :: {{ var.name }}_in{{ var.dims }}
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        state_ptr%p%{{ var.name }}={{ var.name }}_in
+    end subroutine
+    
+    subroutine get_{{var.name}}_shape(state_cnt, array_shape)
+        use params
+        integer(8), intent(in) :: state_cnt
+        !> {{ var.desc }}
+        integer, intent(out) :: array_shape({{ var.ndim }})
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        if (state_ptr%p%{{var.name}}_initialized) then
+            array_shape=shape(state_ptr%p%{{ var.name }})
+        else
+            array_shape = 0             
+        endif
+    end subroutine
+    {% endfor %}
+    
+end module
+

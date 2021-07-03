@@ -74,7 +74,6 @@ contains
     ! Initialization of sea model
     subroutine sea_model_init(state, sst_init_month)
         use boundaries, only: fill_missing_values, check_surface_fields
-        ! use date, only: isst0
         use geometry, only: radang
         use input_output, only: load_boundary_file
         use model_state, only: ModelState_t
@@ -167,7 +166,7 @@ contains
                                   state%sea_ice_frac12)
 
         ! SST anomalies for initial and preceding/following months
-        if (sst_anomaly_coupling_flag > 0) then
+        if (sst_anomaly_coupling_flag > 0) then            
             write (*, '(A,I0.2)') 'SST anomalies are read starting from month ', sst_init_month
             do month = 1, 3
                 if ((sst_init_month <= 1 .and. month /= 2) .or. sst_init_month > 1) then

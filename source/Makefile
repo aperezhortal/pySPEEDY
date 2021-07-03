@@ -26,6 +26,7 @@ LIB=-L$/usr/lib -lnetcdff -lnetcdf
 LIB=-L/home/aperez/.conda/envs/speedy/lib -lnetcdff -lnetcdf
 
 FILES= \
+       error_codes.o \
        model_state.o \
 	   boundaries.o \
 	   convection.o \
@@ -77,9 +78,10 @@ base_target: $(FILES)
 clean:
 	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
+error_codes.o          :
 speedy_driver.o        : model_state.o speedy.o
 speedy.o               : params.o model_control.o prognostics.o input_output.o \
-				         shortwave_radiation.o time_stepping.o\
+				         shortwave_radiation.o time_stepping.o error_codes.o \
                          diagnostics.o model_state.o 
 model_state.o          : types.o params.o
 boundaries.o           : physical_constants.o params.o input_output.o spectral.o types.o

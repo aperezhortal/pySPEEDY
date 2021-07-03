@@ -88,7 +88,6 @@ contains
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)
         ! =========================================================================
-
         call initialize_coupler(state, control_params)
 
         ! =========================================================================
@@ -100,6 +99,8 @@ contains
 
         ! Do the initial (2nd-order) time step, initialize the semi-implicit scheme
         call first_step(state)
+
+        state%initialized = .true.
     end subroutine
 
     !> Prints SPEEDY.f90 banner.

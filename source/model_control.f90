@@ -43,6 +43,7 @@ module model_control
         integer              :: imont1           !! The month used for computing seasonal forcing fields
         real(p)              :: tmonth           !! The fraction of the current month elapsed
         real(p)              :: tyear            !! The fraction of the current year elapsed
+        integer              :: month_idx =1     !! Simulation month (star month=1)
         integer              :: isst0            !! Initial month of SST anomalies
         integer              :: ndaycal(12, 2)   !! The model calendar
 

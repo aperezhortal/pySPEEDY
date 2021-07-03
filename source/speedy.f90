@@ -25,7 +25,7 @@ module speedy
 
 contains
 
-    subroutine run_speedy(state, control_params)
+    subroutine run_speedy(state, control_params, error_code)
         ! For this function, we explicity pass all the variables that needs to be saved
         ! to facilitate the python-fortran interface.
 
@@ -41,17 +41,23 @@ contains
         use forcing, only: set_forcing
         use model_state, only: ModelState_t, ModelState_deallocate, ModelState_allocate
         use spectral, only: spec_to_grid
+        use error_codes
         implicit none
 
         !> The model state needs to be initilialized before calling this function.
         type(ModelState_t), intent(inout) :: state
         type(ControlParams_t), intent(inout)  :: control_params
+        integer, intent(out) :: error_code
 
         ! Time step counter
         integer :: model_step = 1
         
-        ! Initialization
-        call initialize_state(state, control_params)
+        ! Check if model was initialized
+        if (.not. state%initialized) then
+            error_code = E_STATE_NOT_INITIALIZED
+            return
+        end if 
+        ! call initialize_state(state, control_params)
 
         ! Model main loop
         do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))

@@ -1,14 +1,24 @@
 from collections import namedtuple
 from jinja2 import FileSystemLoader, Environment
 from pathlib import Path
+import json
 
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
+PYSPEEDY_DATA_DIR = (THIS_FILE_DIR / "../pyspeedy/data").resolve()
 
-_VarDef = namedtuple("VariableDefinition", ["name", "dtype", "dims", "desc"])
+class VarDef:
+    def __init__(self, name, dtype, dims, desc, time_dim=None):
+        """
+        If has_time_dim is True, the variable is not allocated during the
+        initialization since it depends on the duration of the simulation.
+        """
+        self.name = name
+        self.dtype = dtype
+        self.dims = dims
+        self.desc = desc
+        self.time_dim = time_dim
 
-
-class VarDef(_VarDef):
     @property
     def dimension(self):
         dimension = ", ".join(":" * self.ndim)
@@ -123,6 +133,16 @@ model_state = [
     ##########################
     VarDef("sst12", "real", "(ix, il, 12)", "Sea/ice surface temperature [K]"),
     VarDef("sea_ice_frac12", "real", "(ix, il, 12)", "Sea ice fraction"),
+    ############################
+    # Sea model module variables
+    ############################
+    VarDef(
+        "sst_anom",
+        "real",
+        "(ix, il, 0:n_months+1)",
+        "Observed SST anomaly (input).",
+        time_dim="n_months",
+    ),
 ]
 
 file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
@@ -136,3 +156,13 @@ template = env.get_template("speedy_driver.f90.j2")
 output = template.stream(model_state=model_state).dump(
     str(SOURCES_DIR / "speedy_driver.f90")
 )
+
+
+model_state = {
+    var.name: dict(dtype=var.dtype, dims=var.dims, desc=var.desc, time_dim=var.time_dim)
+    for var in model_state
+}
+
+with open(PYSPEEDY_DATA_DIR/"model_state.json", 'w') as outfile:
+    json.dump(model_state, outfile, indent=4)
+
