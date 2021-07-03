@@ -33,7 +33,7 @@ class Speedy:
         """
         self._start_date = None
         self._end_date = None
-
+        self._state_cnt = _speedy.modelstate_init()
         self.set_params(**control_params)
 
 
@@ -58,7 +58,9 @@ class Speedy:
         for key, value in _control_params.items():
             setattr(self, key, value)
 
-        self._state_cnt = _speedy.modelstate_init()
+        if self.start_date > self.end_date:
+            raise ValueError("The start date should be lower than the en date.")
+        
         self._control_cnt = _speedy.controlparams_init(
             self._start_date,
             self._end_date,
@@ -229,7 +231,7 @@ class Speedy:
 
         end_date = self.end_date.replace(
             day=1, hour=0, minute=0, microsecond=0
-        ) + relativedelta(months=1)
+        ) + relativedelta(months=1, days=1)
 
         ds = ds.loc[
             dict(
@@ -257,12 +259,12 @@ class Speedy:
             )
 
         _speedy.modelstate_init_sst_anom(self._state_cnt, expected_months - 2)
-        # self["sst_anom"] = ds["ssta"]
+        self["sst_anom"] = ds["ssta"]
 
     def run(self):
         """
         Run the model.
-        """
+        """        
         error_code = _speedy.run(self._state_cnt, self._control_cnt)
         if error_code == -1:
             raise RuntimeError(
@@ -273,9 +275,10 @@ class Speedy:
 if __name__ == "__main__":
 
     model = Speedy()
-    model.default_init()
-    # print(model.get_shape("sst_anom"))
     model.set_sst_anomalies()
+    print(model["sst_anom"].shape)
+    model.default_init()
+    # model.set_params(end_date=datetime(1982, 5, 1))
     model.run()
 
     # from matplotlib import pyplot as plt

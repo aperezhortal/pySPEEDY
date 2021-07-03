@@ -5,6 +5,7 @@ bin
 *.so
 source/model_state.f90
 source/speedy_driver.f90
+*.pyc
 
 .idea
 .vscode

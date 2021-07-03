@@ -22,9 +22,6 @@ module sea_model
     real(p) :: bmask_s(ix, il) ! Binary sea mask
     real(p) :: deglat_s(il) ! Grid latitudes
 
-    ! SST anomaly fields
-    real(p) :: sst_anom_3m(ix, il, 3) ! SST anomaly in 3 consecutive months
-
     ! Climatological fields from model output
     real(p) :: hfseacl(ix, il) ! Annual-mean heat flux into sea sfc.
     real(p) :: sstom12(ix, il, 12) ! Ocean model SST climatology
@@ -72,15 +69,12 @@ module sea_model
 
 contains
     ! Initialization of sea model
-    subroutine sea_model_init(state, sst_init_month)
+    subroutine sea_model_init(state)
         use boundaries, only: fill_missing_values, check_surface_fields
         use geometry, only: radang
-        use input_output, only: load_boundary_file
         use model_state, only: ModelState_t
 
         type(ModelState_t), intent(inout) :: state
-
-        integer, intent(in) :: sst_init_month !! Initial month of SST anomalies
 
         ! Domain mask
         real(p) :: dmask(ix, il)
@@ -165,18 +159,7 @@ contains
         call check_surface_fields(bmask_s, 12, 0.0_p, 1.0_p, 0.0_p, &
                                   state%sea_ice_frac12)
 
-        ! SST anomalies for initial and preceding/following months
-        if (sst_anomaly_coupling_flag > 0) then            
-            write (*, '(A,I0.2)') 'SST anomalies are read starting from month ', sst_init_month
-            do month = 1, 3
-                if ((sst_init_month <= 1 .and. month /= 2) .or. sst_init_month > 1) then
-                    sst_anom_3m(:, :, month) = load_boundary_file("sea_surface_temperature_anomaly.nc", &
-                        & "ssta", sst_init_month - 2 + month, 420)
-                end if
-            end do
-
-            call check_surface_fields(bmask_s, 3, -50.0_p, 50.0_p, 0.0_p, sst_anom_3m)
-        end if
+        call check_surface_fields(bmask_s, 3, -50.0_p, 50.0_p, 0.0_p, state%sst_anom)
 
         ! Climatological fields for the ocean model (TO BE RECODED)
         ! Annual-mean heat flux into sea-surface
@@ -247,41 +230,40 @@ contains
         cdice = dmask*tdice/(1.+dmask*tdice)
     end
 
-    subroutine couple_sea_atm(state, day, model_datetime, start_datetime, imont1, tmonth)
+    subroutine couple_sea_atm(state, day, control_params)
         use model_control, only:
-        use interpolation, only: forin5, forint
+        use interpolation, only: forin5, forint, monthly_interp
         use model_control, only: Datetime_t
         use model_state, only: ModelState_t
+        use model_control, only: ControlParams_t
 
+        type(ControlParams_t), intent(in)  :: control_params
         type(ModelState_t), intent(in) :: state
         integer, intent(in) :: day
-        type(Datetime_t), intent(in) :: model_datetime, start_datetime
-        integer, intent(in) :: imont1 !! Month for computing seasonal forcing fields
-        real(p), intent(in) :: tmonth      !! The fraction of the current month elapsed
 
         integer :: i, j
         real(p) :: sstcl0, sstfr
 
+        integer :: sst_anom_shape(3)
         ! 1. Interpolate climatological fields and obs. SST anomaly
         !    to actual date
 
         ! Climatological SST
-        call forin5(imont1, state%sst12, sstcl_ob, tmonth)
+        call forin5(control_params%imont1, state%sst12, sstcl_ob, control_params%tmonth)
 
         ! Climatological sea ice fraction
-        call forint(imont1, state%sea_ice_frac12, sicecl_ob, tmonth)
+        call forint(control_params%imont1, state%sea_ice_frac12, sicecl_ob, control_params%tmonth)
 
         ! SST anomaly
         if (sst_anomaly_coupling_flag .gt. 0) then
-            if (model_datetime%day .eq. 1 .and. day .gt. 0) then
-                call update_observed_sst_anomaly(model_datetime, start_datetime)
-            end if
-            call forint(2, sst_anom_3m, sstan_ob, tmonth)
+            sst_anom_shape = shape(state%sst_anom)  
+            call monthly_interp(control_params%month_idx, state%sst_anom, &
+                                sstan_ob, control_params%tmonth, sst_anom_shape(3))
         end if
 
         ! Ocean model climatological SST
         if (sea_coupling_flag .ge. 3) then
-            call forin5(imont1, sstom12, sstcl_om, tmonth)
+            call forin5(control_params%imont1, sstom12, sstcl_om, control_params%tmonth)
         end if
 
         ! Adjust climatological fields over sea ice
@@ -366,29 +348,6 @@ contains
         sst_am = sst_am + sice_am*(tice_am - sst_am)
         ssti_om = sst_om + sice_am*(tice_am - sst_om)
     end subroutine
-
-    ! Update observed SST anomaly array
-    subroutine update_observed_sst_anomaly(model_datetime, start_datetime)
-        use model_control, only: Datetime_t
-        use input_output, only: load_boundary_file
-        use boundaries, only: check_surface_fields
-
-        type(Datetime_t), intent(in) :: model_datetime, start_datetime
-
-        integer :: next_month
-
-        sst_anom_3m(:, :, 1) = sst_anom_3m(:, :, 2)
-        sst_anom_3m(:, :, 2) = sst_anom_3m(:, :, 3)
-
-        ! Compute next month given initial SST year
-        next_month = (start_datetime%year - issty0)*12 + model_datetime%month
-
-        ! Read next month SST anomalies
-        sst_anom_3m(:, :, 3) = load_boundary_file("sea_surface_temperature_anomaly.nc", "ssta", &
-            & next_month, 420)
-
-        call check_surface_fields(bmask_s, 1, -50.0_p, 50.0_p, 0.0_p, sst_anom_3m(:, :, 3))
-    end
 
     ! Purpose : Integrate slab ocean and sea-ice models for one day
     subroutine run_sea_model(model_vars)

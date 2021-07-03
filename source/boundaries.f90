@@ -21,7 +21,6 @@ contains
     !  and surface albedo).
     subroutine initialize_boundaries(state)
         use physical_constants, only: grav
-        use input_output, only: load_boundary_file
         use model_state, only: ModelState_t
         type(ModelState_t), intent(inout) :: state
 

@@ -9,88 +9,10 @@ module input_output
     implicit none
 
     private
-    public output, load_boundary_file
-
-    !> Interface for reading boundary files.
-    interface load_boundary_file
-        module procedure load_boundary_file_2d
-        module procedure load_boundary_file_one_month_from_year
-        module procedure load_boundary_file_one_month_from_long
-    end interface
+    public output
 
 contains
-    !> Loads the given 2D field from the given boundary file.
-    function load_boundary_file_2d(file_name, field_name) result(field)
-        character(len=*), intent(in) :: file_name  !! The NetCDF file to read from
-        character(len=*), intent(in) :: field_name !! The field to read
-
-        integer :: ncid, varid
-        real(sp), dimension(ix, il) :: raw_input
-        real(p), dimension(ix, il)  :: field
-
-        ! Open boundary file, read variable and then close
-        call check(nf90_open(file_name, nf90_nowrite, ncid))
-        call check(nf90_inq_varid(ncid, field_name, varid))
-        call check(nf90_get_var(ncid, varid, raw_input, start=(/1, 1/), count=(/ix, il/)))
-        call check(nf90_close(ncid))
-        field = raw_input(:, il:1:-1)
-
-        ! Fix undefined values
-        where (field <= -999) field = 0.0
-    end function
-
-    !> Loads the given 2D field at the given month from the given monthly
-    !  boundary file.
-    function load_boundary_file_one_month_from_year(file_name, field_name, month) result(field)
-        character(len=*), intent(in) :: file_name  !! The NetCDF file to read from
-        character(len=*), intent(in) :: field_name !! The field to read
-        integer, intent(in)          :: month      !! The month to read
-
-        integer :: ncid, varid
-        real(sp), dimension(ix, il, 12) :: raw_input
-        real(p), dimension(ix, il)     :: field
-
-        ! Open boundary file, read variable and then close
-        call check(nf90_open(file_name, nf90_nowrite, ncid))
-        call check(nf90_inq_varid(ncid, field_name, varid))
-        call check(nf90_get_var(ncid, varid, raw_input))
-        call check(nf90_close(ncid))
-        field = raw_input(:, il:1:-1, month)
-
-        ! Fix undefined values
-        where (field <= -999) field = 0.0
-    end
-
-    !> Loads the given 2D field at the given month from the given boundary file
-    !  of a given length.
-    !
-    !  This is used for reading the SST anomalies from a particular month of a
-    !  particular year. The SST anomalies are stored in a long multidecadal
-    !  file and the total number of months in this file must be passed as an
-    !  argument (`length`).
-    function load_boundary_file_one_month_from_long(file_name, field_name, month, length) &
-        & result(field)
-        character(len=*), intent(in) :: file_name  !! The NetCDF file to read from
-        character(len=*), intent(in) :: field_name !! The field to read
-        integer, intent(in)          :: month      !! The month to read
-        integer, intent(in)          :: length     !! The total length of the file in number of
-                                                   !! months
-
-        integer :: ncid, varid
-        real(sp), dimension(ix, il, length) :: raw_input
-        real(p), dimension(ix, il)         :: field
-
-        ! Open boundary file, read variable and then close
-        call check(nf90_open(file_name, nf90_nowrite, ncid))
-        call check(nf90_inq_varid(ncid, field_name, varid))
-        call check(nf90_get_var(ncid, varid, raw_input))
-        call check(nf90_close(ncid))
-        field = raw_input(:, il:1:-1, month)
-
-        ! Fix undefined values
-        where (field <= -999) field = 0.0
-    end
-
+    
     !> Writes a snapshot of all prognostic variables to a NetCDF file.
     subroutine output(timestep, control_params, vor, div, t, ps, tr, phi)
         use geometry, only: radang, fsg
@@ -101,12 +23,12 @@ contains
         integer, intent(in) :: timestep           !! The time step that is being written
         type(ControlParams_t), target, intent(in)  :: control_params
 
-        complex(p), intent(in) :: vor(mx,nx,kx,2)    !! Vorticity
-        complex(p), intent(in) :: div(mx,nx,kx,2)    !! Divergence
-        complex(p), intent(in) :: t(mx,nx,kx,2)      !! Temperature
-        complex(p), intent(in) :: ps(mx,nx,2)        !! log(normalized surface pressure)
-        complex(p), intent(in) :: tr(mx,nx,kx,2,ntr) !! Tracers
-        complex(p), intent(in) :: phi(mx,nx,kx)      !! Geopotential
+        complex(p), intent(in) :: vor(mx, nx, kx, 2)    !! Vorticity
+        complex(p), intent(in) :: div(mx, nx, kx, 2)    !! Divergence
+        complex(p), intent(in) :: t(mx, nx, kx, 2)      !! Temperature
+        complex(p), intent(in) :: ps(mx, nx, 2)        !! log(normalized surface pressure)
+        complex(p), intent(in) :: tr(mx, nx, kx, 2, ntr) !! Tracers
+        complex(p), intent(in) :: phi(mx, nx, kx)      !! Geopotential
 
         complex(p), dimension(mx, nx)     :: ucos, vcos
         real(p), dimension(ix, il, kx)  :: u_grid, v_grid, t_grid, q_grid, phi_grid

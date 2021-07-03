@@ -43,8 +43,9 @@ module model_control
         integer              :: imont1           !! The month used for computing seasonal forcing fields
         real(p)              :: tmonth           !! The fraction of the current month elapsed
         real(p)              :: tyear            !! The fraction of the current year elapsed
+        
         integer              :: month_idx =1     !! Simulation month (star month=1)
-        integer              :: isst0            !! Initial month of SST anomalies
+
         integer              :: ndaycal(12, 2)   !! The model calendar
 
         integer :: diag_interval     !! Period (number of steps) for diagnostic print-out
@@ -113,10 +114,8 @@ contains
         do jm = 2, 12
             ndaycal(jm, 2) = ndaycal(jm - 1, 1) + ndaycal(jm - 1, 2)
         end do
-
-        ! Initialize month index for reading SST anomaly file
-        control_params%isst0 = (control_params%start_datetime%year - issty0)*12 &
-                               + control_params%start_datetime%month
+        
+        control_params%month_idx = 1
 
         call update_forcing_params(control_params)
 
@@ -151,11 +150,13 @@ contains
             if (model_datetime%day > 29) then
                 model_datetime%day = 1
                 model_datetime%month = model_datetime%month + 1
+                control_params%month_idx = control_params%month_idx + 1 
             end if
         else
             if (model_datetime%day > control_params%ndaycal(model_datetime%month, 1)) then
                 model_datetime%day = 1
                 model_datetime%month = model_datetime%month + 1
+                control_params%month_idx = control_params%month_idx + 1 
             end if
         end if
 
@@ -165,6 +166,7 @@ contains
             model_datetime%year = model_datetime%year + 1
         end if
 
+         
         call update_forcing_params(control_params)
 
     end subroutine

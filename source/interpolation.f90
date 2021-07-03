@@ -8,9 +8,34 @@ module interpolation
     implicit none
 
     private
-    public forint, forin5
+    public forint, forin5, monthly_interp
 
 contains
+
+    !> Performs linear interpolation on the time dimension.
+    ! This function does not wrap the indexes around the month 1 or 12.
+    subroutine monthly_interp(month_idx, in_field, out_field, month_fraction, n_months)
+        integer, intent(in) :: month_idx                    !! The month
+        integer, intent(in) :: n_months
+        real(p), intent(in) :: in_field(ix, il, 0:n_months-1) !! The input field
+        real(p), intent(inout) :: out_field(ix, il)   !! The output field
+        real(p), intent(in)    :: month_fraction      !! The fraction of the current month elapsed
+
+        integer :: imon2
+        real(p) :: wmon
+
+        if (month_fraction <= 0.5) then
+            imon2 = month_idx - 1
+            wmon = 0.5 - month_fraction
+        else
+            imon2 = month_idx + 1
+            wmon = month_fraction - 0.5
+        end if
+
+        out_field = in_field(:, :, month_idx) &
+                    + wmon*(in_field(:, :, imon2) - in_field(:, :, month_idx))
+    end subroutine
+
     !> Performs linear interpolation of monthly-mean forcing fields.
     subroutine forint(imon, for12, for1, tmonth)
         integer, intent(in) :: imon            !! The month
