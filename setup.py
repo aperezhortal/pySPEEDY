@@ -13,8 +13,8 @@ SPEEDY_SOURCE_DIR = PROJECT_ROOT_DIR / "source"
 F2CMAP = SPEEDY_SOURCE_DIR.resolve() / "f2py_f2cmap"
 
 pyspeedy_extension = Extension(
-    name="pyspeedy._speedy",
-    sources=["source/types.f90", "source/params.f90", "source/pyspeedy.f90"],
+    name="pyspeedy.speedy_driver",
+    sources=["source/types.f90", "source/params.f90", "source/speedy_driver.f90"],
     extra_compile_args=[
         "-O2",
         "-ffast-math",

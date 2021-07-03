@@ -10,7 +10,7 @@ test:
 	./test.sh
 
 .PHONY:clean
-clean:
+clean:   
 	$(MAKE) -C source clean
-	@rm -f pyspeedy/_speedy*.so
+	@rm -f pyspeedy/*.so
 

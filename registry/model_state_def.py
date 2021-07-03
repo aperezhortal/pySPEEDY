@@ -132,7 +132,7 @@ output = template.stream(model_state=model_state).dump(
     str(SOURCES_DIR / "model_state.f90")
 )
 
-template = env.get_template("pyspeedy.f90.j2")
+template = env.get_template("speedy_driver.f90.j2")
 output = template.stream(model_state=model_state).dump(
-    str(SOURCES_DIR / "pyspeedy.f90")
+    str(SOURCES_DIR / "speedy_driver.f90")
 )

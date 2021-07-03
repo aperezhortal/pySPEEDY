@@ -1,7 +1,9 @@
-from _speedy import pyspeedy
+import os
 import xarray as xr
 import numpy as np
 from datetime import datetime
+
+from pyspeedy import _speedy, example_bc_file
 
 _DEFAULT_PARAMS = dict(
     history_interval=1,
@@ -52,8 +54,8 @@ class Speedy:
         for key, value in _control_params.items():
             setattr(self, key, value)
 
-        self._state = pyspeedy.modelstate_init()
-        self._control = pyspeedy.controlparams_init(
+        self._state = _speedy.modelstate_init()
+        self._control = _speedy.controlparams_init(
             self._start_date,
             self._end_date,
             self.history_interval,
@@ -63,7 +65,7 @@ class Speedy:
     @staticmethod
     def _dealloc_date(container):
         if container is not None:
-            pyspeedy.close_datetime(container)
+            _speedy.close_datetime(container)
 
         return None
 
@@ -71,14 +73,14 @@ class Speedy:
         """
         Getter for state variables
         """
-        _getter = getattr(pyspeedy, f"get_{var_name}", None)
+        _getter = getattr(_speedy, f"get_{var_name}", None)
         if _getter is None:
             raise AttributeError(f"The state variable '{var_name}' does not exist.")
         return _getter(self._state)
 
     def get_shape(self, var_name):
         """Get state variable shape."""
-        _getter = getattr(pyspeedy, f"get_{var_name}_shape", None)
+        _getter = getattr(_speedy, f"get_{var_name}_shape", None)
         if _getter is None:
             raise AttributeError(
                 f"The 'get-shape' method for the state variable '"
@@ -88,7 +90,7 @@ class Speedy:
 
     def __setitem__(self, var_name, value):
         """Setter for state variables."""
-        _setter = getattr(pyspeedy, f"set_{var_name}")
+        _setter = getattr(_speedy, f"set_{var_name}")
         if _setter is None:
             raise AttributeError(
                 f"The setter for the state variable '{var_name}' does not exist."
@@ -100,8 +102,8 @@ class Speedy:
 
     def __del__(self):
         """Clean up."""
-        pyspeedy.modelstate_close(self._state)
-        pyspeedy.controlparams_close(self._control)
+        _speedy.modelstate_close(self._state)
+        _speedy.controlparams_close(self._control)
 
         self._control = None
         self._state = None
@@ -112,7 +114,7 @@ class Speedy:
     @staticmethod
     def _get_fortran_date(container):
         """Get a datetime object from a fortran datetime"""
-        return datetime(*pyspeedy.get_datetime(container))
+        return datetime(*_speedy.get_datetime(container))
 
     @staticmethod
     def _set_fortran_date(container, date_value):
@@ -120,7 +122,7 @@ class Speedy:
 
         Speedy._dealloc_date(container)
         if isinstance(date_value, datetime):
-            return pyspeedy.create_datetime(
+            return _speedy.create_datetime(
                 date_value.year,
                 date_value.month,
                 date_value.day,
@@ -146,11 +148,20 @@ class Speedy:
     def end_date(self, value):
         self._end_date = self._set_fortran_date(self._end_date, value)
 
-    def default_init(self):
+    def default_init(self, bc_file=None):
         # In the model state, the variables follow the lon/lat dimension ordering.
 
         from pathlib import Path
-        ds = xr.load_dataset(str(Path(__file__).parent / "data/example_bc.nc"))
+
+        if bc_file is None:
+            bc_file = example_bc_file()
+
+        if not os.path.isfile(bc_file):
+            raise RuntimeError(
+                "The boundary conditions file does not exist.\n" f"File: {bc_file}"
+            )
+
+        ds = xr.load_dataset(example_bc_file(), engine="netcdf4")
 
         self["orog"] = ds["orog"].values
         self["fmask_orig"] = ds["lsm"].values
@@ -179,20 +190,13 @@ class Speedy:
         """
         Run the model.
         """
-        pyspeedy.run(self._state, self._control)
+        _speedy.run(self._state, self._control)
 
 
 if __name__ == "__main__":
 
     model = Speedy()
-    # model.start_date = datetime(2010, 1, 2, 4, 5)
-    # print(model.start_date)
-    # model.start_date = datetime(2010, 1, 2, 4, 6)
-    # print(model.start_date)
-    # print(model["vor"].shape)
-    # print(model["phi0"].shape)
     model.default_init()
-    # print(model.get_shape("phi0"))
     model.run()
 
     # from matplotlib import pyplot as plt

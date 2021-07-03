@@ -64,7 +64,7 @@ FILES= \
 	   types.o \
 	   vertical_diffusion.o \
 	   speedy.o \
-	   pyspeedy.o
+	   speedy_driver.o
 
 
 %.o: %.f90
@@ -77,7 +77,7 @@ base_target: $(FILES)
 clean:
 	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
-pyspeedy.o             : model_state.o speedy.o
+speedy_driver.o        : model_state.o speedy.o
 speedy.o               : params.o model_control.o prognostics.o input_output.o \
 				         shortwave_radiation.o time_stepping.o\
                          diagnostics.o model_state.o 

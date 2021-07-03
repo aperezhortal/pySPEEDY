@@ -4,7 +4,7 @@ rundir_ref
 bin
 *.so
 source/model_state.f90
-source/pyspeedy.f90
+source/speedy_driver.f90
 
 .idea
 .vscode
