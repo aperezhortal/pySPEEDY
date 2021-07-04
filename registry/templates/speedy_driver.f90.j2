@@ -50,9 +50,9 @@ contains
         control_ptr = transfer(control_container, control_ptr)
         call initialize_state(state_ptr%p, control_ptr%p)
     end subroutine
-
-    subroutine run(state_container, control_container, error_code)
-        use speedy, only: run_speedy
+   
+    subroutine step(state_container, control_container, error_code)
+        use speedy, only: do_single_step
         
         integer(8), intent(in) :: state_container, control_container
         integer, intent(out)   :: error_code
@@ -62,9 +62,11 @@ contains
 
         state_ptr = transfer(state_container, state_ptr)
         control_ptr = transfer(control_container, control_ptr)
-        call run_speedy(state_ptr%p, control_ptr%p, error_code)
+        call do_single_step(state_ptr%p, control_ptr%p, error_code)
     end subroutine
+
     
+
     ! =========================================================================
     ! ControlParams interface
     ! =========================================================================

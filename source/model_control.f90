@@ -43,11 +43,11 @@ module model_control
         integer              :: imont1           !! The month used for computing seasonal forcing fields
         real(p)              :: tmonth           !! The fraction of the current month elapsed
         real(p)              :: tyear            !! The fraction of the current year elapsed
-        
-        integer              :: month_idx =1     !! Simulation month (star month=1)
 
+        integer              :: month_idx = 1     !! Simulation month (star month=1)
         integer              :: ndaycal(12, 2)   !! The model calendar
-
+        
+        integer :: model_step
         integer :: diag_interval     !! Period (number of steps) for diagnostic print-out
         integer :: history_interval !! Number of time steps between outputs
     end type
@@ -81,7 +81,7 @@ contains
     !> Initializes control structure with the default parameters.
     subroutine initialize_control(control_params, &
                                   start_datetime, end_datetime, &
-                                  history_interval , diag_interval)
+                                  history_interval, diag_interval)
         !TODO: Remove the issty0 parameter
         use params, only: issty0
         type(ControlParams_t), intent(inout), target  :: control_params
@@ -100,7 +100,7 @@ contains
         ! Current model datetime is start datetime
         control_params%model_datetime = control_params%start_datetime
 
-        control_params%diag_interval =diag_interval
+        control_params%diag_interval = diag_interval
         control_params%history_interval = history_interval
 
         ! Set calendar
@@ -114,8 +114,9 @@ contains
         do jm = 2, 12
             ndaycal(jm, 2) = ndaycal(jm - 1, 1) + ndaycal(jm - 1, 2)
         end do
-        
+
         control_params%month_idx = 1
+        control_params%model_step = 1
 
         call update_forcing_params(control_params)
 
@@ -150,13 +151,13 @@ contains
             if (model_datetime%day > 29) then
                 model_datetime%day = 1
                 model_datetime%month = model_datetime%month + 1
-                control_params%month_idx = control_params%month_idx + 1 
+                control_params%month_idx = control_params%month_idx + 1
             end if
         else
             if (model_datetime%day > control_params%ndaycal(model_datetime%month, 1)) then
                 model_datetime%day = 1
                 model_datetime%month = model_datetime%month + 1
-                control_params%month_idx = control_params%month_idx + 1 
+                control_params%month_idx = control_params%month_idx + 1
             end if
         end if
 
@@ -166,7 +167,6 @@ contains
             model_datetime%year = model_datetime%year + 1
         end if
 
-         
         call update_forcing_params(control_params)
 
     end subroutine

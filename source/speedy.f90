@@ -1,14 +1,13 @@
-!> author: Sam Hatfield, Fred Kucharski, Franco Molteni
-!> date: 29/04/2019
-!> The top-level program. Here we initialize the model and run the main loop
-!> until the (continually updated) model datetime (`model_datetime`) equals the
-!> final datetime (`end_datetime`).
+!> authors: Andres Perez Hortal,Sam Hatfield, Fred Kucharski, Franco Molteni
+!
+!> date 04/07/2021: Expose a single step integrator for the python bridge.
+!> date 29/04/2019: Speedy.f90 original version:
 module speedy
 
     implicit none
 
     private
-    public run_speedy
+    public do_single_step
 
     ! model_config
     !     ! implicit
@@ -25,10 +24,7 @@ module speedy
 
 contains
 
-    subroutine run_speedy(state, control_params, error_code)
-        ! For this function, we explicity pass all the variables that needs to be saved
-        ! to facilitate the python-fortran interface.
-
+    subroutine do_single_step(state, control_params, error_code)
         use types, only: p
         use params, only: nsteps, delt, nsteps, nstrad
         use model_control, only: advance_date, datetime_equal, ControlParams_t
@@ -49,66 +45,49 @@ contains
         type(ControlParams_t), intent(inout)  :: control_params
         integer, intent(out) :: error_code
 
-        ! Time step counter
-        integer :: model_step = 1
-        
+        error_code = 0
         ! Check if model was initialized
         if (.not. state%initialized) then
             error_code = E_STATE_NOT_INITIALIZED
             return
-        end if 
-        ! call initialize_state(state, control_params)
+        end if
 
-        ! Model main loop
-        do while (.not. datetime_equal(control_params%model_datetime, control_params%end_datetime))
+        ! Daily tasks
+        if (mod(control_params%model_step - 1, nsteps) == 0) then
+            ! Set forcing terms according to date
+            call set_forcing(state, 1, control_params%model_datetime, control_params%tyear)
+        end if
 
-            ! Daily tasks
-            if (mod(model_step - 1, nsteps) == 0) then
-                ! Set forcing terms according to date
-                call set_forcing(state, 1, control_params%model_datetime, control_params%tyear)
-            end if
+        ! Determine whether to compute shortwave radiation on this time step
+        compute_shortwave = mod(control_params%model_step, nstrad) == 1
 
-            ! Determine whether to compute shortwave radiation on this time step
-            compute_shortwave = mod(model_step, nstrad) == 1
+        ! Perform one leapfrog time step
+        call step(state, 2, 2, 2*delt)
 
-            ! Perform one leapfrog time step
-            call step(state, 2, 2, 2*delt)
+        ! Check model diagnostics
+        call check_diagnostics(state%vor(:, :, :, 2), &
+                               state%div(:, :, :, 2), &
+                               state%t(:, :, :, 2), &
+                               control_params%model_step, &
+                               control_params%diag_interval)
 
-            ! Check model diagnostics
-            call check_diagnostics(state%vor(:, :, :, 2), &
-                                   state%div(:, :, :, 2), &
-                                   state%t(:, :, :, 2), &
-                                   model_step, control_params%diag_interval)
+        ! Increment time step counter
+        control_params%model_step = control_params%model_step + 1
 
-            ! Increment time step counter
-            model_step = model_step + 1
+        ! Increment model datetime
+        call advance_date(control_params)
 
-            ! Increment model datetime
-            call advance_date(control_params)
+        ! Output
+        if (mod(control_params%model_step - 1, control_params%history_interval) == 0) then
+            call output(control_params%model_step - 1, control_params, &
+                        state%vor, state%div, &
+                        state%t, &
+                        state%ps, state%tr, &
+                        state%phi)
+        end if
 
-            ! Output
-            if (mod(model_step - 1, control_params%history_interval) == 0) then
-                call output(model_step - 1, control_params, &
-                            state%vor, state%div, &
-                            state%t, &
-                            state%ps, state%tr, &
-                            state%phi)
-            end if
-
-            ! Exchange data with coupler
-            call couple_sea_land(state, 1 + model_step/nsteps, control_params)
-
-            write (*, '(A12,I4,A,I0.2,A,I0.2,A,I0.2,A,I0.2)') 'model_datetime: ', &
-            & control_params%model_datetime%year, '/', control_params%model_datetime%month, &
-            '/', control_params%model_datetime%day, ' ', &
-            & control_params%model_datetime%hour, ':', control_params%model_datetime%minute
-
-            write (*, '(A12,I4,A,I0.2,A,I0.2,A,I0.2,A,I0.2)') 'End date: ', &
-            & control_params%end_datetime%year, '/', control_params%end_datetime%month, '/', &
-             control_params%end_datetime%day, ' ', &
-            & control_params%end_datetime%hour, ':', control_params%end_datetime%minute
-
-        end do
+        ! Exchange data with coupler
+        call couple_sea_land(state, 1 + control_params%model_step/nsteps, control_params)
 
     end subroutine
 

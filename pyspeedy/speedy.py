@@ -1,14 +1,14 @@
 import os
-from pathlib import Path
 import xarray as xr
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import json 
 from pyspeedy import _speedy, example_bc_file, example_sst_anomaly_file, PACKAGE_DATA_DIR
+from pyspeedy.error_codes import ERROR_CODES
 
 _DEFAULT_PARAMS = dict(
-    history_interval=1,
+    history_interval=1, # in time steps
     diag_interval=180,
     start_date=datetime(1982, 1, 1),
     end_date=datetime(1982, 1, 2),
@@ -67,6 +67,8 @@ class Speedy:
             self.history_interval,
             self.diag_interval,
         )
+
+        self._model_date = None
 
         self.n_months = (
             (self.end_date.year - self.start_date.year) * 12
@@ -161,6 +163,14 @@ class Speedy:
     @start_date.setter
     def start_date(self, value):
         self._start_date = self._set_fortran_date(self._start_date, value)
+    
+    @property
+    def model_date(self):
+        return self._get_fortran_date(self._model_date)
+
+    @start_date.setter
+    def model_date(self, value):
+        self._model_date = self._set_fortran_date(self._model_date, value)
 
     @property
     def end_date(self):
@@ -264,21 +274,28 @@ class Speedy:
     def run(self):
         """
         Run the model.
-        """        
-        error_code = _speedy.run(self._state_cnt, self._control_cnt)
-        if error_code == -1:
-            raise RuntimeError(
-                "Model state not initialized. Initialize it before running the model."
-            )
+        """     
+        model_date = self.start_date
+        dt_step  = timedelta(seconds=3600*24/36)
+        while model_date < self.end_date:
+            error_code = _speedy.step(self._state_cnt, self._control_cnt)
+            if error_code<0:
+                raise RuntimeError(ERROR_CODES[error_code])
+            model_date += dt_step
+            print(model_date)
+
 
 
 if __name__ == "__main__":
 
     model = Speedy()
+    model.model_date = datetime(1982, 12, 1)
+    print(model.model_date)
+    # model.set_params(end_date=datetime(1982, 2, 1),
+    #                  history_interval=36*15, # in time steps
+    #                  diag_interval=36*15)
     model.set_sst_anomalies()
-    print(model["sst_anom"].shape)
     model.default_init()
-    # model.set_params(end_date=datetime(1982, 5, 1))
     model.run()
 
     # from matplotlib import pyplot as plt
