@@ -21,23 +21,31 @@ class VarDef:
 
     @property
     def dimension(self):
-        dimension = ", ".join(":" * self.ndim)
-        return f"dimension({dimension})"
+        if self.dims:
+            dimension = ", ".join(":" * self.ndim)
+            return f"dimension({dimension})"
 
     @property
     def dimension_args(self):
-        return self.dims.replace("(", "").replace(")", "")
+        if self.dims:
+            return self.dims.replace("(", "").replace(")", "")
 
     @property
     def dimension_args_declaration(self):
-        return f"integer, intent(in) :: {self.dimension_args}"
+        if self.dims:
+            return f"integer, intent(in) :: {self.dimension_args}"
 
     @property
     def ndim(self):
-        return len(self.dims.split(","))
+        if self.dims:
+            return len(self.dims.split(","))
 
 
 model_state = [
+    ########################################
+    # Model integration control variables
+    ########################################
+    VarDef("current_step", "integer", None, "Current model step."),
     ########################################
     # Prognostic variables (spectral domain)
     ########################################
@@ -145,15 +153,18 @@ model_state = [
     ),
 ]
 
+state_arrays = [ var for var in model_state if var.dims]
+state_scalars = [ var for var in model_state if var.dims is None ]
+
 file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
 template = env.get_template("model_state.f90.j2")
-output = template.stream(model_state=model_state).dump(
+output = template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
     str(SOURCES_DIR / "model_state.f90")
 )
 
 template = env.get_template("speedy_driver.f90.j2")
-output = template.stream(model_state=model_state).dump(
+output = template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
     str(SOURCES_DIR / "speedy_driver.f90")
 )
 

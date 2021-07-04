@@ -90,6 +90,7 @@ class Speedy:
         _getter = getattr(_speedy, f"get_{var_name}", None)
         if _getter is None:
             raise AttributeError(f"The state variable '{var_name}' does not exist.")
+            
         time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
         if time_dim:
             return _getter(self._state_cnt, getattr(self, time_dim))
@@ -113,15 +114,20 @@ class Speedy:
             raise AttributeError(
                 f"The setter for the state variable '{var_name}' does not exist."
             )
-        if self.get_shape(var_name) != value.shape:
-            raise ValueError("Array shape missmatch")
-        value = np.asfortranarray(value)
 
-        time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
-        if time_dim:
-            print(time_dim)
-            return _setter(self._state_cnt, value, getattr(self, time_dim))
+        is_array_func = getattr(_speedy, f"is_array_{var_name}")
+        if is_array_func():                
+            if self.get_shape(var_name) != value.shape:
+                raise ValueError("Array shape missmatch")
+            value = np.asfortranarray(value)
 
+            time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
+            if time_dim:
+                print(time_dim)
+                return _setter(self._state_cnt, value, getattr(self, time_dim))
+
+            return _setter(self._state_cnt, value)
+        
         return _setter(self._state_cnt, value)
 
     def __del__(self):
@@ -282,15 +288,13 @@ class Speedy:
             if error_code<0:
                 raise RuntimeError(ERROR_CODES[error_code])
             model_date += dt_step
-            print(model_date)
+            print(model_date, model["current_step"])
 
 
 
 if __name__ == "__main__":
 
     model = Speedy()
-    model.model_date = datetime(1982, 12, 1)
-    print(model.model_date)
     # model.set_params(end_date=datetime(1982, 2, 1),
     #                  history_interval=36*15, # in time steps
     #                  diag_interval=36*15)

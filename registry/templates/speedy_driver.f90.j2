@@ -170,7 +170,7 @@ contains
         state_cnt = transfer(state_ptr, state_cnt)
     end subroutine
     
-    {% for var in model_state if var.time_dim %}
+    {% for var in state_arrays if var.time_dim %}
     !> Allocate {{var.name}}
     subroutine modelstate_init_{{var.name}}(state_cnt, {{var.time_dim}})
         use model_state, only: ModelState_allocate_{{var.name}}
@@ -195,14 +195,14 @@ contains
         deallocate(state_ptr%p)
     end subroutine
 
-    {% for var in model_state %}
+    {% for var in state_arrays %}
 
     subroutine get_{{var.name}}(state_cnt, {{ var.name }}_out {% if var.time_dim %}, {{var.time_dim}} {% endif %})
         use params
         integer(8), intent(in) :: state_cnt
         {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
         !> {{ var.desc }}
-        {{ var.dtype }}(8), intent(out) :: {{ var.name }}_out{{ var.dims }}
+        {{ var.dtype }}(p), intent(out) :: {{ var.name }}_out{{ var.dims }}
         type(ModelState_Ptr_t):: state_ptr
 
         state_ptr = transfer(state_cnt, state_ptr)
@@ -214,7 +214,7 @@ contains
         integer(8), intent(in) :: state_cnt
         {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
         !> {{ var.desc }}
-        {{ var.dtype }}(8), intent(in) :: {{ var.name }}_in{{ var.dims }}
+        {{ var.dtype }}(p), intent(in) :: {{ var.name }}_in{{ var.dims }}
         type(ModelState_Ptr_t):: state_ptr
 
         state_ptr = transfer(state_cnt, state_ptr)
@@ -235,6 +235,50 @@ contains
             array_shape = 0             
         endif
     end subroutine
+    {% endfor %}
+
+    !==============
+    ! State scalars
+    !==============
+    {% for var in state_scalars %}
+
+    subroutine get_{{var.name}}(state_cnt, {{ var.name }}_out)
+        use params
+        integer(8), intent(in) :: state_cnt
+        !> {{ var.desc }}
+        {{ var.dtype }}, intent(out) :: {{ var.name }}_out
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        {{ var.name }}_out=state_ptr%p%{{ var.name }}
+    end subroutine
+
+    subroutine set_{{var.name}}(state_cnt, {{ var.name }}_in)
+        use params
+        integer(8), intent(in) :: state_cnt       
+        !> {{ var.desc }}
+        {{ var.dtype }}, intent(in) :: {{ var.name }}_in
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_cnt, state_ptr)
+        state_ptr%p%{{ var.name }}={{ var.name }}_in
+    end subroutine
+    {% endfor %}
+
+    {% for var in state_arrays %}
+    subroutine is_array_{{var.name}}(var_is_array)
+        logical, intent(out) :: var_is_array
+        var_is_array=.true.
+    end subroutine
+
+    {% endfor %}
+
+    {% for var in state_scalars %}
+    subroutine is_array_{{var.name}}(var_is_array)
+        logical, intent(out) :: var_is_array
+        var_is_array=.false.
+    end subroutine
+
     {% endfor %}
     
 end module

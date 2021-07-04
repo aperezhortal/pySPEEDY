@@ -47,7 +47,6 @@ module model_control
         integer              :: month_idx = 1     !! Simulation month (star month=1)
         integer              :: ndaycal(12, 2)   !! The model calendar
         
-        integer :: model_step
         integer :: diag_interval     !! Period (number of steps) for diagnostic print-out
         integer :: history_interval !! Number of time steps between outputs
     end type
@@ -116,7 +115,6 @@ contains
         end do
 
         control_params%month_idx = 1
-        control_params%model_step = 1
 
         call update_forcing_params(control_params)
 

@@ -20,7 +20,7 @@ contains
         complex(p), dimension(mx, nx, kx), intent(in) :: vor    !! Spectral vorticity
         complex(p), dimension(mx, nx, kx), intent(in) :: div    !! Spectral divergence
         complex(p), dimension(mx, nx, kx), intent(in) :: t      !! Spectral temperature
-        integer, intent(in)                         :: istep  !! Current time step
+        integer, intent(in)                           :: istep  !! Current time step
 
         integer, intent(in) :: nstdia ! Period (number of steps) for diagnostic print
 

@@ -12,20 +12,25 @@ module model_state
     private
     public ModelState_t, ModelState_Ptr_t
     public ModelState_allocate, ModelState_deallocate
-    {% for var in model_state if var.time_dim %}
+    {% for var in state_arrays if var.time_dim %}
     public ModelState_allocate_{{var.name}}
     {% endfor %}
 
     
     !> Model state
     type ModelState_t
-        {% for var in model_state %}
-        {{ var.dtype }}(8), allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
+        {% for var in state_arrays %}
+        {{ var.dtype }}(p), allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}        
         {% endfor %}
+
+        {% for var in state_scalars %}
+        {{ var.dtype }} :: {{ var.name }} ! {{ var.desc }}
+        {% endfor %}
+
 
         logical :: initialized = .false.
 
-        {% for var in model_state%}
+        {% for var in state_arrays  %}
         logical :: {{var.name}}_initialized = .false.
         {% endfor %}        
     end type
@@ -43,25 +48,25 @@ contains
 
         !========================================================
         ! Allocate model state variables
-        {% for var in model_state if not var.time_dim %}
+        {% for var in state_arrays if not var.time_dim %}
         allocate( state%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
         state%{{var.name}}_initialized = .true.
         {% endfor %}
 
-        {% for var in model_state if var.time_dim %}
+        {% for var in state_arrays if var.time_dim %}
         ! IMPORTANT: {{var.name}} is not initialized here
         {% endfor %}
 
         !=====================================
         ! Initialize to 0 the allocated arrays
-        {% for var in model_state if not var.time_dim %}
+        {% for var in state_arrays if not var.time_dim %}
         state%{{var.name}}=0
         {% endfor %}        
 
     end subroutine
 
     
-    {% for var in model_state if var.time_dim %}
+    {% for var in state_arrays if var.time_dim %}
     !> Allocate {{var.name}}
     subroutine ModelState_allocate_{{var.name}}(state, {{var.time_dim}})
         use params, only: mx, nx, kx, ntr, ix, il, iy, t_levs, aux_dim
@@ -83,7 +88,7 @@ contains
 
         !========================================================
         ! Safely deallocate the model state variables
-        {% for var in model_state %}
+        {% for var in state_arrays %}
         if( allocated(state%{{var.name}}) ) deallocate( state%{{var.name}} ) ! {{ var.desc }}
         state%{{var.name}}_initialized = .false.
         {% endfor %}

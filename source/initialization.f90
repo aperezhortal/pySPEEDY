@@ -67,8 +67,10 @@ contains
         type(ModelState_t), intent(inout) :: state
         type(ControlParams_t), intent(out)  :: control_params
 
-        call print_speedy_title
+        ! call print_speedy_title
         
+        state%current_step = 0 
+
         ! Intialize modules if they were not initialized.
         call initialize_modules()       
 
