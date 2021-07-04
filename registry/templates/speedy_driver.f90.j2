@@ -202,7 +202,7 @@ contains
         integer(8), intent(in) :: state_cnt
         {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
         !> {{ var.desc }}
-        {{ var.dtype }}(p), intent(out) :: {{ var.name }}_out{{ var.dims }}
+        {{ var.dtype }}(8), intent(out) :: {{ var.name }}_out{{ var.dims }}
         type(ModelState_Ptr_t):: state_ptr
 
         state_ptr = transfer(state_cnt, state_ptr)
@@ -214,7 +214,7 @@ contains
         integer(8), intent(in) :: state_cnt
         {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
         !> {{ var.desc }}
-        {{ var.dtype }}(p), intent(in) :: {{ var.name }}_in{{ var.dims }}
+        {{ var.dtype }}(8), intent(in) :: {{ var.name }}_in{{ var.dims }}
         type(ModelState_Ptr_t):: state_ptr
 
         state_ptr = transfer(state_cnt, state_ptr)

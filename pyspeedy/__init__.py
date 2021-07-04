@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pyspeedy.speedy_driver import speedy_driver as _speedy
 
-PACKAGE_DATA_DIR = Path(__file__).parent/"data"
+PACKAGE_DATA_DIR = Path(__file__).parent / "data"
+
 
 def example_bc_file():
     """Returns the Path to the example bc file."""
@@ -19,6 +20,7 @@ def example_sst_anomaly_file():
 
 ##############
 # Housekeeping
+
 
 class __ModuleInitializer:
     def __init__(self):

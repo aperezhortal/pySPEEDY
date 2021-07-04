@@ -1,5 +1,3 @@
-
-
 from collections import defaultdict
 
 ERROR_CODES = defaultdict(lambda x: f"Unexpected error: {x}")

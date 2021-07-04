@@ -3,12 +3,17 @@ import xarray as xr
 import numpy as np
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-import json 
-from pyspeedy import _speedy, example_bc_file, example_sst_anomaly_file, PACKAGE_DATA_DIR
+import json
+from pyspeedy import (
+    _speedy,
+    example_bc_file,
+    example_sst_anomaly_file,
+    PACKAGE_DATA_DIR,
+)
 from pyspeedy.error_codes import ERROR_CODES
 
 _DEFAULT_PARAMS = dict(
-    history_interval=1, # in time steps
+    history_interval=1,  # in time steps
     diag_interval=180,
     start_date=datetime(1982, 1, 1),
     end_date=datetime(1982, 1, 2),
@@ -16,8 +21,9 @@ _DEFAULT_PARAMS = dict(
 
 # Make this dict immutable.
 _DEFAULT_PARAMS = tuple(_DEFAULT_PARAMS.items())
-with open(PACKAGE_DATA_DIR/"model_state.json") as fp:
+with open(PACKAGE_DATA_DIR / "model_state.json") as fp:
     MODEL_STATE_DEF = json.load(fp)
+
 
 class Speedy:
     """
@@ -36,8 +42,13 @@ class Speedy:
         self._state_cnt = _speedy.modelstate_init()
         self.set_params(**control_params)
 
-
-    def set_params(self, **control_params):
+    def set_params(
+        self,
+        history_interval=1,  # in time steps
+        diag_interval=180,
+        start_date=datetime(1982, 1, 1),
+        end_date=datetime(1982, 1, 2),
+    ):
         """
         Set the model's control parameters.
 
@@ -52,15 +63,14 @@ class Speedy:
         end_date: datetime
             Model end date.
         """
-        _control_params = dict(_DEFAULT_PARAMS)
-        _control_params.update(control_params)
-
-        for key, value in _control_params.items():
-            setattr(self, key, value)
+        self.history_interval = history_interval
+        self.diag_interval = diag_interval
+        self.start_date = start_date
+        self.end_date = end_date
 
         if self.start_date > self.end_date:
             raise ValueError("The start date should be lower than the en date.")
-        
+
         self._control_cnt = _speedy.controlparams_init(
             self._start_date,
             self._end_date,
@@ -81,8 +91,6 @@ class Speedy:
         if container is not None:
             _speedy.close_datetime(container)
 
-        return None
-
     def __getitem__(self, var_name):
         """
         Getter for state variables
@@ -90,7 +98,7 @@ class Speedy:
         _getter = getattr(_speedy, f"get_{var_name}", None)
         if _getter is None:
             raise AttributeError(f"The state variable '{var_name}' does not exist.")
-            
+
         time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
         if time_dim:
             return _getter(self._state_cnt, getattr(self, time_dim))
@@ -116,7 +124,7 @@ class Speedy:
             )
 
         is_array_func = getattr(_speedy, f"is_array_{var_name}")
-        if is_array_func():                
+        if is_array_func():
             if self.get_shape(var_name) != value.shape:
                 raise ValueError("Array shape missmatch")
             value = np.asfortranarray(value)
@@ -127,7 +135,7 @@ class Speedy:
                 return _setter(self._state_cnt, value, getattr(self, time_dim))
 
             return _setter(self._state_cnt, value)
-        
+
         return _setter(self._state_cnt, value)
 
     def __del__(self):
@@ -169,7 +177,7 @@ class Speedy:
     @start_date.setter
     def start_date(self, value):
         self._start_date = self._set_fortran_date(self._start_date, value)
-    
+
     @property
     def model_date(self):
         return self._get_fortran_date(self._model_date)
@@ -280,27 +288,27 @@ class Speedy:
     def run(self):
         """
         Run the model.
-        """     
+        """
         model_date = self.start_date
-        dt_step  = timedelta(seconds=3600*24/36)
+        dt_step = timedelta(seconds=3600 * 24 / 36)
         while model_date < self.end_date:
             error_code = _speedy.step(self._state_cnt, self._control_cnt)
-            if error_code<0:
+            if error_code < 0:
                 raise RuntimeError(ERROR_CODES[error_code])
             model_date += dt_step
             print(model_date, model["current_step"])
 
 
-
 if __name__ == "__main__":
 
     model = Speedy()
+    model.set_sst_anomalies()
+    model.default_init()
+    # model.run()
+
     # model.set_params(end_date=datetime(1982, 2, 1),
     #                  history_interval=36*15, # in time steps
     #                  diag_interval=36*15)
-    model.set_sst_anomalies()
-    model.default_init()
-    model.run()
 
     # from matplotlib import pyplot as plt
     # plt.pcolormesh(t[:,:,4])

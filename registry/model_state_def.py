@@ -7,6 +7,7 @@ THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
 PYSPEEDY_DATA_DIR = (THIS_FILE_DIR / "../pyspeedy/data").resolve()
 
+
 class VarDef:
     def __init__(self, name, dtype, dims, desc, time_dim=None):
         """
@@ -153,8 +154,8 @@ model_state = [
     ),
 ]
 
-state_arrays = [ var for var in model_state if var.dims]
-state_scalars = [ var for var in model_state if var.dims is None ]
+state_arrays = [var for var in model_state if var.dims]
+state_scalars = [var for var in model_state if var.dims is None]
 
 file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
@@ -174,6 +175,5 @@ model_state = {
     for var in model_state
 }
 
-with open(PYSPEEDY_DATA_DIR/"model_state.json", 'w') as outfile:
+with open(PYSPEEDY_DATA_DIR / "model_state.json", "w") as outfile:
     json.dump(model_state, outfile, indent=4)
-
