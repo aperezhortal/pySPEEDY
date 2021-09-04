@@ -1,4 +1,5 @@
 import os
+
 import xarray as xr
 import numpy as np
 from datetime import datetime, timedelta
@@ -40,6 +41,7 @@ class Speedy:
         self._start_date = None
         self._end_date = None
         self._state_cnt = _speedy.modelstate_init()
+
         self.set_params(**control_params)
 
     def set_params(
@@ -48,6 +50,8 @@ class Speedy:
         diag_interval=180,
         start_date=datetime(1982, 1, 1),
         end_date=datetime(1982, 1, 2),
+        output_dir="./",
+        output_vars=None,
     ):
         """
         Set the model's control parameters.
@@ -85,6 +89,19 @@ class Speedy:
             + (self.end_date.month - self.start_date.month)
             + 1
         )
+
+        self.output_dir = output_dir
+
+        if output_vars is None:
+            output_vars = (
+                "u_grid",
+                "v_grid",
+                "t_grid",
+                "q_grid",
+                "phi_grid",
+                "ps_grid",
+            )
+        self.output_vars = output_vars
 
     @staticmethod
     def _dealloc_date(container):
@@ -182,7 +199,7 @@ class Speedy:
     def model_date(self):
         return self._get_fortran_date(self._model_date)
 
-    @start_date.setter
+    @model_date.setter
     def model_date(self, value):
         self._model_date = self._set_fortran_date(self._model_date, value)
 
@@ -289,22 +306,60 @@ class Speedy:
         """
         Run the model.
         """
-        model_date = self.start_date
+        self.model_date = self.start_date
         dt_step = timedelta(seconds=3600 * 24 / 36)
-        while model_date < self.end_date:
+        while self.model_date < self.end_date:
             error_code = _speedy.step(self._state_cnt, self._control_cnt)
             if error_code < 0:
                 raise RuntimeError(ERROR_CODES[error_code])
-            model_date += dt_step
-            print(model_date, model["current_step"])
+            self.model_date += dt_step
+
+            if self["current_step"] % self.history_interval == 0:
+                self.save()
+
+    def save(self):
+        """
+        Save selected variables of the current model state into
+        a netcdf or zarr file.
+        The variables are saved in the lat/lon grid space (not the spectral domain).
+        """
+        print("Saving model output at: ", self.model_date)
+        _speedy.compute_grid_vars(self._state_cnt)
+        data_vars = dict()
+
+        for var in self.output_vars:
+            data_vars[MODEL_STATE_DEF[var]["alt_name"]] = (
+                MODEL_STATE_DEF[var]["nc_dims"] + ["time"],
+                self[var][..., None].astype("float32"),
+            )
+
+        output_ds = xr.Dataset(
+            data_vars=data_vars,
+            coords=dict(
+                lon=self["lon"],
+                lat=self["lat"],
+                lev=self["lev"],
+                time=[self.model_date],
+            ),
+        )
+
+        encoding = dict()
+        for var in self.output_vars:
+            alt_name = MODEL_STATE_DEF[var]["alt_name"]
+            output_ds[alt_name].attrs["units"] = MODEL_STATE_DEF[var]["units"]
+            output_ds[alt_name].attrs["long_name"] = MODEL_STATE_DEF[var]["desc"]
+            encoding[alt_name] = {"dtype": "float32", "zlib": True}
+
+        file_name = self.model_date.strftime("%Y%m%d%H%M.nc")
+        output_ds.to_netcdf(os.path.join(self.output_dir, file_name), encoding=encoding)
+        return output_ds
 
 
 if __name__ == "__main__":
-
     model = Speedy()
     model.set_sst_anomalies()
     model.default_init()
-    # model.run()
+    model.run()
 
     # model.set_params(end_date=datetime(1982, 2, 1),
     #                  history_interval=36*15, # in time steps

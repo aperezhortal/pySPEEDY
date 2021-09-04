@@ -20,7 +20,7 @@ module model_state
     !> Model state
     type ModelState_t
         {% for var in state_arrays %}
-        {{ var.dtype }}(8), allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}        
+        {{ var.dtype }}, allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
         {% endfor %}
 
         {% for var in state_scalars %}

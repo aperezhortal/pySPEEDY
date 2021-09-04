@@ -11,7 +11,7 @@ module prognostics
 
     private
 
-    public initialize_prognostics
+    public initialize_prognostics, spectral2grid
 
 contains
 
@@ -30,7 +30,6 @@ contains
         use geometry, only: fsg
         use diagnostics, only: check_diagnostics
         use spectral, only: grid_to_spec, trunct
-        use input_output, only: output
 
         type(ModelState_t), intent(inout) :: state
         type(ControlParams_t), intent(in) :: control_params
@@ -116,8 +115,32 @@ contains
                                state%t(:, :, :, 1), &
                                0, control_params%diag_interval)
 
-        ! Write initial data
-        call output(0, control_params, state%vor, state%div, state%t, &
-                    state%ps, state%tr, state%phi)
     end subroutine
+
+    !> Transform the prognostic variables from the spectral to the grid space. 
+    !  The spectral Divergence and Vorticity are transformed to U and V in the 
+    !  grid space.
+    subroutine spectral2grid(state)
+        use physical_constants, only: grav, p0
+        use spectral, only: spec_to_grid, uvspec
+        type(ModelState_t), intent(inout) :: state
+
+        complex(p), dimension(:, :), allocatable :: ucos, vcos
+        integer :: k
+        allocate(ucos(mx, nx))
+        allocate(vcos(mx, nx))
+        ! Convert prognostic fields from spectral space to grid point space
+        ! Transform some of the variables to more suitable units.
+        do k = 1, kx
+            call uvspec(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
+            state%u_grid(:, :, k) = spec_to_grid(ucos, 2)
+            state%v_grid(:, :, k) = spec_to_grid(vcos, 2)
+            state%t_grid(:, :, k) = spec_to_grid(state%t(:, :, k, 1), 1)
+            state%q_grid(:, :, k) = spec_to_grid(state%tr(:, :, k, 1, 1), 1)*1.0e-3 ! kg/kg
+            state%phi_grid(:, :, k) = spec_to_grid(state%phi(:, :, k), 1)/grav ! m
+        end do
+        state%ps_grid = p0*exp(spec_to_grid(state%ps(:, :, 1), 1)) ! Pa
+        deallocate(ucos)
+        deallocate(vcos)
+    end subroutine 
 end module

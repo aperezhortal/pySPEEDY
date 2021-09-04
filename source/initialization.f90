@@ -54,13 +54,15 @@ contains
         use model_control, only: ControlParams_t
         use coupler, only: initialize_coupler
         use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
-        use input_output, only: output
         use time_stepping, only: first_step
         use boundaries, only: initialize_boundaries
         use model_state, only: ModelState_t
         use prognostics, only: initialize_prognostics
         use forcing, only: set_forcing
+        use geometry, only: fsg, radang
+        use params, only: ix, il
 
+        integer :: k
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
@@ -101,6 +103,11 @@ contains
 
         ! Do the initial (2nd-order) time step, initialize the semi-implicit scheme
         call first_step(state)
+
+        ! Initialize coordinates
+        state%lev(:)=fsg(:)
+        state%lon(:)=(/(3.75*k, k=0, ix - 1)/)
+        state%lat(:)=(/(radang(k)*90.0/asin(1.0), k=1, il)/)
 
         state%initialized = .true.
     end subroutine

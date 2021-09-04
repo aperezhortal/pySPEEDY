@@ -35,7 +35,6 @@ contains
         use params, only: nsteps, delt, nsteps, nstrad
         use model_control, only: advance_date, datetime_equal, ControlParams_t
         use shortwave_radiation, only: compute_shortwave
-        use input_output, only: output
         use coupler, only: couple_sea_land
         use initialization, only: initialize_state
         use time_stepping, only: step
@@ -82,15 +81,6 @@ contains
 
         ! Increment model datetime
         call advance_date(control_params)
-
-        ! Output
-        if (mod(state%current_step, control_params%history_interval) == 0) then
-            call output(state%current_step, control_params, &
-                        state%vor, state%div, &
-                        state%t, &
-                        state%ps, state%tr, &
-                        state%phi)
-        end if
 
         ! Exchange data with coupler
         call couple_sea_land(state, 1 + state%current_step/nsteps, control_params)

@@ -20,6 +20,10 @@ def example_sst_anomaly_file():
 
 ##############
 # Housekeeping
+#
+# Here we initialize the speedy fortran module
+# Also, we make sure that the fortran module is de-initialized when
+# the python speedy module is closed.
 
 
 class __ModuleInitializer:

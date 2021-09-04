@@ -7,7 +7,7 @@ all:
 
 .PHONY:clean
 test:	
-	./test.sh
+	pytest -s -v pyspeedy
 
 .PHONY:clean
 clean:   

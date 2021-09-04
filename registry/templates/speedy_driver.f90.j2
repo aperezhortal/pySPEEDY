@@ -24,8 +24,8 @@ module speedy_driver
 contains
 
     ! =========================================================================
-    ! Speedy interface + init/close
-    ! =========================================================================    
+    ! Speedy interface
+    ! =========================================================================
     !> Initialize the Speedy modules. This needs to be run once.
     subroutine initialize_module()
         use initialization, only: initialize_modules
@@ -65,7 +65,16 @@ contains
         call do_single_step(state_ptr%p, control_ptr%p, error_code)
     end subroutine
 
-    
+    subroutine compute_grid_vars(state_container)
+        use prognostics, only: spectral2grid
+
+        integer(8), intent(in) :: state_container
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        call spectral2grid(state_ptr%p)
+    end subroutine
 
     ! =========================================================================
     ! ControlParams interface
@@ -202,7 +211,7 @@ contains
         integer(8), intent(in) :: state_cnt
         {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
         !> {{ var.desc }}
-        {{ var.dtype }}(8), intent(out) :: {{ var.name }}_out{{ var.dims }}
+        {{ var.dtype }}, intent(out) :: {{ var.name }}_out{{ var.dims }}
         type(ModelState_Ptr_t):: state_ptr
 
         state_ptr = transfer(state_cnt, state_ptr)
@@ -214,7 +223,7 @@ contains
         integer(8), intent(in) :: state_cnt
         {%+ if var.time_dim %}integer, intent(in) :: {{var.time_dim}}{% endif %}        
         !> {{ var.desc }}
-        {{ var.dtype }}(8), intent(in) :: {{ var.name }}_in{{ var.dims }}
+        {{ var.dtype }}, intent(in) :: {{ var.name }}_in{{ var.dims }}
         type(ModelState_Ptr_t):: state_ptr
 
         state_ptr = transfer(state_cnt, state_ptr)

@@ -1,24 +1,43 @@
-from collections import namedtuple
+from collections import defaultdict
+
 from jinja2 import FileSystemLoader, Environment
 from pathlib import Path
 import json
+import pandas as pd
+import re
 
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
 PYSPEEDY_DATA_DIR = (THIS_FILE_DIR / "../pyspeedy/data").resolve()
 
+NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
+
 
 class VarDef:
-    def __init__(self, name, dtype, dims, desc, time_dim=None):
+    def __init__(
+        self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None
+    ):
         """
-        If has_time_dim is True, the variable is not allocated during the
+        If time_dim is not None, the variable is not allocated during the
         initialization since it depends on the duration of the simulation.
         """
         self.name = name
         self.dtype = dtype
         self.dims = dims
+        self.nc_dims = None
+
+        if dims is not None:
+            for dim, nc_dim in NC_DIMS_LUT.items():
+                dims = re.sub(r"\b%s\b" % dim, nc_dim, dims)
+            self.nc_dims = dims.replace(" ", "").replace("(", "").replace(")", "")
+            self.nc_dims = [s for s in self.nc_dims.split(",")]
+
         self.desc = desc
         self.time_dim = time_dim
+        self.units = units
+        self.alt_name = name
+        if alt_name is not None:
+            self.alt_name = alt_name
 
     @property
     def dimension(self):
@@ -50,108 +69,145 @@ model_state = [
     ########################################
     # Prognostic variables (spectral domain)
     ########################################
-    VarDef("vor", "complex", "(mx, nx, kx, t_levs)", "Vorticity"),
-    VarDef("div", "complex", "(mx, nx, kx, t_levs)", "Divergence"),
-    VarDef("t", "complex", "(mx, nx, kx, t_levs)", "Temperature [K]"),
+    VarDef("vor", "complex(8)", "(mx, nx, kx, t_levs)", "Vorticity"),
+    VarDef("div", "complex(8)", "(mx, nx, kx, t_levs)", "Divergence"),
+    VarDef("t", "complex(8)", "(mx, nx, kx, t_levs)", "Temperature", "K"),
     VarDef(
         "ps",
-        "complex",
+        "complex(8)",
         "(mx, nx, t_levs)",
-        "Log of (normalised) surface pressure (p_s/p0)",
+        "Log of (normalised) surface pressure",
+        "(p_s/p0)",
     ),
     VarDef(
         "tr",
-        "complex",
+        "complex(8)",
         "(mx, nx, kx, t_levs,ntr)",
         "Tracers (tr(1): specific humidity in g/kg)",
     ),
-    VarDef("phi", "complex", "(mx, nx, kx)", "Atmospheric geopotential"),
-    VarDef("phis", "complex", "(mx, nx)", "Surface geopotential"),
+    VarDef("phi", "complex(8)", "(mx, nx, kx)", "Atmospheric geopotential"),
+    VarDef("phis", "complex(8)", "(mx, nx)", "Surface geopotential"),
+    ####################################
+    # Prognostic variables (grid domain)
+    ####################################
+    VarDef("u_grid", "real(8)", "(ix, il, kx)", "eastward_wind", "m/s", alt_name="u"),
+    VarDef("v_grid", "real(8)", "(ix, il, kx)", "northward_wind", "m/s", alt_name="v"),
+    VarDef("t_grid", "real(8)", "(ix, il, kx)", "air_temperature", "K", alt_name="t"),
+    VarDef(
+        "q_grid", "real(8)", "(ix, il, kx)", "specific_humidity", "Kg/Kg", alt_name="q"
+    ),
+    VarDef(
+        "phi_grid",
+        "real(8)",
+        "(ix, il, kx)",
+        "geopotential_height",
+        "m",
+        alt_name="phi",
+    ),
+    VarDef(
+        "ps_grid", "real(8)", "(ix, il)", "surface_air_pressure", "Pa", alt_name="ps"
+    ),
     ################################################
     # Auxiliary variables used by the physic schemes
     ################################################
     VarDef(
-        "precnv", "real", "(ix, il)", "Convective precipitation  [g/(m^2 s)], total"
+        "precnv", "real(8)", "(ix, il)", "Convective precipitation, total", "g/(m^2 s)"
     ),
     VarDef(
-        "precls", "real", "(ix, il)", "Large-scale precipitation [g/(m^2 s)], total"
+        "precls", "real(8)", "(ix, il)", "Large-scale precipitation, total", "g/(m^2 s)"
     ),
     VarDef(
-        "snowcv", "real", "(ix, il)", "Convective precipitation  [g/(m^2 s)], snow only"
+        "snowcv",
+        "real(8)",
+        "(ix, il)",
+        "Convective precipitation, snow only",
+        "g/(m^2 s)",
     ),
     VarDef(
-        "snowls", "real", "(ix, il)", "Large-scale precipitation [g/(m^2 s)], snow only"
+        "snowls",
+        "real(8)",
+        "(ix, il)",
+        "Large-scale precipitation, snow only",
+        "g/(m^2 s)",
     ),
-    VarDef("cbmf", "real", "(ix, il)", "Cloud-base mass flux"),
+    VarDef("cbmf", "real(8)", "(ix, il)", "Cloud-base mass flux"),
     VarDef(
-        "tsr", "real", "(ix, il)", "Top-of-atmosphere shortwave radiation (downward)"
+        "tsr", "real(8)", "(ix, il)", "Top-of-atmosphere shortwave radiation (downward)"
     ),
-    VarDef("ssrd", "real", "(ix, il)", "Surface shortwave radiation (downward-only)"),
-    VarDef("ssr", "real", "(ix, il)", "Surface shortwave radiation (net downward)"),
-    VarDef("slrd", "real", "(ix, il)", "Surface longwave radiation (downward-only)"),
-    VarDef("slr", "real", "(ix, il)", " Surface longwave radiation (net upward)"),
-    VarDef("olr", "real", "(ix, il)", "Outgoing longwave radiation (upward)"),
+    VarDef(
+        "ssrd", "real(8)", "(ix, il)", "Surface shortwave radiation (downward-only)"
+    ),
+    VarDef("ssr", "real(8)", "(ix, il)", "Surface shortwave radiation (net downward)"),
+    VarDef("slrd", "real(8)", "(ix, il)", "Surface longwave radiation (downward-only)"),
+    VarDef("slr", "real(8)", "(ix, il)", "Surface longwave radiation (net upward)"),
+    VarDef("olr", "real(8)", "(ix, il)", "Outgoing longwave radiation (upward)"),
     # Third dimension -> 1:land, 2:sea, 3: weighted average
-    VarDef("slru", "real", "(ix, il,aux_dim)", "Surface longwave emission (upward)"),
-    VarDef("ustr", "real", "(ix, il,aux_dim)", "U-stress"),
-    VarDef("vstr", "real", "(ix, il,aux_dim)", "Vstress"),
-    VarDef("shf", "real", "(ix, il,aux_dim)", "Sensible heat flux"),
-    VarDef("evap", "real", "(ix, il,aux_dim)", "Evaporation [g/(m^2 s)]"),
-    VarDef("hfluxn", "real", "(ix, il,aux_dim)", "Net heat flux into surface"),
+    VarDef("slru", "real(8)", "(ix, il,aux_dim)", "Surface longwave emission (upward)"),
+    VarDef("ustr", "real(8)", "(ix, il,aux_dim)", "U-stress"),
+    VarDef("vstr", "real(8)", "(ix, il,aux_dim)", "Vstress"),
+    VarDef("shf", "real(8)", "(ix, il,aux_dim)", "Sensible heat flux"),
+    VarDef("evap", "real(8)", "(ix, il,aux_dim)", "Evaporation", "g/(m^2 s)"),
+    VarDef("hfluxn", "real(8)", "(ix, il,aux_dim)", "Net heat flux into surface"),
     ###########################
     # Boundary module variables
     ###########################
-    VarDef("fmask_orig", "real", "(ix, il)", "Original (fractional) land-sea mask"),
-    VarDef("phi0", "real", "(ix, il)", "Unfiltered surface geopotential"),
-    VarDef("orog", "real", "(ix, il)", "Orography [m]"),
-    VarDef("phis0", "real", "(ix, il)", "Spectrally-filtered surface geopotential"),
-    VarDef("alb0", "real", "(ix, il)", "Bare-land annual-mean albedo"),
+    VarDef("fmask_orig", "real(8)", "(ix, il)", "Original (fractional) land-sea mask"),
+    VarDef("phi0", "real(8)", "(ix, il)", "Unfiltered surface geopotential"),
+    VarDef("orog", "real(8)", "(ix, il)", "Orography", "m"),
+    VarDef("phis0", "real(8)", "(ix, il)", "Spectrally-filtered surface geopotential"),
+    VarDef("alb0", "real(8)", "(ix, il)", "Bare-land annual-mean albedo"),
     ###############################
     # Geopotential module variables
     ###############################
-    VarDef("xgeop1", "real", "(kx)", "Constant 1 for hydrostatic equation"),
-    VarDef("xgeop2", "real", "(kx)", "Constant 2 for hydrostatic equation"),
+    VarDef("xgeop1", "real(8)", "(kx)", "Constant 1 for hydrostatic equation"),
+    VarDef("xgeop2", "real(8)", "(kx)", "Constant 2 for hydrostatic equation"),
     ##########################
     # Bounday module variables
     ##########################
     VarDef(
         "stl12",
-        "real",
+        "real(8)",
         "(ix, il, 12)",
         "Land surface temperature monthly-mean climatology",
     ),
     VarDef(
         "snowd12",
-        "real",
+        "real(8)",
         "(ix, il, 12)",
         "Snow depth (water equivalent) monthly-mean climatology",
     ),
     VarDef(
         "soilw12",
-        "real",
+        "real(8)",
         "(ix, il, 12)",
         "Soil water availability monthly-mean climatology",
     ),
-    VarDef("veg_low", "real", "(ix, il)", "Low vegetation fraction"),
-    VarDef("veg_high", "real", "(ix, il)", "High vegetation fraction"),
-    VarDef("soil_wc_l1", "real", "(ix, il, 12)", "Soil water content: Layer 1"),
-    VarDef("soil_wc_l2", "real", "(ix, il, 12)", "Soil water content: Layer 2"),
-    VarDef("soil_wc_l3", "real", "(ix, il, 12)", "Soil water content: Layer 3"),
+    VarDef("veg_low", "real(8)", "(ix, il)", "Low vegetation fraction"),
+    VarDef("veg_high", "real(8)", "(ix, il)", "High vegetation fraction"),
+    VarDef("soil_wc_l1", "real(8)", "(ix, il, 12)", "Soil water content: Layer 1"),
+    VarDef("soil_wc_l2", "real(8)", "(ix, il, 12)", "Soil water content: Layer 2"),
+    VarDef("soil_wc_l3", "real(8)", "(ix, il, 12)", "Soil water content: Layer 3"),
     ##########################
     # Bounday module variables
     ##########################
-    VarDef("sst12", "real", "(ix, il, 12)", "Sea/ice surface temperature [K]"),
-    VarDef("sea_ice_frac12", "real", "(ix, il, 12)", "Sea ice fraction"),
+    VarDef("sst12", "real(8)", "(ix, il, 12)", "Sea/ice surface temperature", "K"),
+    VarDef("sea_ice_frac12", "real(8)", "(ix, il, 12)", "Sea ice fraction"),
     ############################
     # Sea model module variables
     ############################
     VarDef(
         "sst_anom",
-        "real",
+        "real(8)",
         "(ix, il, 0:n_months+1)",
         "Observed SST anomaly (input).",
         time_dim="n_months",
     ),
+    #############
+    # Coordinates
+    #############
+    VarDef("lon", "real", "(ix)", "longitude", "[degrees]"),
+    VarDef("lat", "real", "(il)", "latitude", "[degrees]"),
+    VarDef("lev", "real", "(kx)", "atmosphere_sigma_coordinate", "[]"),
 ]
 
 state_arrays = [var for var in model_state if var.dims]
@@ -160,20 +216,63 @@ state_scalars = [var for var in model_state if var.dims is None]
 file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
 template = env.get_template("model_state.f90.j2")
-output = template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
+template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
     str(SOURCES_DIR / "model_state.f90")
 )
 
 template = env.get_template("speedy_driver.f90.j2")
-output = template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
+template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
     str(SOURCES_DIR / "speedy_driver.f90")
 )
 
-
-model_state = {
-    var.name: dict(dtype=var.dtype, dims=var.dims, desc=var.desc, time_dim=var.time_dim)
+###################################################
+# Export state variables description in JSON format
+data2json = {
+    var.name: dict(
+        dtype=var.dtype,
+        dims=var.dims,
+        desc=var.desc,
+        time_dim=var.time_dim,
+        units=var.units,
+        nc_dims=var.nc_dims,
+        alt_name=var.alt_name,
+    )
     for var in model_state
 }
 
 with open(PYSPEEDY_DATA_DIR / "model_state.json", "w") as outfile:
-    json.dump(model_state, outfile, indent=4)
+    json.dump(data2json, outfile, indent=4)
+
+####################################################
+# Export state variables description in Excel format
+_data = defaultdict(list)
+for var in model_state:
+    _data["name"].append(var.name)
+    _data["dtype"].append(var.dtype)
+    _data["dims"].append(var.dims)
+    _data["nc_dims"].append(var.dims)
+    _data["desc"].append(var.desc)
+    _data["units"].append(var.units)
+    _data["time_dim"].append(var.time_dim)
+    _data["alt_name"].append(var.alt_name)
+
+
+my_dataframe = pd.DataFrame(data=_data)
+writer = pd.ExcelWriter("output.xlsx", engine="xlsxwriter")
+sheetname = "state_variables"
+my_dataframe.to_excel(writer, sheet_name=sheetname, index=False)
+# Adjust the columns size
+worksheet = writer.sheets[sheetname]  # pull worksheet object
+for idx, col in enumerate(my_dataframe):  # loop through all columns
+    series = my_dataframe[col]
+    max_len = (
+        max(
+            (
+                series.astype(str).map(len).max(),  # len of largest item
+                len(str(series.name)),  # len of column name/header
+            )
+        )
+        + 1
+    )  # adding a little extra space
+    worksheet.set_column(idx, idx, max_len)  # set column width
+writer.save()
