@@ -1,11 +1,7 @@
 *.swp
-rundir
-rundir_ref
-bin
 *.so
 source/model_state.f90
 source/speedy_driver.f90
-data/model_state.json
 *.pyc
 
 .idea

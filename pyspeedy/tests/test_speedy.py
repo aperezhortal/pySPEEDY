@@ -19,5 +19,5 @@ def test_speedy_run():
         model_ds = xr.open_dataset(model_file)
 
         xr.testing.assert_allclose(
-            model_ds, reference_ds.transpose(), rtol=1e-06, atol=0
+            model_ds, reference_ds, rtol=1e-06, atol=0
         )
