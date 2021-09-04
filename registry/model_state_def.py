@@ -148,6 +148,9 @@ model_state = [
     VarDef("shf", "real(8)", "(ix, il,aux_dim)", "Sensible heat flux"),
     VarDef("evap", "real(8)", "(ix, il,aux_dim)", "Evaporation", "g/(m^2 s)"),
     VarDef("hfluxn", "real(8)", "(ix, il,aux_dim)", "Net heat flux into surface"),
+    #
+    # Saved computations
+    VarDef("tt_rsw", "real(8)", "(ix, il,kx)", "Flux of short-wave radiation absorbed in each atmospheric layer"),
     ###########################
     # Boundary module variables
     ###########################

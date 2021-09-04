@@ -390,6 +390,19 @@
         ],
         "alt_name": "hfluxn"
     },
+    "tt_rsw": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,kx)",
+        "desc": "Flux of short-wave radiation absorbed in each atmospheric layer",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "tt_rsw"
+    },
     "fmask_orig": {
         "dtype": "real(8)",
         "dims": "(ix, il)",
