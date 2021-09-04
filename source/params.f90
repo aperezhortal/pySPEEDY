@@ -8,7 +8,7 @@ module params
 
     private
     public trunc, ix, iy, il, kx, nx, mx, ntr, t_levs, aux_dim
-    public nsteps, iseasc, nstrad, sppt_on, issty0, delt, rob, wil, alph
+    public nsteps, iseasc, nstrad, sppt_on, delt, rob, wil, alph
 
     ! =========================================================================
     ! Constant parameters
@@ -42,6 +42,5 @@ module params
     integer, parameter :: iseasc = 1        !! Seasonal cycle flag (0=no, 1=yes)
     integer, parameter :: nstrad = 3        !! Period (number of steps) for shortwave radiation
     logical, parameter :: sppt_on = .false. !! Turn on SPPT?
-    integer, parameter :: issty0 = 1979     !! Starting year for SST anomaly file    
-   
+    
 end module

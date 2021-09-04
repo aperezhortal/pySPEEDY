@@ -81,8 +81,6 @@ contains
     subroutine initialize_control(control_params, &
                                   start_datetime, end_datetime, &
                                   history_interval, diag_interval)
-        !TODO: Remove the issty0 parameter
-        use params, only: issty0
         type(ControlParams_t), intent(inout), target  :: control_params
         type(Datetime_t), intent(in)  :: start_datetime, end_datetime
         integer, intent(in) :: diag_interval, history_interval
