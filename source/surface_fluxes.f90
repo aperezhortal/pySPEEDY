@@ -39,11 +39,12 @@ contains
     subroutine get_surface_fluxes(&
             psa, ua, va, ta, qa, rh, phi, phi0, fmask, forog, tsea, &
             ssrd, slrd, ustr, vstr, shf, evap, slru, hfluxn, &
-            tsfc, tskin, u0, v0, t0, lfluxland)
+            tsfc, tskin, u0, v0, t0, lfluxland,&
+            alb_land,alb_sea, snowc)
 
         use physical_constants, only : p0, rgas, cp, alhc, sbc
         use geometry, only : coa, sigl, wvi
-        use mod_radcon, only : emisfc, alb_l, alb_s, snowc
+        use mod_radcon, only : emisfc
         use land_model, only : stl_am, soilw_am
         use humidity, only : get_qsat, rel_hum_to_spec_hum
 
@@ -72,6 +73,10 @@ contains
         real(p), intent(out) :: u0(ix, il) !! Near-surface u-wind
         real(p), intent(out) :: v0(ix, il) !! Near-surface v-wind
         real(p), intent(out) :: t0(ix, il) !! Near-surface temperature
+
+        real(p), intent(in) :: alb_land(ix, il) !! Daily-mean albedo over land (bare-land + snow)
+        real(p), intent(in) :: alb_sea(ix, il) !! Daily-mean albedo over sea  (open sea + sea ice)
+        real(p), intent(in) :: snowc(ix, il) !! Effective snow cover (fraction)
 
         ! Local variables
         integer :: i, j, ks, nl1
@@ -151,7 +156,7 @@ contains
             ! 2.1 Define effective skin temperature to compensate for
             !     non-linearity of heat/moisture fluxes during the daily cycle
             do j = 1, il
-                tskin(:, j) = stl_am(:, j) + ctday * sqrt(coa(j)) * ssrd(:, j) * (1.0 - alb_l(:, j)) * psa(:, j)
+                tskin(:, j) = stl_am(:, j) + ctday * sqrt(coa(j)) * ssrd(:, j) * (1.0 - alb_land(:, j)) * psa(:, j)
             end do
 
             ! 2.2 Stability correction = f[pot.temp.(sfc)-pot.temp.(air)]
@@ -204,7 +209,7 @@ contains
             tsk3 = tskin**3.0
             dslr = 4.0 * esbc * tsk3
             slru(:, :, 1) = esbc * tsk3 * tskin
-            hfluxn(:, :, 1) = ssrd * (1.0 - alb_l) + slrd - (slru(:, :, 1) + shf(:, :, 1) + alhc * evap(:, :, 1))
+            hfluxn(:, :, 1) = ssrd * (1.0 - alb_land) + slrd - (slru(:, :, 1) + shf(:, :, 1) + alhc * evap(:, :, 1))
 
             ! 3.2 Re-definition of skin temperature from energy balance
             if (lskineb) then
@@ -282,7 +287,7 @@ contains
         ! 4.5 Emission of lw radiation from the surface
         !     and net heat fluxes into sea surface
         slru(:, :, 2) = esbc * tsea**4.0
-        hfluxn(:, :, 2) = ssrd * (1.0 - alb_s) + slrd - slru(:, :, 2) + shf(:, :, 2) + alhc * evap(:, :, 2)
+        hfluxn(:, :, 2) = ssrd * (1.0 - alb_sea) + slrd - slru(:, :, 2) + shf(:, :, 2) + alhc * evap(:, :, 2)
 
         ! =========================================================================
         ! Weighted average of surface fluxes and temperatures according to land-sea

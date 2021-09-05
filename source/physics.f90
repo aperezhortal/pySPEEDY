@@ -154,9 +154,9 @@ contains
             end do
 
             call get_shortwave_rad_fluxes(&
-                    psg, qg, icltop, cloudc, clstr, &
-                    state%ssrd, state%ssr, &
-                    state%tsr, state%tt_rsw)
+                    psg, qg, icltop, cloudc, clstr, state%ssrd, &
+                    state%ssr, state%tsr, state%tt_rsw, state%alb_surface, &
+                    state%rad_flux, state%rad_tau2, state%rad_strat_corr)
 
             do k = 1, kx
                 state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) * rps * grdscp(k)
@@ -164,14 +164,17 @@ contains
         end if
 
         ! Compute downward longwave fluxes
-        call get_downward_longwave_rad_fluxes(tg, state%slrd, tt_rlw)
+        call get_downward_longwave_rad_fluxes(&
+                tg, state%slrd, tt_rlw, state%fband, state%rad_flux, &
+                state%rad_tau2, state%rad_st4a)
 
         ! Compute surface fluxes and land skin temperature
         call get_surface_fluxes(&
                 psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, state%forog, sst_am, &
                 & state%ssrd, state%slrd, state%ustr, state%vstr, &
                 state%shf, state%evap, state%slru, state%hfluxn, &
-                ts, tskin, u0, v0, t0, .true.)
+                ts, tskin, u0, v0, t0, .true., &
+                state%alb_land, state%alb_sea, state%snowc)
 
         ! Recompute sea fluxes in case of anomaly coupling
         if (sea_coupling_flag > 0) then
@@ -180,15 +183,16 @@ contains
                     ssti_om, state%ssrd, state%slrd, &
                     state%ustr, state%vstr, state%shf, &
                     state%evap, state%slru, &
-                    state%hfluxn, ts, tskin, u0, v0, t0, .false.)
+                    state%hfluxn, ts, tskin, u0, v0, t0, .false., &
+                    state%alb_land, state%alb_sea, state%snowc)
         end if
 
         ! Compute upward longwave fluxes, convert them to tendencies and add
         ! shortwave tendencies
         call get_upward_longwave_rad_fluxes(tg, ts, state%slrd, &
                 state%slru(:, :, 3), state%slr, &
-                state%olr, tt_rlw)
-
+                state%olr, tt_rlw, state%fband, &
+                state%rad_flux, state%rad_tau2, state%rad_st4a, state%rad_strat_corr)
         do k = 1, kx
             tt_rlw(:, :, k) = tt_rlw(:, :, k) * rps * grdscp(k)
         end do

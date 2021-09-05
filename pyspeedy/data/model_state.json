@@ -403,18 +403,6 @@
         ],
         "alt_name": "tt_rsw"
     },
-    "fmask_orig": {
-        "dtype": "real(8)",
-        "dims": "(ix, il)",
-        "desc": "Original (fractional) land-sea mask",
-        "time_dim": null,
-        "units": null,
-        "nc_dims": [
-            "lon",
-            "lat"
-        ],
-        "alt_name": "fmask_orig"
-    },
     "phi0": {
         "dtype": "real(8)",
         "dims": "(ix, il)",
@@ -474,6 +462,18 @@
             "lat"
         ],
         "alt_name": "forog"
+    },
+    "fmask_orig": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Original (fractional) land-sea mask",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "fmask_orig"
     },
     "xgeop1": {
         "dtype": "real(8)",
@@ -637,6 +637,129 @@
             "0:n_months+1"
         ],
         "alt_name": "sst_anom"
+    },
+    "ablco2_ref": {
+        "dtype": "real(8)",
+        "dims": null,
+        "desc": "Initial absorptivity of air in CO2 band (t=t0)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "ablco2_ref"
+    },
+    "fband": {
+        "dtype": "real(8)",
+        "dims": "(100:400,4)",
+        "desc": "Energy fraction emitted in each LW band = f(T)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "100:400",
+            "4"
+        ],
+        "alt_name": "fband"
+    },
+    "alb_land": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Daily-mean albedo over land (bare-land + snow)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb_land"
+    },
+    "alb_sea": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Daily-mean albedo over sea  (open sea + sea ice)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb_sea"
+    },
+    "alb_surface": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Combined surface albedo (land + sea)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb_surface"
+    },
+    "snowc": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Effective snow cover (fraction)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snowc"
+    },
+    "rad_flux": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,4)",
+        "desc": "Radiative flux in different spectral bands",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "4"
+        ],
+        "alt_name": "rad_flux"
+    },
+    "rad_tau2": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,kx,4)",
+        "desc": "Transmissivity of atmospheric layers",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev",
+            "4"
+        ],
+        "alt_name": "rad_tau2"
+    },
+    "rad_st4a": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,kx,2)",
+        "desc": "Blackbody emission from full and half atmospheric levels",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev",
+            "2"
+        ],
+        "alt_name": "rad_st4a"
+    },
+    "rad_strat_corr": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,2)",
+        "desc": "Stratospheric correction term",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "2"
+        ],
+        "alt_name": "rad_strat_corr"
     },
     "lon": {
         "dtype": "real",

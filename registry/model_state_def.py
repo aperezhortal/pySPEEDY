@@ -206,6 +206,22 @@ model_state = [
         "Observed SST anomaly (input).",
         time_dim="n_months",
     ),
+    #################
+    # Spectral module
+    #################
+    ###################
+    # mod_radcon module
+    ###################
+    VarDef("ablco2_ref", "real(8)", None, "Initial absorptivity of air in CO2 band (t=t0)"),
+    VarDef("fband", "real(8)", "(100:400,4)", "Energy fraction emitted in each LW band = f(T)"),
+    VarDef("alb_land", "real(8)", "(ix,il)", "Daily-mean albedo over land (bare-land + snow)"),
+    VarDef("alb_sea", "real(8)", "(ix,il)", "Daily-mean albedo over sea  (open sea + sea ice)"),
+    VarDef("alb_surface", "real(8)", "(ix,il)", "Combined surface albedo (land + sea)"),
+    VarDef("snowc", "real(8)", "(ix,il)", "Effective snow cover (fraction)"),
+    VarDef("rad_flux", "real(8)", "(ix,il,4)", "Radiative flux in different spectral bands"),
+    VarDef("rad_tau2", "real(8)", "(ix,il,kx,4)", "Transmissivity of atmospheric layers"),
+    VarDef("rad_st4a", "real(8)", "(ix,il,kx,2)", "Blackbody emission from full and half atmospheric levels"),
+    VarDef("rad_strat_corr", "real(8)", "(ix,il,2)", "Stratospheric correction term"),
     #############
     # Coordinates
     #############
