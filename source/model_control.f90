@@ -3,8 +3,7 @@
 !
 !  Change history:
 !
-!  author: Andres Perez Hortal
-!  date: 01/07/2021
+!  01/07/2021 Andres Perez Hortal: Group parameters into derived datatypes.!
 !
 !  Model control module
 
@@ -56,10 +55,11 @@ module model_control
         type(ControlParams_t), pointer :: p => NULL()
     end type
 
+    ! Parameters
     integer, parameter :: ncal = 365     !! The number of days in a year
 
     !> The number of days in each month
-    integer, save :: ncal365(12) = (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/)
+    integer, parameter :: ncal365(12) = (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/)
 
 contains
     !> Checks whether two datetimes are equal.

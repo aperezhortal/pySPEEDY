@@ -13,24 +13,20 @@ contains
 
     ! Intialize global variables in the modules. This is done only once.
     subroutine initialize_modules()
-        use geometry, only: initialize_geometry
-        use spectral, only: initialize_spectral
-        use geopotential, only: initialize_geopotential
-        use horizontal_diffusion, only: initialize_horizontal_diffusion
+        use geometry, only : initialize_geometry
+        use spectral, only : initialize_spectral
+        use horizontal_diffusion, only : initialize_horizontal_diffusion
 
         if (modules_initialized_flag) then
             !Do nothing, the module is already initialized.
             return
-        end if 
-        
+        end if
+
         ! Initialize model geometry
         call initialize_geometry
 
         ! Initialize spectral transforms
         call initialize_spectral
-
-        ! Initialize geopotential calculations
-        call initialize_geopotential
 
         ! Initialize horizontal diffusion
         call initialize_horizontal_diffusion
@@ -40,8 +36,8 @@ contains
 
     ! Deinitialize the allocatable global variables in the different modules.
     subroutine deinitialize_modules()
-        use spectral, only: deinitialize_spectral
-        use horizontal_diffusion, only: deinitialize_horizontal_diffusion
+        use spectral, only : deinitialize_spectral
+        use horizontal_diffusion, only : deinitialize_horizontal_diffusion
 
         call deinitialize_spectral
         call deinitialize_horizontal_diffusion
@@ -51,31 +47,33 @@ contains
 
     !> Initializes everything.
     subroutine initialize_state(state, control_params)
-        use model_control, only: ControlParams_t
-        use coupler, only: initialize_coupler
-        use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
-        use time_stepping, only: first_step
-        use boundaries, only: initialize_boundaries
-        use model_state, only: ModelState_t
-        use prognostics, only: initialize_prognostics
-        use forcing, only: set_forcing
-        use geometry, only: fsg, radang
-        use params, only: ix, il
+        use model_control, only : ControlParams_t
+        use coupler, only : initialize_coupler
+        use sea_model, only : sea_coupling_flag, sst_anomaly_coupling_flag
+        use time_stepping, only : first_step
+        use boundaries, only : initialize_boundaries
+        use model_state, only : ModelState_t
+        use prognostics, only : initialize_prognostics
+        use geopotential, only : initialize_geopotential
+        use forcing, only : set_forcing
+        use geometry, only : fsg, radang
+        use params, only : ix, il
 
         integer :: k
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
         type(ModelState_t), intent(inout) :: state
-        type(ControlParams_t), intent(out)  :: control_params
+        type(ControlParams_t), intent(out) :: control_params
 
         ! call print_speedy_title
-        
-        state%current_step = 0 
+
+        state%current_step = 0
 
         ! Intialize modules if they were not initialized.
-        call initialize_modules()       
+        call initialize_modules()
 
+        call initialize_geopotential(state)
         ! Check consistency of coupling and prescribed SST anomaly flags
         if (sea_coupling_flag >= 4) sst_anomaly_coupling_flag = 1
 
@@ -105,9 +103,9 @@ contains
         call first_step(state)
 
         ! Initialize coordinates
-        state%lev(:)=fsg(:)
-        state%lon(:)=(/(3.75*k, k=0, ix - 1)/)
-        state%lat(:)=(/(radang(k)*90.0/asin(1.0), k=1, il)/)
+        state%lev(:) = fsg(:)
+        state%lon(:) = (/(3.75 * k, k = 0, ix - 1)/)
+        state%lat(:) = (/(radang(k) * 90.0 / asin(1.0), k = 1, il)/)
 
         state%initialized = .true.
     end subroutine

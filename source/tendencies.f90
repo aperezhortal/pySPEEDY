@@ -1,5 +1,5 @@
 module tendencies
-    use types, only: p
+    use types, only : p
     use params
 
     implicit none
@@ -8,31 +8,31 @@ module tendencies
     public get_tendencies
 
 contains
-    subroutine get_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j2)
-        use implicit, only: implicit_terms
-        use model_state, only: ModelState_t
-  
-        complex(p), dimension(mx, nx, kx), intent(inout) ::  vordt, divdt, tdt
+    subroutine get_tendencies(state, vordt, divdt, tdt, psdt, trdt, j2)
+        use implicit, only : implicit_terms
+        use model_state, only : ModelState_t
+
+        complex(p), dimension(mx, nx, kx), intent(inout) :: vordt, divdt, tdt
         complex(p), intent(inout) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
         integer, intent(in) :: j2
 
-        type(ModelState_t), intent(inout) :: prognostic_vars
+        type(ModelState_t), intent(inout) :: state
 
         ! =========================================================================
         ! Computation of grid-point tendencies (converted to spectral at the end of
         ! grtend)
         ! =========================================================================
 
-        call get_grid_point_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, 1, j2)
+        call get_grid_point_tendencies(state, vordt, divdt, tdt, psdt, trdt, 1, j2)
 
         ! =========================================================================
         ! Computation of spectral tendencies
         ! =========================================================================
 
         if (alph < 0.5) then
-            call get_spectral_tendencies(prognostic_vars, divdt, tdt, psdt, j2)
+            call get_spectral_tendencies(state, divdt, tdt, psdt, j2)
         else
-            call get_spectral_tendencies(prognostic_vars, divdt, tdt, psdt, 1)
+            call get_spectral_tendencies(state, divdt, tdt, psdt, 1)
 
             ! Implicit correction
             call implicit_terms(divdt, tdt, psdt)
@@ -49,16 +49,16 @@ contains
     !           tdt   = spectral tendency of temperature
     !           psdt  = spectral tendency of log(p_s)
     !           trdt  = spectral tendency of tracers
-    subroutine get_grid_point_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j1, j2)
-        use model_state, only: ModelState_t
-        use physical_constants, only: akap, rgas
-        use geometry, only: dhs, dhsr, fsgr, coriol
-        use implicit, only: tref, tref3
-        use geopotential, only: get_geopotential
-        use physics, only: get_physical_tendencies
-        use spectral, only: grid_to_spec, spec_to_grid, laplacian, grad, uvspec, vdspec
+    subroutine get_grid_point_tendencies(state, vordt, divdt, tdt, psdt, trdt, j1, j2)
+        use model_state, only : ModelState_t
+        use physical_constants, only : akap, rgas
+        use geometry, only : dhs, dhsr, fsgr, coriol
+        use implicit, only : tref, tref3
+        use geopotential, only : get_geopotential
+        use physics, only : get_physical_tendencies
+        use spectral, only : grid_to_spec, spec_to_grid, laplacian, grad, uvspec, vdspec
 
-        type(ModelState_t), intent(inout) :: prognostic_vars
+        type(ModelState_t), intent(inout) :: state
 
         !** notes ****
         ! -- TG does not have to be computed at both time levels every time step,
@@ -91,17 +91,17 @@ contains
         ! Convert prognostics to grid point space
         ! =========================================================================
         do k = 1, kx
-            vorg(:, :, k) = spec_to_grid(prognostic_vars%vor(:, :, k, j2), 1)
-            divg(:, :, k) = spec_to_grid(prognostic_vars%div(:, :, k, j2), 1)
-            tg(:, :, k) = spec_to_grid(prognostic_vars%t(:, :, k, j2), 1)
+            vorg(:, :, k) = spec_to_grid(state%vor(:, :, k, j2), 1)
+            divg(:, :, k) = spec_to_grid(state%div(:, :, k, j2), 1)
+            tg(:, :, k) = spec_to_grid(state%t(:, :, k, j2), 1)
 
             do itr = 1, ntr
-                trg(:, :, k, itr) = spec_to_grid(prognostic_vars%tr(:, :, k, j2, itr), 1)
+                trg(:, :, k, itr) = spec_to_grid(state%tr(:, :, k, j2, itr), 1)
             end do
 
-            call uvspec(prognostic_vars%vor(:, :, k, j2), &
-                        prognostic_vars%div(:, :, k, j2), &
-                        dumc(:, :, 1), dumc(:, :, 2))
+            call uvspec(state%vor(:, :, k, j2), &
+                    state%div(:, :, k, j2), &
+                    dumc(:, :, 1), dumc(:, :, 2))
             vg(:, :, k) = spec_to_grid(dumc(:, :, 2), 2)
             ug(:, :, k) = spec_to_grid(dumc(:, :, 1), 2)
 
@@ -117,18 +117,18 @@ contains
         dmean(:, :) = 0.0
 
         do k = 1, kx
-            umean(:, :) = umean(:, :) + ug(:, :, k)*dhs(k)
-            vmean(:, :) = vmean(:, :) + vg(:, :, k)*dhs(k)
-            dmean(:, :) = dmean(:, :) + divg(:, :, k)*dhs(k)
+            umean(:, :) = umean(:, :) + ug(:, :, k) * dhs(k)
+            vmean(:, :) = vmean(:, :) + vg(:, :, k) * dhs(k)
+            dmean(:, :) = dmean(:, :) + divg(:, :, k) * dhs(k)
         end do
 
         ! Compute tendency of log(surface pressure)
         ! ps(1,1,j2)=zero
-        call grad(prognostic_vars%ps(:, :, j2), dumc(:, :, 1), dumc(:, :, 2))
+        call grad(state%ps(:, :, j2), dumc(:, :, 1), dumc(:, :, 2))
         px = spec_to_grid(dumc(:, :, 1), 2)
         py = spec_to_grid(dumc(:, :, 2), 2)
 
-        psdt = grid_to_spec(-umean*px - vmean*py)
+        psdt = grid_to_spec(-umean * px - vmean * py)
         psdt(1, 1) = (0.0, 0.0)
 
         ! Compute "vertical" velocity
@@ -140,12 +140,12 @@ contains
         ! (The following combination of terms is utilized later in the
         !     temperature equation)
         do k = 1, kx
-            puv(:, :, k) = (ug(:, :, k) - umean)*px + (vg(:, :, k) - vmean)*py
+            puv(:, :, k) = (ug(:, :, k) - umean) * px + (vg(:, :, k) - vmean) * py
         end do
 
         do k = 1, kx
-            sigdt(:, :, k + 1) = sigdt(:, :, k) - dhs(k)*(puv(:, :, k) + divg(:, :, k) - dmean)
-            sigm(:, :, k + 1) = sigm(:, :, k) - dhs(k)*puv(:, :, k)
+            sigdt(:, :, k + 1) = sigdt(:, :, k) - dhs(k) * (puv(:, :, k) + divg(:, :, k) - dmean)
+            sigm(:, :, k + 1) = sigm(:, :, k) - dhs(k) * puv(:, :, k)
         end do
 
         ! Subtract part of temperature field that is used as reference for
@@ -159,46 +159,46 @@ contains
         temp(:, :, kx + 1) = 0.0
 
         do k = 2, kx
-            temp(:, :, k) = sigdt(:, :, k)*(ug(:, :, k) - ug(:, :, k - 1))
+            temp(:, :, k) = sigdt(:, :, k) * (ug(:, :, k) - ug(:, :, k - 1))
         end do
 
         do k = 1, kx
-            utend(:, :, k) = vg(:, :, k)*vorg(:, :, k) - tgg(:, :, k)*rgas*px &
-                & - (temp(:, :, k + 1) + temp(:, :, k))*dhsr(k)
+            utend(:, :, k) = vg(:, :, k) * vorg(:, :, k) - tgg(:, :, k) * rgas * px &
+                    & - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
         end do
 
         ! Meridional wind tendency
         do k = 2, kx
-            temp(:, :, k) = sigdt(:, :, k)*(vg(:, :, k) - vg(:, :, k - 1))
+            temp(:, :, k) = sigdt(:, :, k) * (vg(:, :, k) - vg(:, :, k - 1))
         end do
 
         do k = 1, kx
-            vtend(:, :, k) = -ug(:, :, k)*vorg(:, :, k) - tgg(:, :, k)*rgas*py &
-                & - (temp(:, :, k + 1) + temp(:, :, k))*dhsr(k)
+            vtend(:, :, k) = -ug(:, :, k) * vorg(:, :, k) - tgg(:, :, k) * rgas * py &
+                    & - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
         end do
 
         ! Temperature tendency
         do k = 2, kx
-            temp(:, :, k) = sigdt(:, :, k)*(tgg(:, :, k) - tgg(:, :, k - 1)) &
-                & + sigm(:, :, k)*(tref(k) - tref(k - 1))
+            temp(:, :, k) = sigdt(:, :, k) * (tgg(:, :, k) - tgg(:, :, k - 1)) &
+                    & + sigm(:, :, k) * (tref(k) - tref(k - 1))
         end do
 
         do k = 1, kx
-            ttend(:, :, k) = tgg(:, :, k)*divg(:, :, k) - (temp(:, :, k + 1) + temp(:, :, k))*dhsr(k) &
-                & + fsgr(k)*tgg(:, :, k)*(sigdt(:, :, k + 1) + sigdt(:, :, k)) + tref3(k)*(sigm(:, :, k + 1) &
-                & + sigm(:, :, k)) + akap*(tg(:, :, k)*puv(:, :, k) - tgg(:, :, k)*dmean(:, :))
+            ttend(:, :, k) = tgg(:, :, k) * divg(:, :, k) - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k) &
+                    & + fsgr(k) * tgg(:, :, k) * (sigdt(:, :, k + 1) + sigdt(:, :, k)) + tref3(k) * (sigm(:, :, k + 1) &
+                    & + sigm(:, :, k)) + akap * (tg(:, :, k) * puv(:, :, k) - tgg(:, :, k) * dmean(:, :))
         end do
 
         ! Tracer tendency
         do itr = 1, ntr
             do k = 2, kx
-                temp(:, :, k) = sigdt(:, :, k)*(trg(:, :, k, itr) - trg(:, :, k - 1, itr))
+                temp(:, :, k) = sigdt(:, :, k) * (trg(:, :, k, itr) - trg(:, :, k - 1, itr))
             end do
 
             temp(:, :, 2:3) = 0.0
 
             do k = 1, kx
-                trtend(:, :, k, itr) = trg(:, :, k, itr)*divg(:, :, k) - (temp(:, :, k + 1) + temp(:, :, k))*dhsr(k)
+                trtend(:, :, k, itr) = trg(:, :, k, itr) * divg(:, :, k) - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
             end do
         end do
 
@@ -206,10 +206,10 @@ contains
         ! Compute physical tendencies
         ! =========================================================================
 
-        prognostic_vars%phi = get_geopotential(prognostic_vars%t(:, :, :, j1), prognostic_vars%phis)
+        state%phi = get_geopotential(state%t(:, :, :, j1), state%phis, state%xgeop1, state%xgeop2)
 
-        call get_physical_tendencies(prognostic_vars, j1, &
-                                     utend, vtend, ttend, trtend)
+        call get_physical_tendencies(state, j1, &
+                utend, vtend, ttend, trtend)
 
         ! =========================================================================
         ! Convert tendencies to spectral space
@@ -224,17 +224,17 @@ contains
             ! Divergence tendency
             ! add -lapl(0.5*(u**2+v**2)) to div tendency
             divdt(:, :, k) = divdt(:, :, k) &
-                & - laplacian(grid_to_spec(0.5*(ug(:, :, k)**2.0 + vg(:, :, k)**2.0)))
+                    & - laplacian(grid_to_spec(0.5 * (ug(:, :, k)**2.0 + vg(:, :, k)**2.0)))
 
             ! Temperature tendency
             ! and add div(vT) to spectral t tendency
-            call vdspec(-ug(:, :, k)*tgg(:, :, k), -vg(:, :, k)*tgg(:, :, k), dumc(:, :, 1), tdt(:, :, k), 2)
+            call vdspec(-ug(:, :, k) * tgg(:, :, k), -vg(:, :, k) * tgg(:, :, k), dumc(:, :, 1), tdt(:, :, k), 2)
             tdt(:, :, k) = tdt(:, :, k) + grid_to_spec(ttend(:, :, k))
 
             ! tracer tendency
             do itr = 1, ntr
-                call vdspec(-ug(:, :, k)*trg(:, :, k, itr), -vg(:, :, k)*trg(:, :, k, itr), &
-                    & dumc(:, :, 1), trdt(:, :, k, itr), 2)
+                call vdspec(-ug(:, :, k) * trg(:, :, k, itr), -vg(:, :, k) * trg(:, :, k, itr), &
+                        & dumc(:, :, 1), trdt(:, :, k, itr), 2)
                 trdt(:, :, k, itr) = trdt(:, :, k, itr) + grid_to_spec(trtend(:, :, k, itr))
             end do
         end do
@@ -245,15 +245,15 @@ contains
     !                tdt   = temperature tendency (spectral)
     !                psdt  = tendency of log_surf.pressure (spectral)
     !                j2    = time level index (1 or 2)
-    subroutine get_spectral_tendencies(prognostic_vars, divdt, tdt, psdt, j2)
-        use model_state, only: ModelState_t
-        use physical_constants, only: rgas
-        use geometry, only: dhs, dhsr
-        use geopotential, only: get_geopotential
-        use implicit, only: tref, tref2, tref3
-        use spectral, only: laplacian
+    subroutine get_spectral_tendencies(state, divdt, tdt, psdt, j2)
+        use model_state, only : ModelState_t
+        use physical_constants, only : rgas
+        use geometry, only : dhs, dhsr
+        use geopotential, only : get_geopotential
+        use implicit, only : tref, tref2, tref3
+        use spectral, only : laplacian
 
-        type(ModelState_t), intent(inout) :: prognostic_vars
+        type(ModelState_t), intent(inout) :: state
 
         complex(p), intent(inout) :: psdt(mx, nx), divdt(mx, nx, kx), tdt(mx, nx, kx)
         integer, intent(in) :: j2
@@ -265,7 +265,7 @@ contains
         ! Vertical mean div and pressure tendency
         dmeanc(:, :) = (0.0, 0.0)
         do k = 1, kx
-            dmeanc = dmeanc + prognostic_vars%div(:, :, k, j2)*dhs(k)
+            dmeanc = dmeanc + state%div(:, :, k, j2) * dhs(k)
         end do
 
         psdt = psdt - dmeanc
@@ -277,7 +277,7 @@ contains
 
         do k = 1, kx - 1
             sigdtc(:, :, k + 1) = sigdtc(:, :, k) &
-                                  - dhs(k)*(prognostic_vars%div(:, :, k, j2) - dmeanc)
+                    - dhs(k) * (state%div(:, :, k, j2) - dmeanc)
 
         end do
 
@@ -285,22 +285,22 @@ contains
         dumk(:, :, kx + 1) = (0.0, 0.0)
 
         do k = 2, kx
-            dumk(:, :, k) = sigdtc(:, :, k)*(tref(k) - tref(k - 1))
+            dumk(:, :, k) = sigdtc(:, :, k) * (tref(k) - tref(k - 1))
         end do
 
         do k = 1, kx
-            tdt(:, :, k) = tdt(:, :, k) - (dumk(:, :, k + 1) + dumk(:, :, k))*dhsr(k)&
-                & + tref3(k)*(sigdtc(:, :, k + 1) + sigdtc(:, :, k))&
-                & - tref2(k)*dmeanc
+            tdt(:, :, k) = tdt(:, :, k) - (dumk(:, :, k + 1) + dumk(:, :, k)) * dhsr(k)&
+                    & + tref3(k) * (sigdtc(:, :, k + 1) + sigdtc(:, :, k))&
+                    & - tref2(k) * dmeanc
         end do
 
         ! Geopotential and divergence tendency
-        prognostic_vars%phi = get_geopotential(prognostic_vars%t(:, :, :, j2), prognostic_vars%phis)
+        state%phi = get_geopotential(state%t(:, :, :, j2), state%phis, state%xgeop1, state%xgeop2)
 
         do k = 1, kx
             divdt(:, :, k) = divdt(:, :, k) &
-                             - laplacian(prognostic_vars%phi(:, :, k) &
-                             + rgas*tref(k)*prognostic_vars%ps(:, :, j2))
+                    - laplacian(state%phi(:, :, k) &
+                            + rgas * tref(k) * state%ps(:, :, j2))
         end do
     end subroutine
 end module
