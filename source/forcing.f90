@@ -45,7 +45,7 @@ contains
         ! 1. time-independent parts of physical parametrizations
         if (imode == 0) then
             call radset
-            call set_orog_land_sfc_drag(state%phis0)
+            call set_orog_land_sfc_drag(state%phis0, state%forog)
 
             ablco2_ref = ablco2
         end if

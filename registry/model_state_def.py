@@ -15,7 +15,7 @@ NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
 
 class VarDef:
     def __init__(
-        self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None
+            self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None
     ):
         """
         If time_dim is not None, the variable is not allocated during the
@@ -154,19 +154,23 @@ model_state = [
     ###########################
     # Boundary module variables
     ###########################
-    VarDef("fmask_orig", "real(8)", "(ix, il)", "Original (fractional) land-sea mask"),
     VarDef("phi0", "real(8)", "(ix, il)", "Unfiltered surface geopotential"),
     VarDef("orog", "real(8)", "(ix, il)", "Orography", "m"),
     VarDef("phis0", "real(8)", "(ix, il)", "Spectrally-filtered surface geopotential"),
     VarDef("alb0", "real(8)", "(ix, il)", "Bare-land annual-mean albedo"),
+    VarDef("forog", "real(8)", "(ix, il)", "Orographic factor for land surface drag"),
+    #################################
+    # Surface fluxes module variables
+    #################################
+    VarDef("fmask_orig", "real(8)", "(ix, il)", "Original (fractional) land-sea mask"),
     ###############################
     # Geopotential module variables
     ###############################
     VarDef("xgeop1", "real(8)", "(kx)", "Constant 1 for hydrostatic equation"),
     VarDef("xgeop2", "real(8)", "(kx)", "Constant 2 for hydrostatic equation"),
-    ##########################
-    # Bounday module variables
-    ##########################
+    #############################
+    # Land model module variables
+    #############################
     VarDef(
         "stl12",
         "real(8)",
@@ -190,14 +194,11 @@ model_state = [
     VarDef("soil_wc_l1", "real(8)", "(ix, il, 12)", "Soil water content: Layer 1"),
     VarDef("soil_wc_l2", "real(8)", "(ix, il, 12)", "Soil water content: Layer 2"),
     VarDef("soil_wc_l3", "real(8)", "(ix, il, 12)", "Soil water content: Layer 3"),
-    ##########################
-    # Bounday module variables
-    ##########################
-    VarDef("sst12", "real(8)", "(ix, il, 12)", "Sea/ice surface temperature", "K"),
-    VarDef("sea_ice_frac12", "real(8)", "(ix, il, 12)", "Sea ice fraction"),
     ############################
     # Sea model module variables
     ############################
+    VarDef("sst12", "real(8)", "(ix, il, 12)", "Sea/ice surface temperature", "K"),
+    VarDef("sea_ice_frac12", "real(8)", "(ix, il, 12)", "Sea ice fraction"),
     VarDef(
         "sst_anom",
         "real(8)",
@@ -259,7 +260,6 @@ for var in model_state:
     _data["time_dim"].append(var.time_dim)
     _data["alt_name"].append(var.alt_name)
 
-
 my_dataframe = pd.DataFrame(data=_data)
 writer = pd.ExcelWriter("output.xlsx", engine="xlsxwriter")
 sheetname = "state_variables"
@@ -269,13 +269,13 @@ worksheet = writer.sheets[sheetname]  # pull worksheet object
 for idx, col in enumerate(my_dataframe):  # loop through all columns
     series = my_dataframe[col]
     max_len = (
-        max(
-            (
-                series.astype(str).map(len).max(),  # len of largest item
-                len(str(series.name)),  # len of column name/header
+            max(
+                (
+                    series.astype(str).map(len).max(),  # len of largest item
+                    len(str(series.name)),  # len of column name/header
+                )
             )
-        )
-        + 1
+            + 1
     )  # adding a little extra space
     worksheet.set_column(idx, idx, max_len)  # set column width
 writer.save()

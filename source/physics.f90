@@ -66,7 +66,7 @@ contains
         allocate(ucos(mx, nx), vcos(mx, nx))
 
         allocate(pslg(ix, il), rps(ix, il), gse(ix, il), psg(ix, il))
-        allocate(ts(ix, il), tskin(ix, il), u0(ix, il),v0(ix, il))
+        allocate(ts(ix, il), tskin(ix, il), u0(ix, il), v0(ix, il))
         allocate(t0(ix, il), cloudc(ix, il), clstr(ix, il), cltop(ix, il))
         allocate(prtop(ix, il), iptop(ix, il), icnv(ix, il))
 
@@ -167,14 +167,16 @@ contains
         call get_downward_longwave_rad_fluxes(tg, state%slrd, tt_rlw)
 
         ! Compute surface fluxes and land skin temperature
-        call get_surface_fluxes(psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, sst_am, &
+        call get_surface_fluxes(&
+                psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, state%forog, sst_am, &
                 & state%ssrd, state%slrd, state%ustr, state%vstr, &
                 state%shf, state%evap, state%slru, state%hfluxn, &
                 ts, tskin, u0, v0, t0, .true.)
 
         ! Recompute sea fluxes in case of anomaly coupling
         if (sea_coupling_flag > 0) then
-            call get_surface_fluxes(psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, &
+            call get_surface_fluxes(&
+                    psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, state%forog, &
                     ssti_om, state%ssrd, state%slrd, &
                     state%ustr, state%vstr, state%shf, &
                     state%evap, state%slru, &

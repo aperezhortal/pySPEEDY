@@ -463,6 +463,18 @@
         ],
         "alt_name": "alb0"
     },
+    "forog": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Orographic factor for land surface drag",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "forog"
+    },
     "xgeop1": {
         "dtype": "real(8)",
         "dims": "(kx)",

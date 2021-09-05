@@ -7,4 +7,5 @@ source/speedy_driver.f90
 .idea
 .vscode
 build
-rundir*
+.pytest_cache
+.ipynb_checkpoints

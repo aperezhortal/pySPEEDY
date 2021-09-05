@@ -246,7 +246,11 @@ class Speedy:
         _speedy.init(self._state_cnt, self._control_cnt)
 
     def set_sst_anomalies(self, sst_anomaly=None):
-        """Load SST anomalies from file."""
+        """
+        Load SST anomalies from file.
+
+        Only the times between the simulation's start and end date are loaded.
+        """
         if sst_anomaly is None:
             sst_anomaly = example_sst_anomaly_file()
 

@@ -17,8 +17,9 @@ module sppt
 
     !> Array for tapering value of SPPT in the different layers of the
     !  atmosphere. A value of 1 means the tendency is not tapered at that level
-    real(p), save :: mu(kx) = (/1, 1, 1, 1, 1, 1, 1, 1/)
+    real(p), parameter,dimension(kx) :: mu = (/1, 1, 1, 1, 1, 1, 1, 1/)
 
+    ! TODO: Move random seed initialization to the main intialization routine.
     !> Flag for controlling first-use behaviour
     logical :: first = .true.
 
@@ -26,7 +27,7 @@ module sppt
     real(p), parameter :: time_decorr = 6.0
 
     !> Time autocorrelation of spectral AR(1) signals
-    real(p), save :: phi = exp(-(24 / real(nsteps, p)) / time_decorr)
+    real(p), parameter :: phi = exp(-(24 / real(nsteps, p)) / time_decorr)
 
     !> Correlation length scale of SPPT perturbation (in metres)
     real(p), parameter :: len_decorr = 500000.0
@@ -124,6 +125,7 @@ contains
         randn = mean + stdev * u * sin(v)
     end function
 
+    ! TODO: How to make this initialization by thread?
     !> Seeds RNG from system clock.
     subroutine time_seed()
         integer :: i, n, clock
