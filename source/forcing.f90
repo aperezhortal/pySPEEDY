@@ -25,7 +25,7 @@ contains
         use shortwave_radiation, only: get_zonal_average_fields, ablco2, increase_co2
         use longwave_radiation, only: radset
         use humidity, only: get_qsat
-        use spectral, only: grid_to_spec
+        use spectral, only: ModLegendre_grid2spec
         use model_state, only: ModelState_t
 
         type(ModelState_t), intent(inout) :: state
@@ -83,7 +83,7 @@ contains
             end do
         end do
 
-        tcorh = grid_to_spec(corh)
+        tcorh = ModLegendre_grid2spec(state%legendre_mod,corh)
 
         ! 4. humidity correction term for horizontal diffusion
         do j = 1, il
@@ -100,7 +100,7 @@ contains
 
         corh = refrh1 * (qref - qsfc)
 
-        qcorh = grid_to_spec(corh)
+        qcorh = ModLegendre_grid2spec(state%legendre_mod, corh)
     end subroutine
 
     !> Compute reference lapse rate as a function of latitude and date

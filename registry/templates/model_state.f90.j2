@@ -1,5 +1,5 @@
 !> author: Andres Perez Hortal
-!  date: 23/06/2021
+!  date: 23/08/2021
 !  Module where all the model state variables are declared.
 !  THIS CODE IS AUTOMATICALLY GENERATED.
 !  DO NOT MODIFY IT DIRECTLY.
@@ -10,30 +10,40 @@ module model_state
     implicit none
 
     private
-    public ModelState_t, ModelState_Ptr_t
-    public ModelState_allocate, ModelState_deallocate
-    {% for var in state_arrays if var.time_dim %}
-    public ModelState_allocate_{{var.name}}
+
+    public ModelState_Ptr_t
+
+    {% for module, mod_vars in modules_vars.items() %}
+    public {{mod_vars[0].derived_dtype_t}}, {{mod_vars[0].derived_dtype}}_allocate, {{mod_vars[0].derived_dtype}}_deallocate
+    {% for var in mod_vars if var.time_dim %}
+    public {{var.derived_dtype}}_allocate_{{var.name}}
+    {% endfor %}
     {% endfor %}
 
-    
-    !> Model state
-    type ModelState_t
-        {% for var in state_arrays %}
-        {{ var.dtype }}, allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
-        {% endfor %}
+    {# Define all the model variables #}
 
-        {% for var in state_scalars %}
-        {{ var.dtype }} :: {{ var.name }} ! {{ var.desc }}
-        {% endfor %}
+    {% for module, mod_vars in modules_vars.items() %}
+    !> {{module}} module variables
+    type {{mod_vars[0].derived_dtype_t}}
 
+        {% for mod_def in nested_structs[module] %}
+        type({{ mod_def.derived_dtype_t }}), allocatable :: {{ mod_def.module_var_name }} !! {{mod_def.module}} module variables
+        {% endfor %}
 
         logical :: initialized = .false.
 
-        {% for var in state_arrays  %}
+        {% for var in mod_vars %}
+        {% if var.dimension is not none %}
+        {{ var.dtype }}, allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
         logical :: {{var.name}}_initialized = .false.
-        {% endfor %}        
+        {% else %}
+        {{ var.dtype }} :: {{ var.name }} ! {{ var.desc }}
+        {% endif %}
+
+        {% endfor %}
     end type
+
+    {% endfor %}
 
     type ModelState_Ptr_t
         type(ModelState_t), pointer :: p => NULL()
@@ -41,59 +51,75 @@ module model_state
 
 contains
 
-    !> Allocate Model State variables
-    subroutine ModelState_allocate(state)
+    {% for module, mod_vars in modules_vars.items() %}
+    !> Allocate {{module}} module variables
+    subroutine {{mod_vars[0].derived_dtype}}_allocate({{mod_vars[0].module_var_name}})
         use params, only: mx, nx, kx, ntr, ix, il, iy, t_levs, aux_dim
-        type(ModelState_t), intent(out) :: state
+        type({{mod_vars[0].derived_dtype_t}}), intent(out) :: {{mod_vars[0].module_var_name}}
 
-        !========================================================
-        ! Allocate model state variables
-        {% for var in state_arrays if not var.time_dim %}
-        allocate( state%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
-        state%{{var.name}}_initialized = .true.
+        !==================================
+        ! Allocate nested modules variables
+        {% for mod_def in nested_structs[module] %}
+        allocate( {{mod_vars[0].module_var_name}}%{{mod_def.module_var_name}})
+        call {{mod_def.derived_dtype}}_allocate({{mod_vars[0].module_var_name}}%{{mod_def.module_var_name}})
         {% endfor %}
 
-        {% for var in state_arrays if var.time_dim %}
+        !========================================================
+        ! Allocate variables
+        {% for var in mod_vars if var.dimension is not none %}
+        {% if not var.time_dim %}
+        allocate( {{var.module_var_name}}%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
+        {{var.module_var_name}}%{{var.name}}_initialized = .true.
+        {{var.module_var_name}}%{{var.name}}=0
+        {% endif %}
+
+        {% endfor %}
+        {% for var in mod_vars if var.time_dim is not none %}
         ! IMPORTANT: {{var.name}} is not initialized here
         {% endfor %}
 
-        !=====================================
-        ! Initialize to 0 the allocated arrays
-        {% for var in state_arrays if not var.time_dim %}
-        state%{{var.name}}=0
-        {% endfor %}        
-
     end subroutine
-
     
-    {% for var in state_arrays if var.time_dim %}
+    {% for var in mod_vars if var.time_dim %}
     !> Allocate {{var.name}}
-    subroutine ModelState_allocate_{{var.name}}(state, {{var.time_dim}})
+    subroutine {{var.derived_dtype}}_allocate_{{var.name}}({{var.module_var_name}}, {{var.time_dim}})
         use params, only: mx, nx, kx, ntr, ix, il, iy, t_levs, aux_dim
-        type(ModelState_t), intent(inout) :: state
+        type({{var.derived_dtype_t}}), intent(inout) :: {{var.module_var_name}}
         integer, intent(in) :: {{var.time_dim}}
 
         !=========================================
         ! Allocate {{var.name}}(lon, lat, {{var.time_dim}})
-        allocate( state%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
-        state%{{var.name}} = 0 
-        state%{{var.name}}_initialized = .true.        
+        allocate( {{var.module_var_name}}%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
+        {{var.module_var_name}}%{{var.name}} = 0
+        {{var.module_var_name}}%{{var.name}}_initialized = .true.
     end subroutine
+
     {% endfor %}
 
-
-    !> Deallocate model state variables
-    subroutine ModelState_deallocate(state)
-        type(ModelState_t), intent(inout) :: state
+    !> Deallocate {module}} module variables
+    subroutine {{mod_vars[0].derived_dtype}}_deallocate({{mod_vars[0].module_var_name}})
+        type({{mod_vars[0].derived_dtype_t}}), intent(inout) :: {{mod_vars[0].module_var_name}}
 
         !========================================================
-        ! Safely deallocate the model state variables
-        {% for var in state_arrays %}
-        if( allocated(state%{{var.name}}) ) deallocate( state%{{var.name}} ) ! {{ var.desc }}
-        state%{{var.name}}_initialized = .false.
+        ! Safely {module}} module variables
+        {% for var in mod_vars if var.dimension is not none %}
+        ! {{ var.desc }}
+        if( allocated({{var.module_var_name}}%{{var.name}}) ) deallocate( {{var.module_var_name}}%{{var.name}} )
+        {{var.module_var_name}}%{{var.name}}_initialized = .false.
+        {{var.module_var_name}}%initialized = .false.
+
         {% endfor %}
 
-        state%initialized = .false.
+        !==================================
+        ! Deallocate nested modules variables
+        {% for mod_def in nested_structs[module] %}
+        if( allocated({{mod_vars[0].module_var_name}}%{{mod_def.module_var_name}}) ) then
+            call {{mod_def.derived_dtype}}_deallocate({{mod_vars[0].module_var_name}}%{{mod_def.module_var_name}})
+            deallocate( {{mod_vars[0].module_var_name}}%{{mod_def.module_var_name}})
+        endif
+        {% endfor %}
+
     end subroutine
 
+    {% endfor %}
 end module

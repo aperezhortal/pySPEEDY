@@ -17,7 +17,7 @@ module sppt
 
     !> Array for tapering value of SPPT in the different layers of the
     !  atmosphere. A value of 1 means the tendency is not tapered at that level
-    real(p), parameter,dimension(kx) :: mu = (/1, 1, 1, 1, 1, 1, 1, 1/)
+    real(p), parameter, dimension(kx) :: mu = (/1, 1, 1, 1, 1, 1, 1, 1/)
 
     ! TODO: Move random seed initialization to the main intialization routine.
     !> Flag for controlling first-use behaviour
@@ -37,9 +37,11 @@ module sppt
 
 contains
     !> Generate grid point space SPPT pattern distribution.
-    function gen_sppt() result(sppt_grid)
-        use spectral, only : el2, spec_to_grid
+    function gen_sppt(legendre_mod) result(sppt_grid)
+        use spectral, only : el2, ModLegendre_spec2grid
         use physical_constants, only : rearth
+        use model_state, only : ModLegendre_t
+        type(ModLegendre_t), intent(in) :: legendre_mod
 
         real(p), allocatable :: sppt_grid(:, :, :) !! The generated grid point pattern
 
@@ -97,7 +99,7 @@ contains
 
         ! Convert to grid point space
         do k = 1, kx
-            sppt_grid(:, :, k) = spec_to_grid(sppt_spec(:, :, k), 1)
+            sppt_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, sppt_spec(:, :, k), 1)
         end do
 
         ! Clip to +/- 1.0

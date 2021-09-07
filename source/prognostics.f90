@@ -2,10 +2,10 @@
 !  date: 04/07/2019
 !  For storing and initializing prognostic spectral variables for model dynamics, and geopotential.
 module prognostics
-    use types, only: p
-    use params, only: mx, nx, kx, ntr, ix, iy, il
-    use model_control, only: ControlParams_t
-    use model_state, only: ModelState_t
+    use types, only : p
+    use params, only : mx, nx, kx, ntr, ix, iy, il
+    use model_control, only : ControlParams_t
+    use model_state, only : ModelState_t, ModLegendre_t
 
     implicit none
 
@@ -25,13 +25,13 @@ contains
 
     !> Initializes all spectral variables starting from a reference atmosphere.
     subroutine initialize_from_rest_state(state, control_params)
-        use dynamical_constants, only: gamma, hscale, hshum, refrh1
-        use physical_constants, only: grav, rgas
-        use geometry, only: fsg
-        use diagnostics, only: check_diagnostics
-        use spectral, only: grid_to_spec, trunct
+        use dynamical_constants, only : gamma, hscale, hshum, refrh1
+        use physical_constants, only : grav, rgas
+        use geometry, only : fsg
+        use diagnostics, only : check_diagnostics
+        use spectral, only : ModLegendre_grid2spec, trunct
 
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
         type(ControlParams_t), intent(in) :: control_params
 
         complex(p) :: surfs(mx, nx)
@@ -39,10 +39,13 @@ contains
         real(p) :: gam1, esref, gam2, qexp, qref, rgam, rgamr, rlog0, tref, ttop
         integer :: i, j, k
 
-        gam1 = gamma/(1000.0*grav)
+        type(ModLegendre_t), pointer :: legendre_mod
+        legendre_mod => state%legendre_mod
+
+        gam1 = gamma / (1000.0 * grav)
 
         ! 1. Compute spectral surface geopotential
-        state%phis = grid_to_spec(state%phis0)
+        state%phis = ModLegendre_grid2spec(legendre_mod, state%phis0)
 
         ! 2. Start from reference atmosphere (at rest)
         write (*, '(A)') 'Starting from rest'
@@ -57,22 +60,22 @@ contains
         !     stratos: T = 216 degK, lapse rate = 0
         tref = 288.0
         ttop = 216.0
-        gam2 = gam1/tref
-        rgam = rgas*gam1
-        rgamr = 1.0/rgam
+        gam2 = gam1 / tref
+        rgam = rgas * gam1
+        rgamr = 1.0 / rgam
 
         ! Surface and stratospheric air temperature
         state%t(:, :, 1, 1) = (0.0, 0.0)
         state%t(:, :, 2, 1) = (0.0, 0.0)
-        surfs = -gam1*state%phis
+        surfs = -gam1 * state%phis
 
-        state%t(1, 1, 1, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
-        state%t(1, 1, 2, 1) = sqrt(2.0)*(1.0, 0.0)*ttop
-        surfs(1, 1) = sqrt(2.0)*(1.0, 0.0)*tref - gam1*state%phis(1, 1)
+        state%t(1, 1, 1, 1) = sqrt(2.0) * (1.0, 0.0) * ttop
+        state%t(1, 1, 2, 1) = sqrt(2.0) * (1.0, 0.0) * ttop
+        surfs(1, 1) = sqrt(2.0) * (1.0, 0.0) * tref - gam1 * state%phis(1, 1)
 
         ! Temperature at tropospheric levels
         do k = 3, kx
-            state%t(:, :, k, 1) = surfs*fsg(k)**rgam
+            state%t(:, :, k, 1) = surfs * fsg(k)**rgam
         end do
 
         ! 2.3 Set log(ps) consistent with temperature profile
@@ -81,39 +84,39 @@ contains
 
         do j = 1, il
             do i = 1, ix
-                surfg(i, j) = rlog0 + rgamr*log(1.0 - gam2*state%phis0(i, j))
+                surfg(i, j) = rlog0 + rgamr * log(1.0 - gam2 * state%phis0(i, j))
             end do
         end do
 
-        state%ps(:, :, 1) = grid_to_spec(surfg)
-        if (ix == iy*4) call trunct(state%ps)
+        state%ps(:, :, 1) = ModLegendre_grid2spec(legendre_mod, surfg)
+        if (ix == iy * 4) call trunct(state%ps)
 
         ! 2.4 Set tropospheric specific humidity in g/kg
         !     Qref = RHref * Qsat(288K, 1013hPa)
         esref = 17.0
-        qref = refrh1*0.622*esref
-        qexp = hscale/hshum
+        qref = refrh1 * 0.622 * esref
+        qexp = hscale / hshum
 
         ! Specific humidity at the surface
         do j = 1, il
             do i = 1, ix
-                surfg(i, j) = qref*exp(qexp*surfg(i, j))
+                surfg(i, j) = qref * exp(qexp * surfg(i, j))
             end do
         end do
 
-        surfs = grid_to_spec(surfg)
-        if (ix == iy*4) call trunct(surfs)
+        surfs = ModLegendre_grid2spec(legendre_mod, surfg)
+        if (ix == iy * 4) call trunct(surfs)
 
         ! Specific humidity at tropospheric levels
         do k = 3, kx
-            state%tr(:, :, k, 1, 1) = surfs*fsg(k)**qexp
+            state%tr(:, :, k, 1, 1) = surfs * fsg(k)**qexp
         end do
 
         ! Print diagnostics from initial conditions
         call check_diagnostics(state%vor(:, :, :, 1), &
-                               state%div(:, :, :, 1), &
-                               state%t(:, :, :, 1), &
-                               0, control_params%diag_interval)
+                state%div(:, :, :, 1), &
+                state%t(:, :, :, 1), &
+                0, control_params%diag_interval)
 
     end subroutine
 
@@ -121,26 +124,31 @@ contains
     !  The spectral Divergence and Vorticity are transformed to U and V in the 
     !  grid space.
     subroutine spectral2grid(state)
-        use physical_constants, only: grav, p0
-        use spectral, only: spec_to_grid, uvspec
+        use physical_constants, only : grav, p0
+        use model_state, only : ModLegendre_t
+        use spectral, only : ModLegendre_spec2grid, uvspec
         type(ModelState_t), intent(inout) :: state
 
         complex(p), dimension(:, :), allocatable :: ucos, vcos
         integer :: k
+        type(ModLegendre_t) :: legendre_mod
+
+        legendre_mod = state%legendre_mod
         allocate(ucos(mx, nx))
         allocate(vcos(mx, nx))
+
         ! Convert prognostic fields from spectral space to grid point space
         ! Transform some of the variables to more suitable units.
         do k = 1, kx
             call uvspec(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
-            state%u_grid(:, :, k) = spec_to_grid(ucos, 2)
-            state%v_grid(:, :, k) = spec_to_grid(vcos, 2)
-            state%t_grid(:, :, k) = spec_to_grid(state%t(:, :, k, 1), 1)
-            state%q_grid(:, :, k) = spec_to_grid(state%tr(:, :, k, 1, 1), 1)*1.0e-3 ! kg/kg
-            state%phi_grid(:, :, k) = spec_to_grid(state%phi(:, :, k), 1)/grav ! m
+            state%u_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, ucos, 2)
+            state%v_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, vcos, 2)
+            state%t_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%t(:, :, k, 1), 1)
+            state%q_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
+            state%phi_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%phi(:, :, k), 1) / grav ! m
         end do
-        state%ps_grid = p0*exp(spec_to_grid(state%ps(:, :, 1), 1)) ! Pa
+        state%ps_grid = p0 * exp(ModLegendre_spec2grid(legendre_mod, state%ps(:, :, 1), 1)) ! Pa
         deallocate(ucos)
         deallocate(vcos)
-    end subroutine 
+    end subroutine
 end module

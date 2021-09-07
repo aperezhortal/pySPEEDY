@@ -1,5 +1,5 @@
 module time_stepping
-    use types, only: p
+    use types, only : p
     use params
 
     implicit none
@@ -9,21 +9,21 @@ module time_stepping
 
 contains
     ! Call initialization of semi-implicit scheme and perform initial time step
-    subroutine first_step(prognostic_vars)
-        use model_state, only: ModelState_t
-        use implicit, only: initialize_implicit
+    subroutine first_step(state)
+        use model_state, only : ModelState_t
+        use implicit, only : initialize_implicit
 
-        type(ModelState_t), intent(inout) :: prognostic_vars
-        
-        call initialize_implicit(0.5*delt)
+        type(ModelState_t), intent(inout) :: state
 
-        call step(prognostic_vars, 1, 1, 0.5*delt)
+        call initialize_implicit(0.5 * delt)
+
+        call step(state, 1, 1, 0.5 * delt)
 
         call initialize_implicit(delt)
 
-        call step(prognostic_vars, 1, 2, delt)
+        call step(state, 1, 2, delt)
 
-        call initialize_implicit(2*delt)
+        call initialize_implicit(2 * delt)
     end
 
     ! Perform one time step starting from F(1) and F(2) and using the following scheme:
@@ -35,43 +35,43 @@ contains
     ! If j1 == 1, j2 == 2 : initial leapfrog time step (eps = 0)
     ! If j1 == 2, j2 == 2 : leapfrog time step with time filter (eps = ROB)
     ! dt = time step
-    subroutine step(prognostic_vars, j1, j2, dt)
-        use dynamical_constants, only: tdrs
-        use model_state, only: ModelState_t
-        use horizontal_diffusion, only: do_horizontal_diffusion, &
-            & dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
-        use tendencies, only: get_tendencies
+    subroutine step(state, j1, j2, dt)
+        use dynamical_constants, only : tdrs
+        use model_state, only : ModelState_t
+        use horizontal_diffusion, only : do_horizontal_diffusion, &
+                & dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
+        use tendencies, only : get_tendencies
 
-        type(ModelState_t), intent(inout) :: prognostic_vars
+        type(ModelState_t), intent(inout) :: state
 
         integer, intent(in) :: j1, j2
         real(p), intent(in) :: dt
-        complex(p), dimension(mx, nx, kx) ::  vordt, divdt, tdt
+        complex(p), dimension(mx, nx, kx) :: vordt, divdt, tdt
         complex(p) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
         real(p) :: eps, sdrag
 
         complex(p) :: ctmp(mx, nx, kx)
 
         integer :: n, itr, k, m
-        
+
         ! =========================================================================
         ! Compute tendencies of prognostic variables
         ! =========================================================================
 
-        call get_tendencies(prognostic_vars, vordt, divdt, tdt, psdt, trdt, j2)
+        call get_tendencies(state, vordt, divdt, tdt, psdt, trdt, j2)
 
         ! =========================================================================
         ! Horizontal diffusion
         ! =========================================================================
 
         ! Diffusion of wind and temperature
-        vordt = do_horizontal_diffusion(prognostic_vars%vor(:, :, :, 1), vordt, dmp, dmp1)
-        divdt = do_horizontal_diffusion(prognostic_vars%div(:, :, :, 1), divdt, dmpd, dmp1d)
+        vordt = do_horizontal_diffusion(state%vor(:, :, :, 1), vordt, dmp, dmp1)
+        divdt = do_horizontal_diffusion(state%div(:, :, :, 1), divdt, dmpd, dmp1d)
 
         do k = 1, kx
             do m = 1, mx
                 do n = 1, nx
-                    ctmp(m, n, k) = prognostic_vars%t(m, n, k, 1) + tcorh(m, n)*tcorv(k)
+                    ctmp(m, n, k) = state%t(m, n, k, 1) + tcorh(m, n) * tcorv(k)
                 end do
             end do
         end do
@@ -79,21 +79,21 @@ contains
         tdt = do_horizontal_diffusion(ctmp, tdt, dmp, dmp1)
 
         ! Stratospheric diffusion and zonal wind damping
-        sdrag = 1.0/(tdrs*3600.0)
+        sdrag = 1.0 / (tdrs * 3600.0)
         do n = 1, nx
-            vordt(1, n, 1) = vordt(1, n, 1) - sdrag*prognostic_vars%vor(1, n, 1, 1)
-            divdt(1, n, 1) = divdt(1, n, 1) - sdrag*prognostic_vars%div(1, n, 1, 1)
+            vordt(1, n, 1) = vordt(1, n, 1) - sdrag * state%vor(1, n, 1, 1)
+            divdt(1, n, 1) = divdt(1, n, 1) - sdrag * state%div(1, n, 1, 1)
         end do
 
-        vordt = do_horizontal_diffusion(prognostic_vars%vor(:, :, :, 1), vordt, dmps, dmp1s)
-        divdt = do_horizontal_diffusion(prognostic_vars%div(:, :, :, 1), divdt, dmps, dmp1s)
+        vordt = do_horizontal_diffusion(state%vor(:, :, :, 1), vordt, dmps, dmp1s)
+        divdt = do_horizontal_diffusion(state%div(:, :, :, 1), divdt, dmps, dmp1s)
         tdt = do_horizontal_diffusion(ctmp, tdt, dmps, dmp1s)
 
         ! Diffusion of tracers
         do k = 1, kx
             do m = 1, mx
                 do n = 1, nx
-                    ctmp(m, n, k) = prognostic_vars%tr(m, n, k, 1, 1) + qcorh(m, n)*qcorv(k)
+                    ctmp(m, n, k) = state%tr(m, n, k, 1, 1) + qcorh(m, n) * qcorv(k)
                 end do
             end do
         end do
@@ -103,10 +103,10 @@ contains
         if (ntr > 1) then
             do itr = 2, ntr
                 !&<
-                trdt(:, :, :, 1) = do_horizontal_diffusion( &
-                    prognostic_vars%tr(:, :, :, 1, itr), &
-                    trdt(:, :, :, itr), dmp, dmp1 &
-                )
+                trdt(:, :, :, 1) = do_horizontal_diffusion(&
+                        state%tr(:, :, :, 1, itr), &
+                        trdt(:, :, :, itr), dmp, dmp1 &
+                        )
                 !&>
             end do
         end if
@@ -121,24 +121,24 @@ contains
             eps = rob
         end if
 
-        prognostic_vars%ps = step_field_2d(j1, dt, eps, prognostic_vars%ps, psdt)
-        prognostic_vars%vor = step_field_3d(j1, dt, eps, prognostic_vars%vor, vordt)
-        prognostic_vars%div = step_field_3d(j1, dt, eps, prognostic_vars%div, divdt)
-        prognostic_vars%t = step_field_3d(j1, dt, eps, prognostic_vars%t, tdt)
+        state%ps = step_field_2d(j1, dt, eps, state%ps, psdt)
+        state%vor = step_field_3d(j1, dt, eps, state%vor, vordt)
+        state%div = step_field_3d(j1, dt, eps, state%div, divdt)
+        state%t = step_field_3d(j1, dt, eps, state%t, tdt)
 
         do itr = 1, ntr
             !&<
-            prognostic_vars%tr(:, :, :, :, itr) = step_field_3d( &
-                j1, dt, eps, &
-                prognostic_vars%tr(:, :, :, :, itr), trdt(:, :, :, itr) &
-            )
+            state%tr(:, :, :, :, itr) = step_field_3d(&
+                    j1, dt, eps, &
+                    state%tr(:, :, :, :, itr), trdt(:, :, :, itr) &
+                    )
             !&>
         end do
     end
 
     ! Perform time integration of field across all model levels using tendency fdt
     function step_field_3d(j1, dt, eps, input, fdt) result(output)
-        use spectral, only: trunct
+        use spectral, only : trunct
 
         integer, intent(in) :: j1
         real(p), intent(in) :: dt, eps
@@ -153,7 +153,7 @@ contains
     end
 
     function step_field_2d(j1, dt, eps, input, fdt) result(output)
-        use spectral, only: trunct
+        use spectral, only : trunct
 
         integer, intent(in) :: j1
         real(p), intent(in) :: dt, eps
@@ -165,17 +165,17 @@ contains
 
         output = input
 
-        eps2 = 1.0 - 2.0*eps
+        eps2 = 1.0 - 2.0 * eps
 
-        if (ix == iy*4) then
+        if (ix == iy * 4) then
             call trunct(fdt)
         end if
 
         ! The actual leap frog with the Robert filter
-        fnew = output(:, :, 1) + dt*fdt
-        output(:, :, 1) = output(:, :, j1) + wil*eps*(output(:, :, 1) - 2*output(:, :, j1) + fnew)
+        fnew = output(:, :, 1) + dt * fdt
+        output(:, :, 1) = output(:, :, j1) + wil * eps * (output(:, :, 1) - 2 * output(:, :, j1) + fnew)
 
         ! Williams' innovation to the filter
-        output(:, :, 2) = fnew - (1.0 - wil)*eps*(output(:, :, 1) - 2.0*output(:, :, j1) + fnew)
+        output(:, :, 2) = fnew - (1.0 - wil) * eps * (output(:, :, 1) - 2.0 * output(:, :, j1) + fnew)
     end
 end module

@@ -21,6 +21,7 @@ contains
     !  and surface albedo).
     subroutine initialize_boundaries(state)
         use physical_constants, only: grav
+        use spectral, only: ModLegendre_spectral_truncation
         use model_state, only: ModelState_t
         type(ModelState_t), intent(inout) :: state
 
@@ -33,7 +34,7 @@ contains
         ! - Annual-mean surface albedo (state%alb0)
 
         ! Initialize the spectrally truncated surface geopotential
-        call spectral_truncation(state%phi0, state%phis0)        
+        call ModLegendre_spectral_truncation(state%legendre_mod, state%phi0, state%phis0)
     end subroutine
 
     !> Check consistency of surface fields with land-sea mask and set undefined
@@ -63,27 +64,7 @@ contains
         end do
     end subroutine
 
-    !> Compute a spectrally-filtered grid-point field.
-    subroutine spectral_truncation(fg1, fg2)
-        use spectral, only: grid_to_spec, spec_to_grid
 
-        real(p), intent(inout) :: fg1(ix,il) !! Original grid-point field
-        real(p), intent(inout) :: fg2(ix,il) !! Filtered grid-point field
-
-        complex(p) :: fsp(mx,nx)
-        integer :: n, m, total_wavenumber
-
-        fsp = grid_to_spec(fg1)
-
-        do n = 1, nx
-            do m = 1, mx
-                total_wavenumber = m + n - 2
-                if (total_wavenumber > trunc) fsp(m,n) = (0.0, 0.0)
-            end do
-        end do
-
-        fg2 = spec_to_grid(fsp, 1)
-    end subroutine
 
     !> Replace missing values in surface fields.
     !  @note It is assumed that non-missing values exist near the Equator.

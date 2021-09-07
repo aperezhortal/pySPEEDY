@@ -14,7 +14,6 @@ contains
     ! Intialize global variables in the modules. This is done only once.
     subroutine initialize_modules()
         use geometry, only : initialize_geometry
-        use spectral, only : initialize_spectral
         use horizontal_diffusion, only : initialize_horizontal_diffusion
 
         if (modules_initialized_flag) then
@@ -24,9 +23,6 @@ contains
 
         ! Initialize model geometry
         call initialize_geometry
-
-        ! Initialize spectral transforms
-        call initialize_spectral
 
         ! Initialize horizontal diffusion
         call initialize_horizontal_diffusion
@@ -52,6 +48,7 @@ contains
         use sea_model, only : sea_coupling_flag, sst_anomaly_coupling_flag
         use time_stepping, only : first_step
         use boundaries, only : initialize_boundaries
+        use spectral, only : initialize_spectral
         use model_state, only : ModelState_t
         use prognostics, only : initialize_prognostics
         use geopotential, only : initialize_geopotential
@@ -60,6 +57,7 @@ contains
         use params, only : ix, il
 
         integer :: k
+
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
@@ -72,6 +70,9 @@ contains
 
         ! Intialize modules if they were not initialized.
         call initialize_modules()
+
+        ! Initialize spectral transforms
+        call initialize_spectral(state)
 
         call initialize_geopotential(state)
         ! Check consistency of coupling and prescribed SST anomaly flags
@@ -95,7 +96,6 @@ contains
         ! =========================================================================
         ! Initialization of first time step
         ! =========================================================================
-
         ! Set up the forcing fields for the first time step
         call set_forcing(state, 0, control_params%model_datetime, control_params%tyear)
 
@@ -108,6 +108,7 @@ contains
         state%lat(:) = (/(radang(k) * 90.0 / asin(1.0), k = 1, il)/)
 
         state%initialized = .true.
+
     end subroutine
 
     !> Prints SPEEDY.f90 banner.

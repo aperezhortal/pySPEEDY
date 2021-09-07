@@ -793,5 +793,64 @@
             "lev"
         ],
         "alt_name": "lev"
+    },
+    "epsi": {
+        "dtype": "real(8)",
+        "dims": "(mx+1,nx+1)",
+        "desc": "Epsilon function used for various spectral calculations",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx+1",
+            "nx+1"
+        ],
+        "alt_name": "epsi"
+    },
+    "cpol": {
+        "dtype": "real(8)",
+        "dims": "(2*mx,nx,iy)",
+        "desc": "The Legendre polynomials",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "2*mx",
+            "nx",
+            "iy"
+        ],
+        "alt_name": "cpol"
+    },
+    "repsi": {
+        "dtype": "real(8)",
+        "dims": "(mx+1,nx+1)",
+        "desc": "1/legendre_epsi",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx+1",
+            "nx+1"
+        ],
+        "alt_name": "repsi"
+    },
+    "nsh2": {
+        "dtype": "integer",
+        "dims": "(nx)",
+        "desc": "Used for defining shape of spectral triangle",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "nx"
+        ],
+        "alt_name": "nsh2"
+    },
+    "wt": {
+        "dtype": "real(8)",
+        "dims": "(iy)",
+        "desc": "Gaussian weights used for integration in direct Legendre transform",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "iy"
+        ],
+        "alt_name": "wt"
     }
 }
