@@ -20,8 +20,8 @@ module legendre
         real(8), allocatable, dimension(:) :: wt ! Gaussian weights used for integration in direct Legendre transform
     contains
         procedure :: initialize => ModLegendre_initialize
-        procedure :: direct => ModLegendre_direct
-        procedure :: inverse => ModLegendre_inverse
+        procedure :: legendre => ModLegendre_legendre
+        procedure :: legendre_inv => ModLegendre_legendre_inv
         procedure :: delete => ModLegendre_delete
     end type
 
@@ -111,7 +111,7 @@ contains
     !> Computes inverse Legendre transformation.
     ! The Legendre polynomials (cpol) and the triangular shape definition (nsh2)
     ! needs to be initialized and passed to the function.
-    function ModLegendre_inverse(this, input) result(output)
+    function ModLegendre_legendre_inv(this, input) result(output)
         class(ModLegendre_t), intent(in) :: this
         ! 2*mx because these arrays actually represent complex variables
         real(p), intent(in) :: input(2 * mx, nx)  !! Input field
@@ -156,7 +156,7 @@ contains
     ! The Legendre polynomials (cpol), the triangular shape definition (nsh2),
     ! and the gaussian weights (wt) used for the integration of the Legendre transform
     ! needs to be initialized and passed to the function.
-    function ModLegendre_direct(this, input) result(output)
+    function ModLegendre_legendre(this, input) result(output)
         class(ModLegendre_t), intent(in) :: this
         ! 2*mx because these arrays actually represent complex variables
         real(p), intent(in) :: input(2 * mx, il)  !! Input field

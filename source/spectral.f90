@@ -178,7 +178,7 @@ contains
         real(p) :: vorm_r(2 * mx, nx)
 
         vorm_r = reshape(transfer(vorm, vorm_r), (/ 2 * mx, nx /))
-        vorg = fourier_inv(this%inverse(vorm_r), kcos)
+        vorg = fourier_inv(this%legendre_inv(vorm_r), kcos)
     end function
 
     function ModLegendre_grid2spec(this, vorg) result(vorm)
@@ -191,7 +191,7 @@ contains
         complex(p) :: vorm(mx, nx)
         real(p) :: vorm_r(2 * mx, nx)
 
-        vorm_r = this%direct(fourier_dir(vorg))
+        vorm_r = this%legendre(fourier_dir(vorg))
         vorm = reshape(transfer(vorm_r, vorm), (/ mx, nx /))
     end function
 
