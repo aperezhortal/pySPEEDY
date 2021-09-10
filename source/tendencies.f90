@@ -50,22 +50,22 @@ contains
     !           psdt  = spectral tendency of log(p_s)
     !           trdt  = spectral tendency of tracers
     subroutine get_grid_point_tendencies(state, vordt, divdt, tdt, psdt, trdt, j1, j2)
-        use model_state, only : ModelState_t, ModLegendre_t
+        use model_state, only : ModelState_t
         use physical_constants, only : akap, rgas
         use geometry, only : dhs, dhsr, fsgr, coriol
         use implicit, only : tref, tref3
         use geopotential, only : get_geopotential
         use physics, only : get_physical_tendencies
-        use spectral, only : ModLegendre_grid2spec, ModLegendre_spec2grid, laplacian, grad, uvspec, vdspec
+        use spectral, only : ModLegendre_grid2spec, ModLegendre_spec2grid, laplacian, grad, uvspec, vdspec, ModSpectral_t
 
         type(ModelState_t), intent(inout), target :: state
 
         !** notes ****
         ! -- TG does not have to be computed at both time levels every time step,
-        !     I have left it this way to retain parallel structure with subroutine
+        !     I have left it mod_spectral way to retain parallel structure with subroutine
         !     using latitude loop
         ! -- memory can be reduced considerably eliminating TGG, computing VORG
-        !     only when needed, etc -- I have not optimized this subroutine for
+        !     only when needed, etc -- I have not optimized mod_spectral subroutine for
         !     routine use on the YMP
         ! -- results from grtend1.F should duplicate results from grtend.F
         !                              -- Isaac
@@ -87,26 +87,26 @@ contains
 
         integer :: k, i, itr, j
 
-        type(ModLegendre_t), pointer :: legendre_mod
+        class(ModSpectral_t), pointer :: mod_spectral
 
-        legendre_mod => state%legendre_mod
+        mod_spectral => state%mod_spectral
         ! =========================================================================
         ! Convert prognostics to grid point space
         ! =========================================================================
         do k = 1, kx
-            vorg(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%vor(:, :, k, j2), 1)
-            divg(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%div(:, :, k, j2), 1)
-            tg(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%t(:, :, k, j2), 1)
+            vorg(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%vor(:, :, k, j2), 1)
+            divg(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%div(:, :, k, j2), 1)
+            tg(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%t(:, :, k, j2), 1)
 
             do itr = 1, ntr
-                trg(:, :, k, itr) = ModLegendre_spec2grid(legendre_mod, state%tr(:, :, k, j2, itr), 1)
+                trg(:, :, k, itr) = ModLegendre_spec2grid(mod_spectral, state%tr(:, :, k, j2, itr), 1)
             end do
 
             call uvspec(state%vor(:, :, k, j2), &
                     state%div(:, :, k, j2), &
                     dumc(:, :, 1), dumc(:, :, 2))
-            vg(:, :, k) = ModLegendre_spec2grid(legendre_mod, dumc(:, :, 2), 2)
-            ug(:, :, k) = ModLegendre_spec2grid(legendre_mod, dumc(:, :, 1), 2)
+            vg(:, :, k) = ModLegendre_spec2grid(mod_spectral, dumc(:, :, 2), 2)
+            ug(:, :, k) = ModLegendre_spec2grid(mod_spectral, dumc(:, :, 1), 2)
 
             do j = 1, il
                 do i = 1, ix
@@ -128,10 +128,10 @@ contains
         ! Compute tendency of log(surface pressure)
         ! ps(1,1,j2)=zero
         call grad(state%ps(:, :, j2), dumc(:, :, 1), dumc(:, :, 2))
-        px = ModLegendre_spec2grid(legendre_mod, dumc(:, :, 1), 2)
-        py = ModLegendre_spec2grid(legendre_mod, dumc(:, :, 2), 2)
+        px = ModLegendre_spec2grid(mod_spectral, dumc(:, :, 1), 2)
+        py = ModLegendre_spec2grid(mod_spectral, dumc(:, :, 2), 2)
 
-        psdt = ModLegendre_grid2spec(legendre_mod, -umean * px - vmean * py)
+        psdt = ModLegendre_grid2spec(mod_spectral, -umean * px - vmean * py)
         psdt(1, 1) = (0.0, 0.0)
 
         ! Compute "vertical" velocity
@@ -222,12 +222,12 @@ contains
             !  Convert u and v tendencies to vor and div spectral tendencies
             !  vdspec takes a grid u and a grid v and converts them to
             !  spectral vor and div
-            call vdspec(utend(:, :, k), vtend(:, :, k), vordt(:, :, k), divdt(:, :, k), 2, state%legendre_mod)
+            call vdspec(utend(:, :, k), vtend(:, :, k), vordt(:, :, k), divdt(:, :, k), 2, state%mod_spectral)
 
             ! Divergence tendency
             ! add -lapl(0.5*(u**2+v**2)) to div tendency
             divdt(:, :, k) = divdt(:, :, k) &
-                    & - laplacian(ModLegendre_grid2spec(legendre_mod, 0.5 * (ug(:, :, k)**2.0 + vg(:, :, k)**2.0)))
+                    & - laplacian(ModLegendre_grid2spec(mod_spectral, 0.5 * (ug(:, :, k)**2.0 + vg(:, :, k)**2.0)))
 
             ! Temperature tendency
             ! and add div(vT) to spectral t tendency
@@ -236,14 +236,14 @@ contains
                     -vg(:, :, k) * tgg(:, :, k), &
                     dumc(:, :, 1), tdt(:, :, k), &
                     2,&
-                    state%legendre_mod)
-            tdt(:, :, k) = tdt(:, :, k) + ModLegendre_grid2spec(legendre_mod, ttend(:, :, k))
+                    state%mod_spectral)
+            tdt(:, :, k) = tdt(:, :, k) + ModLegendre_grid2spec(mod_spectral, ttend(:, :, k))
 
             ! tracer tendency
             do itr = 1, ntr
                 call vdspec(-ug(:, :, k) * trg(:, :, k, itr), -vg(:, :, k) * trg(:, :, k, itr), &
-                        & dumc(:, :, 1), trdt(:, :, k, itr), 2, state%legendre_mod)
-                trdt(:, :, k, itr) = trdt(:, :, k, itr) + ModLegendre_grid2spec(legendre_mod, trtend(:, :, k, itr))
+                        & dumc(:, :, 1), trdt(:, :, k, itr), 2, state%mod_spectral)
+                trdt(:, :, k, itr) = trdt(:, :, k, itr) + ModLegendre_grid2spec(mod_spectral, trtend(:, :, k, itr))
             end do
         end do
     end subroutine

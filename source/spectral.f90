@@ -1,15 +1,23 @@
 module spectral
     use types, only : p
     use params
+    use legendre, only : ModLegendre_t
 
     implicit none
 
     private
+    public ModSpectral_t
     public el2
-    public initialize_spectral, deinitialize_spectral
+    public deinitialize_spectral
     public laplacian, inverse_laplacian, ModLegendre_spec2grid, ModLegendre_grid2spec
     public ModLegendre_spectral_truncation
     public grad, vds, uvspec, vdspec, trunct
+
+    type, extends(ModLegendre_t) :: ModSpectral_t
+    contains
+        procedure :: initialize => ModSpectral_initialize
+        procedure :: delete => ModSpectral_delete
+    end type ModSpectral_t
 
     ! Make them allocatable to avoid declaring them statically.
     ! This suppresses some warnings in the compiler.
@@ -20,23 +28,21 @@ module spectral
     real(p), allocatable, dimension(:), save :: gradx
 
     logical, save :: spectral_mod_initialized_flag = .false.
+
 contains
-    ! Initialize spectral transforms
-    subroutine initialize_spectral(state)
+
+    !> Initialize the spectral module instance
+    subroutine ModSpectral_initialize(this)
         use physical_constants, only : rearth
         use fourier, only : initialize_fourier
         use legendre, only : ModLegendre_initialize
-        use model_state, only : ModelState_t, ModLegendre_t
-        type(ModelState_t), intent(inout), target :: state
+        class(ModSpectral_t), intent(inout) :: this
 
         ! Local variables declarations
         real(p) :: el1
         integer :: m, m1, m2, n, wavenum_tot(mx, nx), mm(mx)
-        type(ModLegendre_t), pointer :: legendre_mod
-
-        legendre_mod => state%legendre_mod
-
-        call ModLegendre_initialize(state%legendre_mod)
+        call ModLegendre_initialize(this)
+        !TODO: Initialize fourier object
 
         if (spectral_mod_initialized_flag) then
             !Do nothing, the module is already initialized.
@@ -102,13 +108,13 @@ contains
                     vddym(m, 1) = 0.0
                 else
                     uvdx(m, n) = -rearth * float(m1) / (el1 * (el1 + 1))
-                    gradym(m, n) = (el1 - 1.0) * legendre_mod%epsi(m2, n) / rearth
-                    uvdym(m, n) = -rearth * legendre_mod%epsi(m2, n) / el1
-                    vddym(m, n) = (el1 + 1) * legendre_mod%epsi(m2, n) / rearth
+                    gradym(m, n) = (el1 - 1.0) * this%epsi(m2, n) / rearth
+                    uvdym(m, n) = -rearth * this%epsi(m2, n) / el1
+                    vddym(m, n) = (el1 + 1) * this%epsi(m2, n) / rearth
                 end if
-                gradyp(m, n) = (el1 + 2.0) * legendre_mod%epsi(m2, n + 1) / rearth
-                uvdyp(m, n) = -rearth * legendre_mod%epsi(m2, n + 1) / (el1 + 1.0)
-                vddyp(m, n) = el1 * legendre_mod%epsi(m2, n + 1) / rearth
+                gradyp(m, n) = (el1 + 2.0) * this%epsi(m2, n + 1) / rearth
+                uvdyp(m, n) = -rearth * this%epsi(m2, n + 1) / (el1 + 1.0)
+                vddyp(m, n) = el1 * this%epsi(m2, n + 1) / rearth
             end do
         end do
 
@@ -116,7 +122,16 @@ contains
 
     end subroutine
 
-    ! Deinitialize global variables
+    subroutine ModSpectral_delete(this)
+        use legendre, only : ModLegendre_delete
+        class(ModSpectral_t), intent(inout) :: this
+
+        call ModLegendre_delete(this)
+        !TODO: Denitialize fourier object
+    end subroutine
+
+
+    !> Deinitialize global variables
     subroutine deinitialize_spectral
         if (allocated(el2)) deallocate (el2)
         if (allocated(elm2)) deallocate (elm2)
@@ -152,12 +167,10 @@ contains
         output = -input * elm2
     end function
 
-    function ModLegendre_spec2grid(legendre_mod, vorm, kcos) result(vorg)
-        use legendre, only : ModLegendre_inverse
+    function ModLegendre_spec2grid(this, vorm, kcos) result(vorg)
         use fourier, only : fourier_inv
-        use model_state, only : ModLegendre_t
 
-        type(ModLegendre_t), intent(in) :: legendre_mod
+        class(ModLegendre_t), intent(in) :: this
         complex(p), intent(in) :: vorm(mx, nx)
         integer, intent(in) :: kcos
 
@@ -165,22 +178,20 @@ contains
         real(p) :: vorm_r(2 * mx, nx)
 
         vorm_r = reshape(transfer(vorm, vorm_r), (/ 2 * mx, nx /))
-        vorg = fourier_inv(ModLegendre_inverse(legendre_mod,vorm_r), kcos)
+        vorg = fourier_inv(this%inverse(vorm_r), kcos)
     end function
 
-    function ModLegendre_grid2spec(legendre_mod, vorg) result(vorm)
-        use legendre, only : ModLegendre_legendre
+    function ModLegendre_grid2spec(this, vorg) result(vorm)
         use fourier, only : fourier_dir
-        use model_state, only : ModLegendre_t
 
-        type(ModLegendre_t), intent(in) :: legendre_mod
+        class(ModLegendre_t), intent(in) :: this
         real(p), intent(in) :: vorg(ix, il)
 
         ! Local vars
         complex(p) :: vorm(mx, nx)
         real(p) :: vorm_r(2 * mx, nx)
 
-        vorm_r = ModLegendre_legendre(legendre_mod,fourier_dir(vorg))
+        vorm_r = this%direct(fourier_dir(vorg))
         vorm = reshape(transfer(vorm_r, vorm), (/ mx, nx /))
     end function
 
@@ -258,13 +269,12 @@ contains
         end do
     end
 
-    subroutine vdspec(ug, vg, vorm, divm, kcos, legendre_mod)
-        use model_state, only : ModLegendre_t
+    subroutine vdspec(ug, vg, vorm, divm, kcos, this)
         use geometry, only : cosgr, cosgr2
         real(p), intent(in) :: ug(ix, il), vg(ix, il)
         complex(p), intent(out) :: vorm(mx, nx), divm(mx, nx)
         integer, intent(in) :: kcos
-        type(ModLegendre_t), intent(in) :: legendre_mod
+        class(ModLegendre_t), intent(in) :: this
 
         integer :: i, j
         real(p) :: ug1(ix, il), vg1(ix, il)
@@ -286,28 +296,26 @@ contains
             end do
         end if
 
-        specu = ModLegendre_grid2spec(legendre_mod, ug1)
-        specv = ModLegendre_grid2spec(legendre_mod, vg1)
+        specu = ModLegendre_grid2spec(this, ug1)
+        specv = ModLegendre_grid2spec(this, vg1)
         call vds(specu, specv, vorm, divm)
     end
 
     subroutine trunct(vor)
         complex(p), intent(inout) :: vor(mx, nx)
-
         vor = vor * trfilt
     end
 
     !> Compute a spectrally-filtered grid-point field.
-    subroutine ModLegendre_spectral_truncation(legendre_mod, fg1, fg2)
-        use model_state, only : ModLegendre_t
-        type(ModLegendre_t), intent(in) :: legendre_mod
+    subroutine ModLegendre_spectral_truncation(this, fg1, fg2)
+        class(ModLegendre_t), intent(in) :: this
         real(p), intent(inout) :: fg1(ix, il) !! Original grid-point field
         real(p), intent(inout) :: fg2(ix, il) !! Filtered grid-point field
 
         complex(p) :: fsp(mx, nx)
         integer :: n, m, total_wavenumber
 
-        fsp = ModLegendre_grid2spec(legendre_mod, fg1)
+        fsp = ModLegendre_grid2spec(this, fg1)
 
         do n = 1, nx
             do m = 1, mx
@@ -316,6 +324,6 @@ contains
             end do
         end do
 
-        fg2 = ModLegendre_spec2grid(legendre_mod, fsp, 1)
+        fg2 = ModLegendre_spec2grid(this, fsp, 1)
     end subroutine
 end module

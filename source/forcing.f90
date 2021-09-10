@@ -83,7 +83,7 @@ contains
             end do
         end do
 
-        tcorh = ModLegendre_grid2spec(state%legendre_mod,corh)
+        tcorh = ModLegendre_grid2spec(state%mod_spectral,corh)
 
         ! 4. humidity correction term for horizontal diffusion
         do j = 1, il
@@ -100,7 +100,7 @@ contains
 
         corh = refrh1 * (qref - qsfc)
 
-        qcorh = ModLegendre_grid2spec(state%legendre_mod, corh)
+        qcorh = ModLegendre_grid2spec(state%mod_spectral, corh)
     end subroutine
 
     !> Compute reference lapse rate as a function of latitude and date

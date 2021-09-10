@@ -34,7 +34,7 @@ contains
         ! - Annual-mean surface albedo (state%alb0)
 
         ! Initialize the spectrally truncated surface geopotential
-        call ModLegendre_spectral_truncation(state%legendre_mod, state%phi0, state%phis0)
+        call ModLegendre_spectral_truncation(state%mod_spectral, state%phi0, state%phis0)
     end subroutine
 
     !> Check consistency of surface fields with land-sea mask and set undefined

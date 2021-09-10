@@ -15,7 +15,7 @@ NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
 
 class VarDef:
     def __init__(
-            self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None, module=None,
+            self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None
     ):
         """
         If time_dim is not None, the variable is not allocated during the
@@ -38,17 +38,7 @@ class VarDef:
         self.alt_name = name
         if alt_name is not None:
             self.alt_name = alt_name
-        if module is None:
-            module = "state"
-
-        self.module = module.title()
-        if self.module == "State":
-            self.derived_dtype = "ModelState"
-            self.module_var_name = "state"
-        else:
-            self.derived_dtype = f"Mod{self.module}"
-            self.module_var_name = f"{self.module.lower()}_mod"
-        self.derived_dtype_t = f"{self.derived_dtype}_t"
+        self.is_module_instance = "class" in dtype.lower()
 
     @property
     def dimension(self):
@@ -75,7 +65,7 @@ class VarDef:
         return str({k: v for k, v in self.__dict__.items() if not k.startswith("_")})
 
 
-model_variables_def = [
+model_state = [
     ########################################
     # Model integration control variables
     ########################################
@@ -242,68 +232,27 @@ model_variables_def = [
     VarDef("lon", "real", "(ix)", "longitude", "[degrees]"),
     VarDef("lat", "real", "(il)", "latitude", "[degrees]"),
     VarDef("lev", "real", "(kx)", "atmosphere_sigma_coordinate", "[]"),
-    ###########################
-    # Legendre module variables
-    ###########################
-    VarDef("epsi", "real(8)", "(mx+1,nx+1)", "Epsilon function used for various spectral calculations",
-           module="legendre"),
-    VarDef("cpol", "real(8)", "(2*mx,nx,iy)", "The Legendre polynomials", module="legendre"),
-    VarDef("repsi", "real(8)", "(mx+1,nx+1)", "1/legendre_epsi", module="legendre"),
-    VarDef("nsh2", "integer", "(nx)", "Used for defining shape of spectral triangle", module="legendre"),
-    VarDef("wt", "real(8)", "(iy)", "Gaussian weights used for integration in direct Legendre transform",
-           module="legendre"),
+    #
+    # Module instances
+    #
+    VarDef("mod_spectral", "class(ModSpectral_t)", None, "Spectral module instance", ),
+
 ]
 
-model_state_vars = [var for var in model_variables_def if var.module.lower() == "state"]
-other_vars = [var for var in model_variables_def if var.module.lower() != "state"]
-
-model_state_arrays = [var for var in model_state_vars if var.dims is not None]
-model_state_scalars = [var for var in model_state_vars if var.dims is None]
-
-# Group state variables into modules
-modules_vars = defaultdict(list)
-for var in other_vars:
-    modules_vars[var.module].append(var)
-
-for var in model_state_vars:
-    modules_vars[var.module].append(var)
-
-# Add to the Model State a reference to the modules
-# structures containing the module's variables
-class ModuleDef():
-    def __init__(self, module):
-        self.module = module.title()
-        if self.module == "State":
-            self.derived_dtype = "ModelState"
-            self.module_var_name = "state"
-        else:
-            self.derived_dtype = f"Mod{self.module}"
-            self.module_var_name = f"{self.module.lower()}_mod"
-        self.derived_dtype_t = f"{self.derived_dtype}_t"
-
-    def __repr__(self):
-        return str({k: v for k, v in self.__dict__.items() if not k.startswith("_")})
-
-
-nested_structs = dict()
-nested_structs["State"] = [
-    ModuleDef(module) for module in modules_vars.keys() if module.lower() != "state"
-]
-
-###############################################
-# Build the fortran sources using the templates
+state_arrays = [var for var in model_state if var.dims and not var.is_module_instance]
+state_scalars = [var for var in model_state if var.dims is None and not var.is_module_instance]
+state_modules = [var for var in model_state if  var.is_module_instance]
 
 file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
 template = env.get_template("model_state.f90.j2")
-template.stream(modules_vars=modules_vars, nested_structs=nested_structs).dump(
+template.stream(state_arrays=state_arrays, state_scalars=state_scalars, state_modules=state_modules).dump(
     str(SOURCES_DIR / "model_state.f90")
 )
 
 template = env.get_template("speedy_driver.f90.j2")
-template.stream(state_arrays=model_state_arrays, state_scalars=model_state_scalars).dump(
-    str(SOURCES_DIR / "speedy_driver.f90")
-)
+template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
+    str(SOURCES_DIR / "speedy_driver.f90"))
 
 ###################################################
 # Export state variables description in JSON format
@@ -317,7 +266,7 @@ data2json = {
         nc_dims=var.nc_dims,
         alt_name=var.alt_name,
     )
-    for var in model_variables_def
+    for var in model_state
 }
 
 with open(PYSPEEDY_DATA_DIR / "model_state.json", "w") as outfile:
@@ -326,7 +275,7 @@ with open(PYSPEEDY_DATA_DIR / "model_state.json", "w") as outfile:
 ####################################################
 # Export state variables description in Excel format
 _data = defaultdict(list)
-for var in model_variables_def:
+for var in model_state:
     _data["name"].append(var.name)
     _data["dtype"].append(var.dtype)
     _data["dims"].append(var.dims)

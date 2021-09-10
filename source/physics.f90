@@ -84,14 +84,14 @@ contains
         ! Convert model spectral variables to grid-point variables
         do k = 1, kx
             call uvspec(state%vor(:, :, k, j1), state%div(:, :, k, j1), ucos, vcos)
-            ug(:, :, k) = ModLegendre_spec2grid(state%legendre_mod, ucos, 2)
-            vg(:, :, k) = ModLegendre_spec2grid(state%legendre_mod, vcos, 2)
-            tg(:, :, k) = ModLegendre_spec2grid(state%legendre_mod, state%t(:, :, k, j1), 1)
-            qg(:, :, k) = ModLegendre_spec2grid(state%legendre_mod, state%tr(:, :, k, j1, 1), 1) ! q
-            phig(:, :, k) = ModLegendre_spec2grid(state%legendre_mod, state%phi(:, :, k), 1)
+            ug(:, :, k) = ModLegendre_spec2grid(state%mod_spectral, ucos, 2)
+            vg(:, :, k) = ModLegendre_spec2grid(state%mod_spectral, vcos, 2)
+            tg(:, :, k) = ModLegendre_spec2grid(state%mod_spectral, state%t(:, :, k, j1), 1)
+            qg(:, :, k) = ModLegendre_spec2grid(state%mod_spectral, state%tr(:, :, k, j1, 1), 1) ! q
+            phig(:, :, k) = ModLegendre_spec2grid(state%mod_spectral, state%phi(:, :, k), 1)
         end do
 
-        pslg = ModLegendre_spec2grid(state%legendre_mod, state%ps(:, :, j1), 1)
+        pslg = ModLegendre_spec2grid(state%mod_spectral, state%ps(:, :, j1), 1)
 
         ! =========================================================================
         ! Compute thermodynamic variables
@@ -220,7 +220,7 @@ contains
 
         ! Add SPPT noise
         if (sppt_on) then
-            sppt_pattern = gen_sppt(state%legendre_mod)
+            sppt_pattern = gen_sppt(state%mod_spectral)
 
             ! The physical contribution to the tendency is *tend - *tend_dyn, where * is u, v, t, q
             do k = 1, kx

@@ -5,7 +5,8 @@ module prognostics
     use types, only : p
     use params, only : mx, nx, kx, ntr, ix, iy, il
     use model_control, only : ControlParams_t
-    use model_state, only : ModelState_t, ModLegendre_t
+    use model_state, only : ModelState_t
+    use spectral, only : ModSpectral_t
 
     implicit none
 
@@ -39,13 +40,13 @@ contains
         real(p) :: gam1, esref, gam2, qexp, qref, rgam, rgamr, rlog0, tref, ttop
         integer :: i, j, k
 
-        type(ModLegendre_t), pointer :: legendre_mod
-        legendre_mod => state%legendre_mod
+        class(ModSpectral_t), pointer :: mod_spectral
+        mod_spectral => state%mod_spectral
 
         gam1 = gamma / (1000.0 * grav)
 
         ! 1. Compute spectral surface geopotential
-        state%phis = ModLegendre_grid2spec(legendre_mod, state%phis0)
+        state%phis = ModLegendre_grid2spec(mod_spectral, state%phis0)
 
         ! 2. Start from reference atmosphere (at rest)
         write (*, '(A)') 'Starting from rest'
@@ -88,7 +89,7 @@ contains
             end do
         end do
 
-        state%ps(:, :, 1) = ModLegendre_grid2spec(legendre_mod, surfg)
+        state%ps(:, :, 1) = ModLegendre_grid2spec(mod_spectral, surfg)
         if (ix == iy * 4) call trunct(state%ps)
 
         ! 2.4 Set tropospheric specific humidity in g/kg
@@ -104,7 +105,7 @@ contains
             end do
         end do
 
-        surfs = ModLegendre_grid2spec(legendre_mod, surfg)
+        surfs = ModLegendre_grid2spec(mod_spectral, surfg)
         if (ix == iy * 4) call trunct(surfs)
 
         ! Specific humidity at tropospheric levels
@@ -125,15 +126,14 @@ contains
     !  grid space.
     subroutine spectral2grid(state)
         use physical_constants, only : grav, p0
-        use model_state, only : ModLegendre_t
         use spectral, only : ModLegendre_spec2grid, uvspec
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
 
         complex(p), dimension(:, :), allocatable :: ucos, vcos
         integer :: k
-        type(ModLegendre_t) :: legendre_mod
+        class(ModSpectral_t), pointer :: mod_spectral
 
-        legendre_mod = state%legendre_mod
+        mod_spectral => state%mod_spectral
         allocate(ucos(mx, nx))
         allocate(vcos(mx, nx))
 
@@ -141,13 +141,13 @@ contains
         ! Transform some of the variables to more suitable units.
         do k = 1, kx
             call uvspec(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
-            state%u_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, ucos, 2)
-            state%v_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, vcos, 2)
-            state%t_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%t(:, :, k, 1), 1)
-            state%q_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
-            state%phi_grid(:, :, k) = ModLegendre_spec2grid(legendre_mod, state%phi(:, :, k), 1) / grav ! m
+            state%u_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, ucos, 2)
+            state%v_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, vcos, 2)
+            state%t_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%t(:, :, k, 1), 1)
+            state%q_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
+            state%phi_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%phi(:, :, k), 1) / grav ! m
         end do
-        state%ps_grid = p0 * exp(ModLegendre_spec2grid(legendre_mod, state%ps(:, :, 1), 1)) ! Pa
+        state%ps_grid = p0 * exp(ModLegendre_spec2grid(mod_spectral, state%ps(:, :, 1), 1)) ! Pa
         deallocate(ucos)
         deallocate(vcos)
     end subroutine

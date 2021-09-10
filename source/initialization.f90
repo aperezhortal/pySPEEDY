@@ -48,7 +48,6 @@ contains
         use sea_model, only : sea_coupling_flag, sst_anomaly_coupling_flag
         use time_stepping, only : first_step
         use boundaries, only : initialize_boundaries
-        use spectral, only : initialize_spectral
         use model_state, only : ModelState_t
         use prognostics, only : initialize_prognostics
         use geopotential, only : initialize_geopotential
@@ -65,14 +64,13 @@ contains
         type(ControlParams_t), intent(out) :: control_params
 
         ! call print_speedy_title
-
         state%current_step = 0
 
         ! Intialize modules if they were not initialized.
         call initialize_modules()
 
         ! Initialize spectral transforms
-        call initialize_spectral(state)
+        call state%mod_spectral%initialize()
 
         call initialize_geopotential(state)
         ! Check consistency of coupling and prescribed SST anomaly flags
