@@ -1,7 +1,7 @@
 module spectral
     use types, only : p
     use params
-    use legendre, only : ModLegendre_t
+    use fourier, only : ModFourier_t
 
     implicit none
 
@@ -13,7 +13,7 @@ module spectral
     public ModLegendre_spectral_truncation
     public grad, vds, uvspec, vdspec, trunct
 
-    type, extends(ModLegendre_t) :: ModSpectral_t
+    type, extends(ModFourier_t) :: ModSpectral_t
     contains
         procedure :: initialize => ModSpectral_initialize
         procedure :: delete => ModSpectral_delete
@@ -34,15 +34,13 @@ contains
     !> Initialize the spectral module instance
     subroutine ModSpectral_initialize(this)
         use physical_constants, only : rearth
-        use fourier, only : initialize_fourier
-        use legendre, only : ModLegendre_initialize
+        use fourier, only : ModFourier_initialize
         class(ModSpectral_t), intent(inout) :: this
 
         ! Local variables declarations
         real(p) :: el1
         integer :: m, m1, m2, n, wavenum_tot(mx, nx), mm(mx)
-        call ModLegendre_initialize(this)
-        !TODO: Initialize fourier object
+        call ModFourier_initialize(this)
 
         if (spectral_mod_initialized_flag) then
             !Do nothing, the module is already initialized.
@@ -65,9 +63,6 @@ contains
         if (.not. allocated(vddyp)) allocate (vddyp(mx, nx))
 
         if (.not. allocated(gradx)) allocate (gradx(mx))
-
-        ! Initialize Fourier transforms
-        call initialize_fourier
 
         !  MM = zonal wavenumber = m
         !  wavenum_tot = total wavenumber of spherical harmonic = l
@@ -123,11 +118,10 @@ contains
     end subroutine
 
     subroutine ModSpectral_delete(this)
-        use legendre, only : ModLegendre_delete
+        use fourier, only : ModFourier_delete
         class(ModSpectral_t), intent(inout) :: this
 
-        call ModLegendre_delete(this)
-        !TODO: Denitialize fourier object
+        call ModFourier_delete(this)
     end subroutine
 
 
@@ -168,9 +162,7 @@ contains
     end function
 
     function ModLegendre_spec2grid(this, vorm, kcos) result(vorg)
-        use fourier, only : fourier_inv
-
-        class(ModLegendre_t), intent(in) :: this
+        class(ModSpectral_t), intent(in) :: this
         complex(p), intent(in) :: vorm(mx, nx)
         integer, intent(in) :: kcos
 
@@ -178,20 +170,18 @@ contains
         real(p) :: vorm_r(2 * mx, nx)
 
         vorm_r = reshape(transfer(vorm, vorm_r), (/ 2 * mx, nx /))
-        vorg = fourier_inv(this%legendre_inv(vorm_r), kcos)
+        vorg = this%fourier_inv(this%legendre_inv(vorm_r), kcos)
     end function
 
     function ModLegendre_grid2spec(this, vorg) result(vorm)
-        use fourier, only : fourier_dir
-
-        class(ModLegendre_t), intent(in) :: this
+        class(ModSpectral_t), intent(in) :: this
         real(p), intent(in) :: vorg(ix, il)
 
         ! Local vars
         complex(p) :: vorm(mx, nx)
         real(p) :: vorm_r(2 * mx, nx)
 
-        vorm_r = this%legendre(fourier_dir(vorg))
+        vorm_r = this%legendre(this%fourier(vorg))
         vorm = reshape(transfer(vorm_r, vorm), (/ mx, nx /))
     end function
 
@@ -274,7 +264,7 @@ contains
         real(p), intent(in) :: ug(ix, il), vg(ix, il)
         complex(p), intent(out) :: vorm(mx, nx), divm(mx, nx)
         integer, intent(in) :: kcos
-        class(ModLegendre_t), intent(in) :: this
+        class(ModSpectral_t), intent(in) :: this
 
         integer :: i, j
         real(p) :: ug1(ix, il), vg1(ix, il)
@@ -308,7 +298,7 @@ contains
 
     !> Compute a spectrally-filtered grid-point field.
     subroutine ModLegendre_spectral_truncation(this, fg1, fg2)
-        class(ModLegendre_t), intent(in) :: this
+        class(ModSpectral_t), intent(in) :: this
         real(p), intent(inout) :: fg1(ix, il) !! Original grid-point field
         real(p), intent(inout) :: fg2(ix, il) !! Filtered grid-point field
 
