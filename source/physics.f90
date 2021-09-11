@@ -25,7 +25,6 @@ contains
         use surface_fluxes, only : get_surface_fluxes
         use vertical_diffusion, only : get_vertical_diffusion_tend
         use humidity, only : spec_hum_to_rel_hum
-        use spectral, only : uvspec
         use model_state, only : ModelState_t
 
         type(ModelState_t), intent(inout) :: state
@@ -83,12 +82,15 @@ contains
         ! =========================================================================
         ! Convert model spectral variables to grid-point variables
         do k = 1, kx
-            call uvspec(state%vor(:, :, k, j1), state%div(:, :, k, j1), ucos, vcos)
+            call state%mod_spectral%vort2vel(&
+                    state%vor(:, :, k, j1), state%div(:, :, k, j1), ucos, vcos)
+
             ug(:, :, k) = state%mod_spectral%spec2grid(ucos, 2)
             vg(:, :, k) = state%mod_spectral%spec2grid(vcos, 2)
             tg(:, :, k) = state%mod_spectral%spec2grid(state%t(:, :, k, j1), 1)
             qg(:, :, k) = state%mod_spectral%spec2grid(state%tr(:, :, k, j1, 1), 1) ! q
             phig(:, :, k) = state%mod_spectral%spec2grid(state%phi(:, :, k), 1)
+
         end do
 
         pslg = state%mod_spectral%spec2grid(state%ps(:, :, j1), 1)

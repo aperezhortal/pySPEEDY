@@ -61,7 +61,7 @@ contains
                 state%div(:, :, :, 2), &
                 state%t(:, :, :, 2), &
                 state%current_step + 1, &
-                control_params%diag_interval)
+                control_params%diag_interval, state%mod_spectral)
 
         ! Increment time step counter
         state%current_step = state%current_step + 1

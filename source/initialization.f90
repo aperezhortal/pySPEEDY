@@ -32,10 +32,8 @@ contains
 
     ! Deinitialize the allocatable global variables in the different modules.
     subroutine deinitialize_modules()
-        use spectral, only : deinitialize_spectral
         use horizontal_diffusion, only : deinitialize_horizontal_diffusion
 
-        call deinitialize_spectral
         call deinitialize_horizontal_diffusion
 
         modules_initialized_flag = .false.

@@ -30,7 +30,6 @@ contains
         use physical_constants, only : grav, rgas
         use geometry, only : fsg
         use diagnostics, only : check_diagnostics
-        use spectral, only : trunct
 
         type(ModelState_t), intent(inout), target :: state
         type(ControlParams_t), intent(in) :: control_params
@@ -46,7 +45,7 @@ contains
         gam1 = gamma / (1000.0 * grav)
 
         ! 1. Compute spectral surface geopotential
-        state%phis = mod_spectral%grid2spec( state%phis0)
+        state%phis = mod_spectral%grid2spec(state%phis0)
 
         ! 2. Start from reference atmosphere (at rest)
         write (*, '(A)') 'Starting from rest'
@@ -89,8 +88,8 @@ contains
             end do
         end do
 
-        state%ps(:, :, 1) = mod_spectral%grid2spec( surfg)
-        if (ix == iy * 4) call trunct(state%ps)
+        state%ps(:, :, 1) = mod_spectral%grid2spec(surfg)
+        if (ix == iy * 4) call mod_spectral%truncate(state%ps)
 
         ! 2.4 Set tropospheric specific humidity in g/kg
         !     Qref = RHref * Qsat(288K, 1013hPa)
@@ -105,8 +104,8 @@ contains
             end do
         end do
 
-        surfs = mod_spectral%grid2spec( surfg)
-        if (ix == iy * 4) call trunct(surfs)
+        surfs = mod_spectral%grid2spec(surfg)
+        if (ix == iy * 4) call mod_spectral%truncate(surfs)
 
         ! Specific humidity at tropospheric levels
         do k = 3, kx
@@ -117,7 +116,8 @@ contains
         call check_diagnostics(state%vor(:, :, :, 1), &
                 state%div(:, :, :, 1), &
                 state%t(:, :, :, 1), &
-                0, control_params%diag_interval)
+                0, control_params%diag_interval,&
+                state%mod_spectral)
 
     end subroutine
 
@@ -126,7 +126,7 @@ contains
     !  grid space.
     subroutine spectral2grid(state)
         use physical_constants, only : grav, p0
-        use spectral, only : uvspec
+
         type(ModelState_t), intent(inout), target :: state
 
         complex(p), dimension(:, :), allocatable :: ucos, vcos
@@ -134,21 +134,27 @@ contains
         class(ModSpectral_t), pointer :: mod_spectral
 
         mod_spectral => state%mod_spectral
-        allocate(ucos(mx, nx))
-        allocate(vcos(mx, nx))
+
+        allocate(ucos(mx, nx), vcos(mx, nx))
 
         ! Convert prognostic fields from spectral space to grid point space
         ! Transform some of the variables to more suitable units.
         do k = 1, kx
-            call uvspec(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
-            state%u_grid(:, :, k) = mod_spectral%spec2grid( ucos, 2)
-            state%v_grid(:, :, k) = mod_spectral%spec2grid( vcos, 2)
-            state%t_grid(:, :, k) = mod_spectral%spec2grid( state%t(:, :, k, 1), 1)
-            state%q_grid(:, :, k) = mod_spectral%spec2grid( state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
-            state%phi_grid(:, :, k) = mod_spectral%spec2grid( state%phi(:, :, k), 1) / grav ! m
+
+            call mod_spectral%vort2vel(&
+                    state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
+
+            state%u_grid(:, :, k) = mod_spectral%spec2grid(ucos, 2)
+            state%v_grid(:, :, k) = mod_spectral%spec2grid(vcos, 2)
+            state%t_grid(:, :, k) = mod_spectral%spec2grid(state%t(:, :, k, 1), 1)
+            state%q_grid(:, :, k) = mod_spectral%spec2grid(state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
+            state%phi_grid(:, :, k) = mod_spectral%spec2grid(state%phi(:, :, k), 1) / grav ! m
         end do
-        state%ps_grid = p0 * exp(mod_spectral%spec2grid( state%ps(:, :, 1), 1)) ! Pa
+
+        state%ps_grid = p0 * exp(mod_spectral%spec2grid(state%ps(:, :, 1), 1)) ! Pa
+
         deallocate(ucos)
         deallocate(vcos)
+
     end subroutine
 end module

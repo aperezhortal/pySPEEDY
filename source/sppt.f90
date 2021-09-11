@@ -38,7 +38,7 @@ module sppt
 contains
     !> Generate grid point space SPPT pattern distribution.
     function gen_sppt(mod_spectral) result(sppt_grid)
-        use spectral, only : el2, ModSpectral_t
+        use spectral, only : ModSpectral_t
         use physical_constants, only : rearth
         use legendre, only : ModLegendre_t
         class(ModSpectral_t), intent(in) :: mod_spectral
@@ -85,7 +85,7 @@ contains
             f0 = sqrt((stddev**2 * (1 - phi**2)) / (2 * f0))
 
             do k = 1, kx
-                sigma(:, :, k) = f0 * exp(-0.25 * len_decorr**2 * el2)
+                sigma(:, :, k) = f0 * exp(-0.25 * len_decorr**2 * mod_spectral%el2)
             end do
 
             ! First AR(1) step

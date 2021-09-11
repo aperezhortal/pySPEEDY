@@ -21,7 +21,6 @@ contains
     !  and surface albedo).
     subroutine initialize_boundaries(state)
         use physical_constants, only: grav
-        use spectral, only: ModLegendre_spectral_truncation
         use model_state, only: ModelState_t
         type(ModelState_t), intent(inout) :: state
 
@@ -34,7 +33,7 @@ contains
         ! - Annual-mean surface albedo (state%alb0)
 
         ! Initialize the spectrally truncated surface geopotential
-        call ModLegendre_spectral_truncation(state%mod_spectral, state%phi0, state%phis0)
+        call state%mod_spectral%grid_filter(state%phi0, state%phis0)
     end subroutine
 
     !> Check consistency of surface fields with land-sea mask and set undefined

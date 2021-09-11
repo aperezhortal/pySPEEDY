@@ -56,7 +56,7 @@ contains
         use implicit, only : tref, tref3
         use geopotential, only : get_geopotential
         use physics, only : get_physical_tendencies
-        use spectral, only : laplacian, grad, uvspec, vdspec, ModSpectral_t
+        use spectral, only : ModSpectral_t
 
         type(ModelState_t), intent(inout), target :: state
 
@@ -88,25 +88,25 @@ contains
         integer :: k, i, itr, j
 
         class(ModSpectral_t), pointer :: mod_spectral
-
         mod_spectral => state%mod_spectral
         ! =========================================================================
         ! Convert prognostics to grid point space
         ! =========================================================================
         do k = 1, kx
-            vorg(:, :, k) = mod_spectral%spec2grid( state%vor(:, :, k, j2), 1)
-            divg(:, :, k) = mod_spectral%spec2grid( state%div(:, :, k, j2), 1)
-            tg(:, :, k) = mod_spectral%spec2grid( state%t(:, :, k, j2), 1)
+            vorg(:, :, k) = mod_spectral%spec2grid(state%vor(:, :, k, j2), 1)
+            divg(:, :, k) = mod_spectral%spec2grid(state%div(:, :, k, j2), 1)
+            tg(:, :, k) = mod_spectral%spec2grid(state%t(:, :, k, j2), 1)
 
             do itr = 1, ntr
-                trg(:, :, k, itr) = mod_spectral%spec2grid( state%tr(:, :, k, j2, itr), 1)
+                trg(:, :, k, itr) = mod_spectral%spec2grid(state%tr(:, :, k, j2, itr), 1)
             end do
 
-            call uvspec(state%vor(:, :, k, j2), &
-                    state%div(:, :, k, j2), &
+            call mod_spectral%vort2vel(&
+                    state%vor(:, :, k, j2), state%div(:, :, k, j2), &
                     dumc(:, :, 1), dumc(:, :, 2))
-            vg(:, :, k) = mod_spectral%spec2grid( dumc(:, :, 2), 2)
-            ug(:, :, k) = mod_spectral%spec2grid( dumc(:, :, 1), 2)
+
+            vg(:, :, k) = mod_spectral%spec2grid(dumc(:, :, 2), 2)
+            ug(:, :, k) = mod_spectral%spec2grid(dumc(:, :, 1), 2)
 
             do j = 1, il
                 do i = 1, ix
@@ -127,11 +127,11 @@ contains
 
         ! Compute tendency of log(surface pressure)
         ! ps(1,1,j2)=zero
-        call grad(state%ps(:, :, j2), dumc(:, :, 1), dumc(:, :, 2))
-        px = mod_spectral%spec2grid( dumc(:, :, 1), 2)
-        py = mod_spectral%spec2grid( dumc(:, :, 2), 2)
+        call mod_spectral%gradient(state%ps(:, :, j2), dumc(:, :, 1), dumc(:, :, 2))
+        px = mod_spectral%spec2grid(dumc(:, :, 1), 2)
+        py = mod_spectral%spec2grid(dumc(:, :, 2), 2)
 
-        psdt = mod_spectral%grid2spec( -umean * px - vmean * py)
+        psdt = mod_spectral%grid2spec(-umean * px - vmean * py)
         psdt(1, 1) = (0.0, 0.0)
 
         ! Compute "vertical" velocity
@@ -220,30 +220,33 @@ contains
 
         do k = 1, kx
             !  Convert u and v tendencies to vor and div spectral tendencies
-            !  vdspec takes a grid u and a grid v and converts them to
+            !  mod_spectral%grid_vel2vort takes a grid u and a grid v and converts them to
             !  spectral vor and div
-            call vdspec(utend(:, :, k), vtend(:, :, k), vordt(:, :, k), divdt(:, :, k), 2, state%mod_spectral)
+            call mod_spectral%grid_vel2vort(&
+                    utend(:, :, k), vtend(:, :, k), vordt(:, :, k), divdt(:, :, k), 2)
 
             ! Divergence tendency
             ! add -lapl(0.5*(u**2+v**2)) to div tendency
             divdt(:, :, k) = divdt(:, :, k) &
-                    & - laplacian(mod_spectral%grid2spec( 0.5 * (ug(:, :, k)**2.0 + vg(:, :, k)**2.0)))
+                    & - mod_spectral%laplacian(&
+                            mod_spectral%grid2spec(0.5 * (ug(:, :, k)**2.0 + vg(:, :, k)**2.0)))
 
             ! Temperature tendency
             ! and add div(vT) to spectral t tendency
-            call vdspec(&
+            call mod_spectral%grid_vel2vort(&
                     -ug(:, :, k) * tgg(:, :, k), &
                     -vg(:, :, k) * tgg(:, :, k), &
                     dumc(:, :, 1), tdt(:, :, k), &
-                    2,&
-                    state%mod_spectral)
-            tdt(:, :, k) = tdt(:, :, k) + mod_spectral%grid2spec( ttend(:, :, k))
+                    2)
+            tdt(:, :, k) = tdt(:, :, k) + mod_spectral%grid2spec(ttend(:, :, k))
 
             ! tracer tendency
             do itr = 1, ntr
-                call vdspec(-ug(:, :, k) * trg(:, :, k, itr), -vg(:, :, k) * trg(:, :, k, itr), &
-                        & dumc(:, :, 1), trdt(:, :, k, itr), 2, state%mod_spectral)
-                trdt(:, :, k, itr) = trdt(:, :, k, itr) + mod_spectral%grid2spec( trtend(:, :, k, itr))
+                call mod_spectral%grid_vel2vort(&
+                        -ug(:, :, k) * trg(:, :, k, itr), -vg(:, :, k) * trg(:, :, k, itr), &
+                        & dumc(:, :, 1), trdt(:, :, k, itr), 2)
+
+                trdt(:, :, k, itr) = trdt(:, :, k, itr) + mod_spectral%grid2spec(trtend(:, :, k, itr))
             end do
         end do
     end subroutine
@@ -259,16 +262,18 @@ contains
         use geometry, only : dhs, dhsr
         use geopotential, only : get_geopotential
         use implicit, only : tref, tref2, tref3
-        use spectral, only : laplacian
+        use spectral, only : ModSpectral_t
 
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
 
         complex(p), intent(inout) :: psdt(mx, nx), divdt(mx, nx, kx), tdt(mx, nx, kx)
         integer, intent(in) :: j2
 
         complex(p) :: dumk(mx, nx, kx + 1), dmeanc(mx, nx), sigdtc(mx, nx, kx + 1)
-
         integer :: k
+        class(ModSpectral_t), pointer :: mod_spectral
+
+        mod_spectral => state%mod_spectral
 
         ! Vertical mean div and pressure tendency
         dmeanc(:, :) = (0.0, 0.0)
@@ -307,7 +312,7 @@ contains
 
         do k = 1, kx
             divdt(:, :, k) = divdt(:, :, k) &
-                    - laplacian(state%phi(:, :, k) &
+                    - mod_spectral%laplacian(state%phi(:, :, k) &
                             + rgas * tref(k) * state%ps(:, :, j2))
         end do
     end subroutine

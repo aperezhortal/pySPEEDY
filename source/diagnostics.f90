@@ -13,14 +13,15 @@ contains
     !> Prints global means of eddy kinetic energy and temperature.
     !  Also stops the integration if the computed diagnostics are outside of
     !  allowable ranges.
-    subroutine check_diagnostics(vor, div, t, istep, nstdia)
+    subroutine check_diagnostics(vor, div, t, istep, nstdia, mod_spectral)
         use params
-        use spectral, only: inverse_laplacian
+        use spectral, only: ModSpectral_t
 
         complex(p), dimension(mx, nx, kx), intent(in) :: vor    !! Spectral vorticity
         complex(p), dimension(mx, nx, kx), intent(in) :: div    !! Spectral divergence
         complex(p), dimension(mx, nx, kx), intent(in) :: t      !! Spectral temperature
         integer, intent(in)                           :: istep  !! Current time step
+        class(ModSpectral_t), intent(in) :: mod_spectral
 
         integer, intent(in) :: nstdia ! Period (number of steps) for diagnostic print
 
@@ -34,7 +35,7 @@ contains
             diag(k, 2) = 0.0
             diag(k, 3) = sqrt(0.5)*real(t(1, 1, k), p)
 
-            temp = inverse_laplacian(vor(:, :, k))
+            temp = mod_spectral%laplacian_inv(vor(:, :, k))
 
             do m = 2, mx
                 do n = 1, nx
@@ -42,7 +43,7 @@ contains
                 end do
             end do
 
-            temp = inverse_laplacian(div(:, :, k))
+            temp = mod_spectral%laplacian_inv(div(:, :, k))
 
             do m = 2, mx
                 do n = 1, nx

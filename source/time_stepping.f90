@@ -1,6 +1,7 @@
 module time_stepping
     use types, only : p
     use params
+    use spectral, only : ModSpectral_t
 
     implicit none
 
@@ -42,7 +43,7 @@ contains
                 & dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
         use tendencies, only : get_tendencies
 
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
 
         integer, intent(in) :: j1, j2
         real(p), intent(in) :: dt
@@ -53,6 +54,10 @@ contains
         complex(p) :: ctmp(mx, nx, kx)
 
         integer :: n, itr, k, m
+
+        class(ModSpectral_t), pointer :: mod_spectral
+
+        mod_spectral => state%mod_spectral
 
         ! =========================================================================
         ! Compute tendencies of prognostic variables
@@ -121,25 +126,22 @@ contains
             eps = rob
         end if
 
-        state%ps = step_field_2d(j1, dt, eps, state%ps, psdt)
-        state%vor = step_field_3d(j1, dt, eps, state%vor, vordt)
-        state%div = step_field_3d(j1, dt, eps, state%div, divdt)
-        state%t = step_field_3d(j1, dt, eps, state%t, tdt)
+        state%ps = step_field_2d(mod_spectral, j1, dt, eps, state%ps, psdt)
+        state%vor = step_field_3d(mod_spectral, j1, dt, eps, state%vor, vordt)
+        state%div = step_field_3d(mod_spectral, j1, dt, eps, state%div, divdt)
+        state%t = step_field_3d(mod_spectral, j1, dt, eps, state%t, tdt)
 
         do itr = 1, ntr
-            !&<
             state%tr(:, :, :, :, itr) = step_field_3d(&
-                    j1, dt, eps, &
+                    mod_spectral, j1, dt, eps, &
                     state%tr(:, :, :, :, itr), trdt(:, :, :, itr) &
                     )
-            !&>
         end do
     end
 
     ! Perform time integration of field across all model levels using tendency fdt
-    function step_field_3d(j1, dt, eps, input, fdt) result(output)
-        use spectral, only : trunct
-
+    function step_field_3d(mod_spectral, j1, dt, eps, input, fdt) result(output)
+        class(ModSpectral_t), intent(in) :: mod_spectral
         integer, intent(in) :: j1
         real(p), intent(in) :: dt, eps
         complex(p), intent(inout) :: fdt(mx, nx, kx)
@@ -148,13 +150,12 @@ contains
         integer :: k
 
         do k = 1, kx
-            output(:, :, k, :) = step_field_2d(j1, dt, eps, input(:, :, k, :), fdt(:, :, k))
+            output(:, :, k, :) = step_field_2d(mod_spectral, j1, dt, eps, input(:, :, k, :), fdt(:, :, k))
         end do
     end
 
-    function step_field_2d(j1, dt, eps, input, fdt) result(output)
-        use spectral, only : trunct
-
+    function step_field_2d(mod_spectral, j1, dt, eps, input, fdt) result(output)
+        class(ModSpectral_t), intent(in) :: mod_spectral
         integer, intent(in) :: j1
         real(p), intent(in) :: dt, eps
         complex(p), intent(inout) :: fdt(mx, nx)
@@ -168,7 +169,7 @@ contains
         eps2 = 1.0 - 2.0 * eps
 
         if (ix == iy * 4) then
-            call trunct(fdt)
+            call mod_spectral%truncate(fdt)
         end if
 
         ! The actual leap frog with the Robert filter
