@@ -9,7 +9,7 @@ module spectral
     public ModSpectral_t
     public el2
     public deinitialize_spectral
-    public laplacian, inverse_laplacian, ModLegendre_spec2grid, ModLegendre_grid2spec
+    public laplacian, inverse_laplacian
     public ModLegendre_spectral_truncation
     public grad, vds, uvspec, vdspec, trunct
 
@@ -17,6 +17,8 @@ module spectral
     contains
         procedure :: initialize => ModSpectral_initialize
         procedure :: delete => ModSpectral_delete
+        procedure :: spec2grid => ModSpectral_spec2grid
+        procedure :: grid2spec => ModSpectral_grid2spec
     end type ModSpectral_t
 
     ! Make them allocatable to avoid declaring them statically.
@@ -161,7 +163,7 @@ contains
         output = -input * elm2
     end function
 
-    function ModLegendre_spec2grid(this, vorm, kcos) result(vorg)
+    function ModSpectral_spec2grid(this, vorm, kcos) result(vorg)
         class(ModSpectral_t), intent(in) :: this
         complex(p), intent(in) :: vorm(mx, nx)
         integer, intent(in) :: kcos
@@ -173,7 +175,7 @@ contains
         vorg = this%fourier_inv(this%legendre_inv(vorm_r), kcos)
     end function
 
-    function ModLegendre_grid2spec(this, vorg) result(vorm)
+    function ModSpectral_grid2spec(this, vorg) result(vorm)
         class(ModSpectral_t), intent(in) :: this
         real(p), intent(in) :: vorg(ix, il)
 
@@ -286,8 +288,8 @@ contains
             end do
         end if
 
-        specu = ModLegendre_grid2spec(this, ug1)
-        specv = ModLegendre_grid2spec(this, vg1)
+        specu = this%grid2spec( ug1)
+        specv = this%grid2spec( vg1)
         call vds(specu, specv, vorm, divm)
     end
 
@@ -305,7 +307,7 @@ contains
         complex(p) :: fsp(mx, nx)
         integer :: n, m, total_wavenumber
 
-        fsp = ModLegendre_grid2spec(this, fg1)
+        fsp = this%grid2spec( fg1)
 
         do n = 1, nx
             do m = 1, mx
@@ -314,6 +316,6 @@ contains
             end do
         end do
 
-        fg2 = ModLegendre_spec2grid(this, fsp, 1)
+        fg2 = this%spec2grid( fsp, 1)
     end subroutine
 end module

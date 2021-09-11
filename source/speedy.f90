@@ -28,7 +28,7 @@ contains
         use diagnostics, only : check_diagnostics
         use forcing, only : set_forcing
         use model_state, only : ModelState_t, ModelState_deallocate, ModelState_allocate
-        use spectral, only : ModLegendre_spec2grid
+        use spectral
         use error_codes
         implicit none
 

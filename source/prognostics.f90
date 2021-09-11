@@ -30,7 +30,7 @@ contains
         use physical_constants, only : grav, rgas
         use geometry, only : fsg
         use diagnostics, only : check_diagnostics
-        use spectral, only : ModLegendre_grid2spec, trunct
+        use spectral, only : trunct
 
         type(ModelState_t), intent(inout), target :: state
         type(ControlParams_t), intent(in) :: control_params
@@ -46,7 +46,7 @@ contains
         gam1 = gamma / (1000.0 * grav)
 
         ! 1. Compute spectral surface geopotential
-        state%phis = ModLegendre_grid2spec(mod_spectral, state%phis0)
+        state%phis = mod_spectral%grid2spec( state%phis0)
 
         ! 2. Start from reference atmosphere (at rest)
         write (*, '(A)') 'Starting from rest'
@@ -89,7 +89,7 @@ contains
             end do
         end do
 
-        state%ps(:, :, 1) = ModLegendre_grid2spec(mod_spectral, surfg)
+        state%ps(:, :, 1) = mod_spectral%grid2spec( surfg)
         if (ix == iy * 4) call trunct(state%ps)
 
         ! 2.4 Set tropospheric specific humidity in g/kg
@@ -105,7 +105,7 @@ contains
             end do
         end do
 
-        surfs = ModLegendre_grid2spec(mod_spectral, surfg)
+        surfs = mod_spectral%grid2spec( surfg)
         if (ix == iy * 4) call trunct(surfs)
 
         ! Specific humidity at tropospheric levels
@@ -126,7 +126,7 @@ contains
     !  grid space.
     subroutine spectral2grid(state)
         use physical_constants, only : grav, p0
-        use spectral, only : ModLegendre_spec2grid, uvspec
+        use spectral, only : uvspec
         type(ModelState_t), intent(inout), target :: state
 
         complex(p), dimension(:, :), allocatable :: ucos, vcos
@@ -141,13 +141,13 @@ contains
         ! Transform some of the variables to more suitable units.
         do k = 1, kx
             call uvspec(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
-            state%u_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, ucos, 2)
-            state%v_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, vcos, 2)
-            state%t_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%t(:, :, k, 1), 1)
-            state%q_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
-            state%phi_grid(:, :, k) = ModLegendre_spec2grid(mod_spectral, state%phi(:, :, k), 1) / grav ! m
+            state%u_grid(:, :, k) = mod_spectral%spec2grid( ucos, 2)
+            state%v_grid(:, :, k) = mod_spectral%spec2grid( vcos, 2)
+            state%t_grid(:, :, k) = mod_spectral%spec2grid( state%t(:, :, k, 1), 1)
+            state%q_grid(:, :, k) = mod_spectral%spec2grid( state%tr(:, :, k, 1, 1), 1) * 1.0e-3 ! kg/kg
+            state%phi_grid(:, :, k) = mod_spectral%spec2grid( state%phi(:, :, k), 1) / grav ! m
         end do
-        state%ps_grid = p0 * exp(ModLegendre_spec2grid(mod_spectral, state%ps(:, :, 1), 1)) ! Pa
+        state%ps_grid = p0 * exp(mod_spectral%spec2grid( state%ps(:, :, 1), 1)) ! Pa
         deallocate(ucos)
         deallocate(vcos)
     end subroutine
