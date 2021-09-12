@@ -211,7 +211,7 @@ model_state = [
         time_dim="n_months",
     ),
     #################
-    # Spectral module
+    # Implicit module
     #################
     ###################
     # mod_radcon module
@@ -236,6 +236,7 @@ model_state = [
     # Module instances
     #
     VarDef("mod_spectral", "class(ModSpectral_t)", None, "Spectral module instance", ),
+    VarDef("mod_implicit", "class(ModImplicit_t)", None, "Implicit module instance", ),
 
 ]
 

@@ -9,7 +9,6 @@ module tendencies
 
 contains
     subroutine get_tendencies(state, vordt, divdt, tdt, psdt, trdt, j2)
-        use implicit, only : implicit_terms
         use model_state, only : ModelState_t
 
         complex(p), dimension(mx, nx, kx), intent(inout) :: vordt, divdt, tdt
@@ -35,7 +34,7 @@ contains
             call get_spectral_tendencies(state, divdt, tdt, psdt, 1)
 
             ! Implicit correction
-            call implicit_terms(divdt, tdt, psdt)
+            call state%mod_implicit%implicit_terms(divdt, tdt, psdt)
         end if
     end subroutine
 
@@ -53,7 +52,7 @@ contains
         use model_state, only : ModelState_t
         use physical_constants, only : akap, rgas
         use geometry, only : dhs, dhsr, fsgr, coriol
-        use implicit, only : tref, tref3
+        use implicit, only : ModImplicit_t
         use geopotential, only : get_geopotential
         use physics, only : get_physical_tendencies
         use spectral, only : ModSpectral_t
@@ -88,7 +87,9 @@ contains
         integer :: k, i, itr, j
 
         class(ModSpectral_t), pointer :: mod_spectral
+        class(ModImplicit_t), pointer :: mod_implicit
         mod_spectral => state%mod_spectral
+        mod_implicit => state%mod_implicit
         ! =========================================================================
         ! Convert prognostics to grid point space
         ! =========================================================================
@@ -154,7 +155,7 @@ contains
         ! Subtract part of temperature field that is used as reference for
         ! implicit terms
         do k = 1, kx
-            tgg(:, :, k) = tg(:, :, k) - tref(k)
+            tgg(:, :, k) = tg(:, :, k) - mod_implicit%tref(k)
         end do
 
         ! Zonal wind tendency
@@ -183,13 +184,16 @@ contains
         ! Temperature tendency
         do k = 2, kx
             temp(:, :, k) = sigdt(:, :, k) * (tgg(:, :, k) - tgg(:, :, k - 1)) &
-                    & + sigm(:, :, k) * (tref(k) - tref(k - 1))
+                    & + sigm(:, :, k) * (mod_implicit%tref(k) - mod_implicit%tref(k - 1))
         end do
 
         do k = 1, kx
-            ttend(:, :, k) = tgg(:, :, k) * divg(:, :, k) - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k) &
-                    & + fsgr(k) * tgg(:, :, k) * (sigdt(:, :, k + 1) + sigdt(:, :, k)) + tref3(k) * (sigm(:, :, k + 1) &
-                    & + sigm(:, :, k)) + akap * (tg(:, :, k) * puv(:, :, k) - tgg(:, :, k) * dmean(:, :))
+            ttend(:, :, k) = tgg(:, :, k) * divg(:, :, k) &
+                    - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k) &
+                    + fsgr(k) * tgg(:, :, k) * (sigdt(:, :, k + 1) + sigdt(:, :, k)) &
+                    + mod_implicit%tref3(k) * (sigm(:, :, k + 1) &
+                            + sigm(:, :, k)) &
+                    + akap * (tg(:, :, k) * puv(:, :, k) - tgg(:, :, k) * dmean(:, :))
         end do
 
         ! Tracer tendency
@@ -201,7 +205,8 @@ contains
             temp(:, :, 2:3) = 0.0
 
             do k = 1, kx
-                trtend(:, :, k, itr) = trg(:, :, k, itr) * divg(:, :, k) - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
+                trtend(:, :, k, itr) = trg(:, :, k, itr) * divg(:, :, k) &
+                        - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
             end do
         end do
 
@@ -261,7 +266,7 @@ contains
         use physical_constants, only : rgas
         use geometry, only : dhs, dhsr
         use geopotential, only : get_geopotential
-        use implicit, only : tref, tref2, tref3
+        use implicit, only : ModImplicit_t
         use spectral, only : ModSpectral_t
 
         type(ModelState_t), intent(inout), target :: state
@@ -271,9 +276,11 @@ contains
 
         complex(p) :: dumk(mx, nx, kx + 1), dmeanc(mx, nx), sigdtc(mx, nx, kx + 1)
         integer :: k
-        class(ModSpectral_t), pointer :: mod_spectral
 
+        class(ModSpectral_t), pointer :: mod_spectral
+        class(ModImplicit_t), pointer :: mod_implicit
         mod_spectral => state%mod_spectral
+        mod_implicit => state%mod_implicit
 
         ! Vertical mean div and pressure tendency
         dmeanc(:, :) = (0.0, 0.0)
@@ -298,13 +305,14 @@ contains
         dumk(:, :, kx + 1) = (0.0, 0.0)
 
         do k = 2, kx
-            dumk(:, :, k) = sigdtc(:, :, k) * (tref(k) - tref(k - 1))
+            dumk(:, :, k) = sigdtc(:, :, k) * (mod_implicit%tref(k) - mod_implicit%tref(k - 1))
         end do
 
         do k = 1, kx
-            tdt(:, :, k) = tdt(:, :, k) - (dumk(:, :, k + 1) + dumk(:, :, k)) * dhsr(k)&
-                    & + tref3(k) * (sigdtc(:, :, k + 1) + sigdtc(:, :, k))&
-                    & - tref2(k) * dmeanc
+            tdt(:, :, k) = tdt(:, :, k) &
+                    - (dumk(:, :, k + 1) + dumk(:, :, k)) * dhsr(k)&
+                    + mod_implicit%tref3(k) * (sigdtc(:, :, k + 1) + sigdtc(:, :, k))&
+                    - mod_implicit%tref2(k) * dmeanc
         end do
 
         ! Geopotential and divergence tendency
@@ -313,7 +321,7 @@ contains
         do k = 1, kx
             divdt(:, :, k) = divdt(:, :, k) &
                     - mod_spectral%laplacian(state%phi(:, :, k) &
-                            + rgas * tref(k) * state%ps(:, :, j2))
+                            + rgas * mod_implicit%tref(k) * state%ps(:, :, j2))
         end do
     end subroutine
 end module

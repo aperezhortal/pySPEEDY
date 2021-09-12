@@ -7,6 +7,7 @@
 module model_state
     use types, only: p
     use spectral, only: ModSpectral_t
+    use implicit, only: ModImplicit_t
     implicit none
 
     private
@@ -92,11 +93,21 @@ contains
 
         !========================================================
         ! Safely deallocate the model state variables
-        {% for var in state_modules + state_arrays %}
+        {% for var in state_arrays %}
         if( allocated(state%{{var.name}}) ) deallocate( state%{{var.name}} ) ! {{ var.desc }}
         state%{{var.name}}_initialized = .false.
 
         {% endfor %}
+
+        {% for var in state_modules %}
+        if( allocated(state%{{var.name}}) ) then
+            call state%{{var.name}}%delete()
+            deallocate( state%{{var.name}} ) ! {{ var.desc }}
+        end if
+        state%{{var.name}}_initialized = .false.
+
+        {% endfor %}
+
 
         state%initialized = .false.
     end subroutine

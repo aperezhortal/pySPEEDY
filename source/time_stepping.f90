@@ -12,19 +12,18 @@ contains
     ! Call initialization of semi-implicit scheme and perform initial time step
     subroutine first_step(state)
         use model_state, only : ModelState_t
-        use implicit, only : initialize_implicit
 
         type(ModelState_t), intent(inout) :: state
 
-        call initialize_implicit(0.5 * delt)
+        call state%mod_implicit%initialize(0.5 * delt)
 
         call step(state, 1, 1, 0.5 * delt)
 
-        call initialize_implicit(delt)
+        call state%mod_implicit%initialize(delt)
 
         call step(state, 1, 2, delt)
 
-        call initialize_implicit(2 * delt)
+        call state%mod_implicit%initialize(2 * delt)
     end
 
     ! Perform one time step starting from F(1) and F(2) and using the following scheme:

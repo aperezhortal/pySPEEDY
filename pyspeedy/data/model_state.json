@@ -802,5 +802,14 @@
         "units": null,
         "nc_dims": null,
         "alt_name": "mod_spectral"
+    },
+    "mod_implicit": {
+        "dtype": "class(ModImplicit_t)",
+        "dims": null,
+        "desc": "Implicit module instance",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "mod_implicit"
     }
 }
