@@ -6,9 +6,7 @@ module shortwave_radiation
     implicit none
 
     private
-    public ablco2
     public get_shortwave_rad_fluxes, get_zonal_average_fields, clouds
-    public increase_co2, compute_shortwave
 
     ! Shortwave radiation and cloud constants
     real(p), parameter :: solc = 342.0 !! Solar constant (area averaged) in W/m^2
@@ -18,80 +16,47 @@ module shortwave_radiation
     real(p), parameter :: qacl = 0.20  !! Specific humidity threshold for cloud cover
     real(p), parameter :: wpcl = 0.2   !! Cloud cover weight for the square-root of precipitation
     !! (for p = 1 mm/day)
-    real(p), parameter :: pmaxcl = 10.0  !! Maximum value of precipitation (mm/day) contributing to
-    !! cloud cover
+    real(p), parameter :: pmaxcl = 10.0  !! Maximum value of precipitation (mm/day) contributing to cloud cover
     real(p), parameter :: clsmax = 0.60  !! Maximum stratiform cloud cover
     real(p), parameter :: clsminl = 0.15  !! Minimum stratiform cloud cover over land (for RH = 1)
-    real(p), parameter :: gse_s0 = 0.25  !! Gradient of dry static energy corresponding to
-    !! stratiform cloud cover = 0
+    real(p), parameter :: gse_s0 = 0.25  !! Gradient of dry static energy corresponding to stratiform cloud cover = 0
     real(p), parameter :: gse_s1 = 0.40  !! Gradient of dry static energy corresponding to
     !! stratiform cloud cover = 1
     real(p), parameter :: albcl = 0.43  !! Cloud albedo (for cloud cover = 1)
     real(p), parameter :: albcls = 0.50  !! Stratiform cloud albedo (for st. cloud cover = 1)
-    real(p), parameter :: epssw = 0.020 !! Fraction of incoming solar radiation absorbed by ozone
+    real(p), parameter :: epssw = 0.020 !! Fraction of incoming solar radiation absorbed by flux_ozone_lower
 
     ! Shortwave absorptivities (for dp = 10^5 Pa)
     real(p), parameter :: absdry = 0.033 !! Absorptivity of dry air (visible band)
     real(p), parameter :: absaer = 0.033 !! Absorptivity of aerosols (visible band)
-    real(p), parameter :: abswv1 = 0.022 !! Absorptivity of water vapour
-    !! (visible band, for dq = 1 g/kg)
-    real(p), parameter :: abswv2 = 15.000 !! Absorptivity of water vapour
-    !! (near IR band, for dq = 1 g/kg)
+    real(p), parameter :: abswv1 = 0.022 !! Absorptivity of water vapour (visible band, for dq = 1 g/kg)
+    real(p), parameter :: abswv2 = 15.000 !! Absorptivity of water vapour (near IR band, for dq = 1 g/kg)
     real(p), parameter :: abscl1 = 0.015 !! Absorptivity of clouds (visible band, maximum value)
-    real(p), parameter :: abscl2 = 0.15  !! Absorptivity of clouds
-    !! (visible band, for dq_base = 1 g/kg)
+    real(p), parameter :: abscl2 = 0.15  !! Absorptivity of clouds (visible band, for dq_base = 1 g/kg)
 
     ! Longwave absorptivities (per dp = 10^5 Pa)
     real(p), parameter :: ablwin = 0.3 !! Absorptivity of air in "window" band
-    real(p), save :: ablco2 = 6.0 !! Absorptivity of air in CO2 band
-    real(p), parameter :: ablwv1 = 0.7 !! Absorptivity of water vapour in H2O band 1 (weak),
-    !! (for dq = 1 g/kg)
-    real(p), parameter :: ablwv2 = 50.0 !! Absorptivity of water vapour in H2O band 2 (strong),
-    !! (for dq = 1 g/kg)
-    real(p), parameter :: ablcl1 = 12.0 !! Absorptivity of "thick" clouds in window band
-    !! (below cloud top)
-    real(p), parameter :: ablcl2 = 0.6 !! Absorptivity of "thin" upper clouds in window and H2O
-    !! bands
 
-    ! Zonally-averaged fields for SW/LW scheme (updated in sol_oz)
-    real(p), save, dimension(ix, il) :: fsol   !! Flux of incoming solar radiation
-    real(p), save, dimension(ix, il) :: ozone  !! Flux absorbed by ozone (lower stratosphere)
-    real(p), save, dimension(ix, il) :: ozupp  !! Flux absorbed by ozone (upper stratosphere)
-    real(p), save, dimension(ix, il) :: zenit  !! Optical depth ratio (function of solar zenith angle)
-    real(p), save, dimension(ix, il) :: stratz !! Stratospheric correction for polar night
+    real(p), parameter :: ablwv1 = 0.7 !! Absorptivity of water vapour in H2O band 1 (weak), (for dq = 1 g/kg)
+    real(p), parameter :: ablwv2 = 50.0 !! Absorptivity of water vapour in H2O band 2 (strong), (for dq = 1 g/kg)
+    real(p), parameter :: ablcl1 = 12.0 !! Absorptivity of "thick" clouds in window band (below cloud top)
+    real(p), parameter :: ablcl2 = 0.6 !! Absorptivity of "thin" upper clouds in window and H2O bands
 
-    real(p), save, dimension(ix, il) :: qcloud !! Equivalent specific humidity of clouds
-
-    ! Logical flags to control shortwave radiation behaviour
-    logical, parameter :: increase_co2 = .false. !! Flag for CO2 optical thickness increase
-    logical :: compute_shortwave = .true.  !! Flag for shortwave radiation routine (turned on
-    !! and off in main loop depending on the value of
-    !! nstrad)
 
 contains
     !> Compute the absorption of shortwave radiation and initialize arrays
     !  for longwave-radiation routines
-    subroutine get_shortwave_rad_fluxes(&
-            psa, qa, icltop, cloudc, clstr, fsfcd, fsfc, ftop, dfabs, &
-            alb_surface, rad_flux, rad_tau2, rad_strat_corr)
+    subroutine get_shortwave_rad_fluxes(state, psa, qa, icltop, cloudc, clstr)
         use geometry, only : fsg, dhs
         use mod_radcon
+        use model_state, only : ModelState_t
 
+        type(ModelState_t), intent(inout) :: state
         real(p), intent(in) :: psa(ix, il)       !! Normalised surface pressure [p/p0]
         real(p), intent(in) :: qa(ix, il, kx)     !! Specific humidity [g/kg]
         integer, intent(in) :: icltop(ix, il)    !! Cloud top level
         real(p), intent(in) :: cloudc(ix, il)    !! Total cloud cover
         real(p), intent(in) :: clstr(ix, il)     !! Stratiform cloud cover
-        real(p), intent(out) :: fsfcd(ix, il)    !! Total downward flux of short-wave radiation at the surface
-        real(p), intent(out) :: fsfc(ix, il)     !! Net downward flux of short-wave radiation at the surface
-        real(p), intent(out) :: ftop(ix, il)     !! Net downward flux of short-wave radiation at the
-        !! top of the atmosphere
-        real(p), intent(out) :: dfabs(ix, il, kx) !! Flux of short-wave radiation absorbed in each
-        !! atmospheric layer
-        real(p), intent(in) :: alb_surface(ix, il) !! Combined surface albedo (land + sea)
-        real(p), intent(inout) :: rad_flux(ix, il, 4) !! Radiative flux in different spectral bands
-        real(p), intent(inout) :: rad_tau2(ix, il, kx, 4) !! Transmissivity of atmospheric layers
-        real(p), intent(inout) :: rad_strat_corr(ix, il, 2) !! Stratospheric correction term
 
         integer :: i, j, k, nl1
         real(p) :: acloud(ix, il), psaz(ix, il), abs1, acloud1, deltap, eps1
@@ -103,23 +68,23 @@ contains
         fband1 = 1.0 - fband2
 
         ! 1.  Initialization
-        rad_tau2 = 0.0
+        state%rad_tau2 = 0.0
 
         do i = 1, ix
             do j = 1, il
                 if (icltop(i, j) <= kx) then
-                    rad_tau2(i, j, icltop(i, j), 3) = albcl * cloudc(i, j)
+                    state%rad_tau2(i, j, icltop(i, j), 3) = albcl * cloudc(i, j)
                 end if
-                rad_tau2(i, j, kx, 3) = albcls * clstr(i, j)
+                state%rad_tau2(i, j, kx, 3) = albcls * clstr(i, j)
             end do
         end do
 
         ! 2. Shortwave transmissivity:
-        ! function of layer mass, ozone (in the statosphere),
+        ! function of layer mass, flux_ozone_lower (in the statosphere),
         ! abs. humidity and cloud cover (in the troposphere)
-        psaz = psa * zenit
-        acloud = cloudc * min(abscl1 * qcloud, abscl2)
-        rad_tau2(:, :, 1, 1) = exp(-psaz * dhs(1) * absdry)
+        psaz = psa * state%zenit_correction
+        acloud = cloudc * min(abscl1 * state%qcloud_equiv, abscl2)
+        state%rad_tau2(:, :, 1, 1) = exp(-psaz * dhs(1) * absdry)
 
         do k = 2, nl1
             abs1 = absdry + absaer * fsg(k)**2
@@ -127,69 +92,76 @@ contains
             do i = 1, ix
                 do j = 1, il
                     if (k >= icltop(i, j)) then
-                        rad_tau2(i, j, k, 1) = exp(-psaz(i, j) * dhs(k) * (abs1 + abswv1 * qa(i, j, k) + acloud(i, j)))
+                        state%rad_tau2(i, j, k, 1) = exp(&
+                                -psaz(i, j) * dhs(k) * (abs1 + abswv1 * qa(i, j, k) + acloud(i, j)))
                     else
-                        rad_tau2(i, j, k, 1) = exp(-psaz(i, j) * dhs(k) * (abs1 + abswv1 * qa(i, j, k)))
+                        state%rad_tau2(i, j, k, 1) = exp(-psaz(i, j) * dhs(k) * (abs1 + abswv1 * qa(i, j, k)))
                     end if
                 end do
             end do
         end do
 
         abs1 = absdry + absaer * fsg(kx)**2
-        rad_tau2(:, :, kx, 1) = exp(-psaz * dhs(kx) * (abs1 + abswv1 * qa(:, :, kx)))
+        state%rad_tau2(:, :, kx, 1) = exp(-psaz * dhs(kx) * (abs1 + abswv1 * qa(:, :, kx)))
 
         do k = 2, kx
-            rad_tau2(:, :, k, 2) = exp(-psaz * dhs(k) * abswv2 * qa(:, :, k))
+            state%rad_tau2(:, :, k, 2) = exp(-psaz * dhs(k) * abswv2 * qa(:, :, k))
         end do
 
         ! 3. Shortwave downward flux
         ! 3.1 Initialization of fluxes
-        ftop = fsol
-        rad_flux(:, :, 1) = fsol * fband1
-        rad_flux(:, :, 2) = fsol * fband2
+        state%tsr = state%flux_solar_in
+        state%rad_flux(:, :, 1) = state%flux_solar_in * fband1
+        state%rad_flux(:, :, 2) = state%flux_solar_in * fband2
 
         ! 3.2 Ozone and dry-air absorption in the stratosphere
         k = 1
-        dfabs(:, :, k) = rad_flux(:, :, 1)
-        rad_flux(:, :, 1) = rad_tau2(:, :, k, 1) * (rad_flux(:, :, 1) - ozupp * psa)
-        dfabs(:, :, k) = dfabs(:, :, k) - rad_flux(:, :, 1)
+        state%tt_rsw(:, :, k) = state%rad_flux(:, :, 1)
+
+        state%rad_flux(:, :, 1) = state%rad_tau2(:, :, k, 1) * (state%rad_flux(:, :, 1) &
+                - state%flux_ozone_upper * psa)
+
+        state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) - state%rad_flux(:, :, 1)
 
         k = 2
-        dfabs(:, :, k) = rad_flux(:, :, 1)
-        rad_flux(:, :, 1) = rad_tau2(:, :, k, 1) * (rad_flux(:, :, 1) - ozone * psa)
-        dfabs(:, :, k) = dfabs(:, :, k) - rad_flux(:, :, 1)
+        state%tt_rsw(:, :, k) = state%rad_flux(:, :, 1)
+
+        state%rad_flux(:, :, 1) = state%rad_tau2(:, :, k, 1) * (state%rad_flux(:, :, 1) &
+                - state%flux_ozone_lower * psa)
+
+        state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) - state%rad_flux(:, :, 1)
 
         ! 3.3  Absorption and reflection in the troposphere
         do k = 3, kx
-            rad_tau2(:, :, k, 3) = rad_flux(:, :, 1) * rad_tau2(:, :, k, 3)
-            rad_flux (:, :, 1) = rad_flux(:, :, 1) - rad_tau2(:, :, k, 3)
-            dfabs(:, :, k) = rad_flux(:, :, 1)
-            rad_flux (:, :, 1) = rad_tau2(:, :, k, 1) * rad_flux(:, :, 1)
-            dfabs(:, :, k) = dfabs(:, :, k) - rad_flux(:, :, 1)
+            state%rad_tau2(:, :, k, 3) = state%rad_flux(:, :, 1) * state%rad_tau2(:, :, k, 3)
+            state%rad_flux (:, :, 1) = state%rad_flux(:, :, 1) - state%rad_tau2(:, :, k, 3)
+            state%tt_rsw(:, :, k) = state%rad_flux(:, :, 1)
+            state%rad_flux (:, :, 1) = state%rad_tau2(:, :, k, 1) * state%rad_flux(:, :, 1)
+            state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) - state%rad_flux(:, :, 1)
         end do
 
         do k = 2, kx
-            dfabs(:, :, k) = dfabs(:, :, k) + rad_flux(:, :, 2)
-            rad_flux(:, :, 2) = rad_tau2(:, :, k, 2) * rad_flux(:, :, 2)
-            dfabs(:, :, k) = dfabs(:, :, k) - rad_flux(:, :, 2)
+            state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) + state%rad_flux(:, :, 2)
+            state%rad_flux(:, :, 2) = state%rad_tau2(:, :, k, 2) * state%rad_flux(:, :, 2)
+            state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) - state%rad_flux(:, :, 2)
         end do
 
-        ! 4. Shortwave upward rad_flux
+        ! 4. Shortwave upward state%rad_flux
         ! 4.1  Absorption and reflection at the surface
-        fsfcd = rad_flux(:, :, 1) + rad_flux(:, :, 2)
-        rad_flux(:, :, 1) = rad_flux(:, :, 1) * alb_surface
-        fsfc = fsfcd - rad_flux(:, :, 1)
+        state%ssrd = state%rad_flux(:, :, 1) + state%rad_flux(:, :, 2)
+        state%rad_flux(:, :, 1) = state%rad_flux(:, :, 1) * state%alb_surface
+        state%ssr = state%ssrd - state%rad_flux(:, :, 1)
 
         ! 4.2  Absorption of upward flux
         do k = kx, 1, -1
-            dfabs(:, :, k) = dfabs(:, :, k) + rad_flux(:, :, 1)
-            rad_flux(:, :, 1) = rad_tau2(:, :, k, 1) * rad_flux(:, :, 1)
-            dfabs(:, :, k) = dfabs(:, :, k) - rad_flux(:, :, 1)
-            rad_flux(:, :, 1) = rad_flux(:, :, 1) + rad_tau2(:, :, k, 3)
+            state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) + state%rad_flux(:, :, 1)
+            state%rad_flux(:, :, 1) = state%rad_tau2(:, :, k, 1) * state%rad_flux(:, :, 1)
+            state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) - state%rad_flux(:, :, 1)
+            state%rad_flux(:, :, 1) = state%rad_flux(:, :, 1) + state%rad_tau2(:, :, k, 3)
         end do
 
         ! 4.3  Net solar radiation = incoming - outgoing
-        ftop = ftop - rad_flux(:, :, 1)
+        state%tsr = state%tsr - state%rad_flux(:, :, 1)
 
         ! 5.  Initialization of longwave radiation model
         ! 5.1  Longwave transmissivity:
@@ -197,16 +169,16 @@ contains
 
         ! Cloud-free levels (stratosphere + PBL)
         k = 1
-        rad_tau2(:, :, k, 1) = exp(-psa * dhs(k) * ablwin)
-        rad_tau2(:, :, k, 2) = exp(-psa * dhs(k) * ablco2)
-        rad_tau2(:, :, k, 3) = 1.0
-        rad_tau2(:, :, k, 4) = 1.0
+        state%rad_tau2(:, :, k, 1) = exp(-psa * dhs(k) * ablwin)
+        state%rad_tau2(:, :, k, 2) = exp(-psa * dhs(k) * state%air_absortivity_co2)
+        state%rad_tau2(:, :, k, 3) = 1.0
+        state%rad_tau2(:, :, k, 4) = 1.0
 
         do k = 2, kx, kx - 2
-            rad_tau2(:, :, k, 1) = exp(-psa * dhs(k) * ablwin)
-            rad_tau2(:, :, k, 2) = exp(-psa * dhs(k) * ablco2)
-            rad_tau2(:, :, k, 3) = exp(-psa * dhs(k) * ablwv1 * qa(:, :, k))
-            rad_tau2(:, :, k, 4) = exp(-psa * dhs(k) * ablwv2 * qa(:, :, k))
+            state%rad_tau2(:, :, k, 1) = exp(-psa * dhs(k) * ablwin)
+            state%rad_tau2(:, :, k, 2) = exp(-psa * dhs(k) * state%air_absortivity_co2)
+            state%rad_tau2(:, :, k, 3) = exp(-psa * dhs(k) * ablwv1 * qa(:, :, k))
+            state%rad_tau2(:, :, k, 4) = exp(-psa * dhs(k) * ablwv2 * qa(:, :, k))
         end do
 
         ! Cloudy layers (free troposphere)
@@ -223,24 +195,27 @@ contains
                         acloud1 = ablcl1 * cloudc(i, j)
                     endif
 
-                    rad_tau2(i, j, k, 1) = exp(-deltap * (ablwin + acloud1))
-                    rad_tau2(i, j, k, 2) = exp(-deltap * ablco2)
-                    rad_tau2(i, j, k, 3) = exp(-deltap * max(ablwv1 * qa(i, j, k), acloud(i, j)))
-                    rad_tau2(i, j, k, 4) = exp(-deltap * max(ablwv2 * qa(i, j, k), acloud(i, j)))
+                    state%rad_tau2(i, j, k, 1) = exp(-deltap * (ablwin + acloud1))
+                    state%rad_tau2(i, j, k, 2) = exp(-deltap * state%air_absortivity_co2)
+                    state%rad_tau2(i, j, k, 3) = exp(-deltap * max(ablwv1 * qa(i, j, k), acloud(i, j)))
+                    state%rad_tau2(i, j, k, 4) = exp(-deltap * max(ablwv2 * qa(i, j, k), acloud(i, j)))
                 end do
             end do
         end do
 
         ! 5.2  Stratospheric correction terms
         eps1 = epslw / (dhs(1) + dhs(2))
-        rad_strat_corr(:, :, 1) = stratz * psa
-        rad_strat_corr(:, :, 2) = eps1 * psa
-    end
+        state%rad_strat_corr(:, :, 1) = state%stratospheric_correction * psa
+        state%rad_strat_corr(:, :, 2) = eps1 * psa
+    end subroutine
 
     !> Compute zonally-averaged fields to be used in the computation of
     !  short-wave absorption
-    subroutine get_zonal_average_fields(tyear)
+    subroutine get_zonal_average_fields(state, tyear)
         use geometry, only : sia, coa
+        use model_state, only : ModelState_t
+
+        type(ModelState_t), intent(inout) :: state
 
         real(p), intent(in) :: tyear !! time as fraction of year (0-1, 0 = 1jan.h00)
 
@@ -269,21 +244,24 @@ contains
             flat2 = 1.5 * sia(j)**2 - 0.5
 
             ! Solar radiation at the top
-            fsol(:, j) = topsr(j)
+            state%flux_solar_in(:, j) = topsr(j)
 
             ! Ozone depth in upper and lower stratosphere
-            ozupp(:, j) = 0.5 * epssw
-            ozone(:, j) = 0.4 * epssw * (1.0 + coz1 * sia(j) + coz2 * flat2)
+            state%flux_ozone_upper(:, j) = 0.5 * epssw
+            state%flux_ozone_lower(:, j) = 0.4 * epssw * (1.0 + coz1 * sia(j) + coz2 * flat2)
 
+            ! Optical depth ratio (function of solar zenith angle)
             ! Zenith angle correction to (downward) absorptivity
-            zenit(:, j) = 1.0 + azen * (1.0 - (coa(j) * cos(rzen) + sia(j) * sin(rzen)))**nzen
+            state%zenit_correction(:, j) = 1.0 + azen * (1.0 - (coa(j) * cos(rzen) + sia(j) * sin(rzen)))**nzen
 
             ! Ozone absorption in upper and lower stratosphere
-            ozupp(:, j) = fsol(:, j) * ozupp(:, j) * zenit(:, j)
-            ozone(:, j) = fsol(:, j) * ozone(:, j) * zenit(:, j)
+            state%flux_ozone_upper(:, j) = &
+                    state%flux_solar_in(:, j) * state%flux_ozone_upper(:, j) * state%zenit_correction(:, j)
+            state%flux_ozone_lower(:, j) = &
+                    state%flux_solar_in(:, j) * state%flux_ozone_lower(:, j) * state%zenit_correction(:, j)
 
             ! Polar night cooling in the stratosphere
-            stratz(:, j) = max(fs0 - fsol(:, j), 0.0)
+            state%stratospheric_correction(:, j) = max(fs0 - state%flux_solar_in(:, j), 0.0)
         end do
     end
 
@@ -333,7 +311,7 @@ contains
     end
 
     !>  Compute cloud-top level and cloud cover
-    subroutine clouds(qa, rh, precnv, precls, iptop, gse, fmask, icltop, cloudc, clstr)
+    subroutine clouds(qa, rh, precnv, precls, iptop, gse, fmask, icltop, cloudc, clstr, qcloud_equiv)
         integer :: iptop(ix, il)
         real(p), intent(in) :: qa(ix, il, kx)   !! Specific humidity [g/kg]
         real(p), intent(in) :: rh(ix, il, kx)   !! Relative humidity
@@ -344,6 +322,7 @@ contains
         integer, intent(out) :: icltop(ix, il) !! Cloud top level
         real(p), intent(out) :: cloudc(ix, il) !! Total cloud cover
         real(p), intent(out) :: clstr(ix, il)  !! Stratiform cloud cover
+        real(p), intent(out) :: qcloud_equiv(ix, il)
 
         integer :: i, j, k, nl1, nlp
         real(p) :: clfact, clstrl, drh, fstab, pr1, rgse, rrcl
@@ -394,7 +373,7 @@ contains
         end do
 
         ! 2.  Equivalent specific humidity of clouds
-        qcloud = qa(:, :, nl1)
+        qcloud_equiv = qa(:, :, nl1)
 
         ! 3. Stratiform clouds at the top of PBL
         clfact = 1.2

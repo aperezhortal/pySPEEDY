@@ -22,7 +22,7 @@ contains
         use land_model, only: stl_am, snowd_am, fmask_l, sd2sc
         use sea_model, only: fmask_s, sst_am, sice_am
         use mod_radcon, only: albsea, albice, albsn
-        use shortwave_radiation, only: get_zonal_average_fields, ablco2, increase_co2
+        use shortwave_radiation, only: get_zonal_average_fields
         use longwave_radiation, only: radset
         use humidity, only: get_qsat
         use model_state, only: ModelState_t
@@ -46,12 +46,12 @@ contains
             call radset(state%fband)
             call set_orog_land_sfc_drag(state%phis0, state%forog)
 
-            state%ablco2_ref = ablco2
+            state%ablco2_ref = state%air_absortivity_co2
         end if
 
         ! 2. daily-mean radiative forcing
         ! incoming solar radiation
-        call get_zonal_average_fields(tyear)
+        call get_zonal_average_fields(state, tyear)
 
         ! total surface albedo
 
@@ -69,8 +69,8 @@ contains
         del_co2   = 0.005
         ! del_co2   = 0.0033
 
-        if (increase_co2) then
-            ablco2 = state%ablco2_ref * exp(del_co2 * (model_datetime%year + tyear - iyear_ref))
+        if (state%increase_co2) then
+            state%air_absortivity_co2 = state%ablco2_ref * exp(del_co2 * (model_datetime%year + tyear - iyear_ref))
         end if
 
         ! 3. temperature correction term for horizontal diffusion

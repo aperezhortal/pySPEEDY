@@ -15,7 +15,7 @@ NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
 
 class VarDef:
     def __init__(
-            self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None
+            self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None, value=None
     ):
         """
         If time_dim is not None, the variable is not allocated during the
@@ -39,6 +39,7 @@ class VarDef:
         if alt_name is not None:
             self.alt_name = alt_name
         self.is_module_instance = "class" in dtype.lower()
+        self.value = value
 
     @property
     def dimension(self):
@@ -210,9 +211,22 @@ model_state = [
         "Observed SST anomaly (input).",
         time_dim="n_months",
     ),
-    #################
-    # Implicit module
-    #################
+    ############################
+    # Shortware radiation module
+    VarDef("increase_co2", "logical", None, " Flag for CO2 optical thickness increase", value=".false."),
+    VarDef("compute_shortwave", "logical", None,
+           "Flag for shortwave radiation routine (turned on and off in main loop depending on the value of nstrad)",
+           value=".true."),
+    VarDef("air_absortivity_co2", "real(8)", None,
+           "Absorptivity of air in CO2 band",
+           value="6.0"),
+    VarDef("flux_solar_in", "real(8)", "(ix, il)", "Flux of incoming solar radiation"),
+    VarDef("flux_ozone_lower", "real(8)", "(ix, il)", "Flux absorbed by ozone (lower stratosphere)"),
+    VarDef("flux_ozone_upper", "real(8)", "(ix, il)", "Flux absorbed by ozone (upper stratosphere)"),
+    VarDef("zenit_correction", "real(8)", "(ix, il)", "Zenith angle correction to (downward) absorptivity"),
+    VarDef("stratospheric_correction", "real(8)", "(ix, il)", "Stratospheric correction for polar night"),
+    VarDef("qcloud_equiv", "real(8)", "(ix, il)", " Equivalent specific humidity of clouds"),
+    ############################
     ###################
     # mod_radcon module
     ###################

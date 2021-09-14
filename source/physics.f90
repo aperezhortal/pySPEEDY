@@ -19,7 +19,7 @@ contains
         use sppt, only : mu, gen_sppt
         use convection, only : get_convection_tendencies
         use large_scale_condensation, only : get_large_scale_condensation_tendencies
-        use shortwave_radiation, only : get_shortwave_rad_fluxes, clouds, compute_shortwave
+        use shortwave_radiation, only : get_shortwave_rad_fluxes, clouds
         use longwave_radiation, only : &
                 get_downward_longwave_rad_fluxes, get_upward_longwave_rad_fluxes
         use surface_fluxes, only : get_surface_fluxes
@@ -142,11 +142,11 @@ contains
 
         ! Compute shortwave tendencies and initialize lw transmissivity
         ! The shortwave radiation may be called at selected time steps
-        if (compute_shortwave) then
+        if (state%compute_shortwave) then
             gse = (se(:, :, kx - 1) - se(:, :, kx)) / (phig(:, :, kx - 1) - phig(:, :, kx))
 
             call clouds(qg, rh, state%precnv, state%precls, iptop, gse, &
-                    fmask_l, icltop, cloudc, clstr)
+                    fmask_l, icltop, cloudc, clstr, state%qcloud_equiv)
 
             do i = 1, ix
                 do j = 1, il
@@ -155,10 +155,7 @@ contains
                 end do
             end do
 
-            call get_shortwave_rad_fluxes(&
-                    psg, qg, icltop, cloudc, clstr, state%ssrd, &
-                    state%ssr, state%tsr, state%tt_rsw, state%alb_surface, &
-                    state%rad_flux, state%rad_tau2, state%rad_strat_corr)
+            call get_shortwave_rad_fluxes(state, psg, qg, icltop, cloudc, clstr)
 
             do k = 1, kx
                 state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) * rps * grdscp(k)

@@ -638,6 +638,105 @@
         ],
         "alt_name": "sst_anom"
     },
+    "increase_co2": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": " Flag for CO2 optical thickness increase",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "increase_co2"
+    },
+    "compute_shortwave": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": "Flag for shortwave radiation routine (turned on and off in main loop depending on the value of nstrad)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "compute_shortwave"
+    },
+    "air_absortivity_co2": {
+        "dtype": "real(8)",
+        "dims": null,
+        "desc": "Absorptivity of air in CO2 band",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "air_absortivity_co2"
+    },
+    "flux_solar_in": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Flux of incoming solar radiation",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "flux_solar_in"
+    },
+    "flux_ozone_lower": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Flux absorbed by ozone (lower stratosphere)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "flux_ozone_lower"
+    },
+    "flux_ozone_upper": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Flux absorbed by ozone (upper stratosphere)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "flux_ozone_upper"
+    },
+    "zenit_correction": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Zenith angle correction to (downward) absorptivity",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "zenit_correction"
+    },
+    "stratospheric_correction": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Stratospheric correction for polar night",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "stratospheric_correction"
+    },
+    "qcloud_equiv": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": " Equivalent specific humidity of clouds",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "qcloud_equiv"
+    },
     "ablco2_ref": {
         "dtype": "real(8)",
         "dims": null,

@@ -64,8 +64,14 @@ contains
         state%{{var.name}}=0
 
         {% endfor %}
+
         {% for var in state_arrays if var.time_dim %}
         ! IMPORTANT: {{var.name}} is not initialized here
+        {% endfor %}
+
+        ! Initialize default values for scalars
+        {% for var in state_scalars if var.value is not none %}
+        state%{{var.name}}= {{var.value}}
         {% endfor %}
 
     end subroutine

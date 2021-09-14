@@ -222,7 +222,7 @@ class Speedy:
                 "The boundary conditions file does not exist.\n" f"File: {bc_file}"
             )
 
-        ds = xr.load_dataset(example_bc_file(), engine="netcdf4")
+        ds = xr.load_dataset(bc_file, engine="netcdf4")
 
         self["orog"] = ds["orog"].values
         self["fmask_orig"] = ds["lsm"].values

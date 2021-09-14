@@ -21,7 +21,6 @@ contains
         use types, only : p
         use params, only : nsteps, delt, nsteps, nstrad
         use model_control, only : advance_date, datetime_equal, ControlParams_t
-        use shortwave_radiation, only : compute_shortwave
         use coupler, only : couple_sea_land
         use initialization, only : initialize_state
         use time_stepping, only : step
@@ -51,7 +50,7 @@ contains
         end if
 
         ! Determine whether to compute shortwave radiation on this time step
-        compute_shortwave = mod(state%current_step, nstrad) == 0
+        state%compute_shortwave = mod(state%current_step, nstrad) == 0
 
         ! Perform one leapfrog time step
         call step(state, 2, 2, 2 * delt)
