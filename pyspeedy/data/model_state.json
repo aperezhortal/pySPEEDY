@@ -878,6 +878,291 @@
         "nc_dims": null,
         "alt_name": "land_coupling_flag"
     },
+    "rhcaps": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./heat_capacity (sea)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "rhcaps"
+    },
+    "rhcapi": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./heat_capacity (ice)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "rhcapi"
+    },
+    "cdsea": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./dissip_time (sea)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cdsea"
+    },
+    "cdice": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./dissip_time (ice)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cdice"
+    },
+    "fmask_sea": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Fraction of sea",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "fmask_sea"
+    },
+    "bmask_sea": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Binary sea mask",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "bmask_sea"
+    },
+    "deglat_s": {
+        "dtype": "real(p)",
+        "dims": "(il)",
+        "desc": "Grid latitudes",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lat"
+        ],
+        "alt_name": "deglat_s"
+    },
+    "hfseacl": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Annual-mean heat flux into sea sfc.",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "hfseacl"
+    },
+    "sstom12": {
+        "dtype": "real(p)",
+        "dims": "(ix, il, 12)",
+        "desc": "Ocean model SST climatology",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "sstom12"
+    },
+    "sstcl_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Observed clim. SST",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstcl_ob"
+    },
+    "sicecl_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Clim. sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sicecl_ob"
+    },
+    "ticecl_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Clim. sea ice temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ticecl_ob"
+    },
+    "sstan_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Daily observed SST anomaly",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstan_ob"
+    },
+    "sstcl_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Ocean model clim. SST",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstcl_om"
+    },
+    "sst_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "SST (full-field)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sst_am"
+    },
+    "sstan_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "SST anomaly",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstan_am"
+    },
+    "sice_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sice_am"
+    },
+    "tice_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Sea ice temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "tice_am"
+    },
+    "sst_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Ocean model SST",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sst_om"
+    },
+    "sice_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Model sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sice_om"
+    },
+    "tice_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Model sea ice temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "tice_om"
+    },
+    "ssti_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Model SST + sea ice temp.",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ssti_om"
+    },
+    "wsst_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Weight for obs. SST anomaly in coupled runs",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "wsst_ob"
+    },
+    "sst_anomaly_coupling_flag": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": "Weight for obs. SST anomaly in coupled runs",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "sst_anomaly_coupling_flag"
+    },
     "ablco2_ref": {
         "dtype": "real(8)",
         "dims": null,

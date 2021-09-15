@@ -43,7 +43,7 @@ contains
     subroutine initialize_state(state, control_params)
         use model_control, only : ControlParams_t
         use coupler, only : initialize_coupler
-        use sea_model, only : sea_coupling_flag, sst_anomaly_coupling_flag
+        use sea_model, only : sea_coupling_flag
         use time_stepping, only : first_step
         use boundaries, only : initialize_boundaries
         use model_state, only : ModelState_t
@@ -72,7 +72,7 @@ contains
 
         call initialize_geopotential(state)
         ! Check consistency of coupling and prescribed SST anomaly flags
-        if (sea_coupling_flag >= 4) sst_anomaly_coupling_flag = 1
+        if (sea_coupling_flag >= 4) state%sst_anomaly_coupling_flag = .true.
 
         ! =========================================================================
         ! Initialization of atmospheric model constants and variables

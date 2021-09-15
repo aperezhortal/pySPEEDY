@@ -14,7 +14,7 @@ contains
     subroutine get_physical_tendencies(state, j1, utend, vtend, ttend, qtend)
         use physical_constants, only : cp
         use geometry, only : fsg, sigh, grdsig, grdscp
-        use sea_model, only : sst_am, ssti_om, sea_coupling_flag
+        use sea_model, only : sea_coupling_flag
         use sppt, only : mu, gen_sppt
         use convection, only : get_convection_tendencies
         use large_scale_condensation, only : get_large_scale_condensation_tendencies
@@ -169,7 +169,7 @@ contains
         ! Compute surface fluxes and land skin temperature
         call get_surface_fluxes(&
                 psg, ug, vg, tg, qg, rh, phig, &
-                state%phis0, state%fmask_land, state%forog, sst_am, &
+                state%phis0, state%fmask_land, state%forog, state%sst_am, &
                 & state%ssrd, state%slrd, state%ustr, state%vstr, &
                 state%shf, state%evap, state%slru, state%hfluxn, &
                 ts, tskin, u0, v0, t0, .true., &
@@ -180,7 +180,7 @@ contains
         if (sea_coupling_flag > 0) then
             call get_surface_fluxes(&
                     psg, ug, vg, tg, qg, rh, phig, state%phis0, state%fmask_land, state%forog, &
-                    ssti_om, state%ssrd, state%slrd, &
+                    state%ssti_om, state%ssrd, state%slrd, &
                     state%ustr, state%vstr, state%shf, &
                     state%evap, state%slru, &
                     state%hfluxn, ts, tskin, u0, v0, t0, .false., &

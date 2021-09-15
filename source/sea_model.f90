@@ -1,83 +1,44 @@
 module sea_model
-    use types, only: p
+    use types, only : p
     use params
 
     implicit none
 
     private
     public sea_model_init, couple_sea_atm
-    public fmask_s
-    public sstcl_ob, sst_am, sice_am, tice_am, ssti_om
-    public sea_coupling_flag, sst_anomaly_coupling_flag
+    public sea_coupling_flag
 
-    ! Constant parameters and fields in sea/ice model
-    real(p) :: rhcaps(ix, il) ! 1./heat_capacity (sea)
-    real(p) :: rhcapi(ix, il) ! 1./heat_capacity (ice)
-    real(p) :: cdsea(ix, il) ! 1./dissip_time (sea)
-    real(p) :: cdice(ix, il) ! 1./dissip_time (ice)
-    real(p) :: beta = 1.0 ! Heat flux coef. at sea/ice int.
+    !> Heat flux coefficient at sea/ice interface [(W/m^2)/deg]
+    real(p), parameter :: beta = 1.0
 
-    ! Sea masks
-    real(p) :: fmask_s(ix, il) ! Fraction of sea
-    real(p) :: bmask_s(ix, il) ! Binary sea mask
-    real(p) :: deglat_s(il) ! Grid latitudes
-
-    ! Climatological fields from model output
-    real(p) :: hfseacl(ix, il) ! Annual-mean heat flux into sea sfc.
-    real(p) :: sstom12(ix, il, 12) ! Ocean model SST climatology
-
-    ! Daily observed climatological fields over sea
-    real(p) :: sstcl_ob(ix, il) ! Observed clim. SST
-    real(p) :: sicecl_ob(ix, il) ! Clim. sea ice fraction
-    real(p) :: ticecl_ob(ix, il) ! Clim. sea ice temperature
-    real(p) :: sstan_ob(ix, il) ! Daily observed SST anomaly
-
-    ! Daily climatological fields from ocean model
-    real(p) :: sstcl_om(ix, il) ! Ocean model clim. SST
-
-    ! Sea sfc. fields used by atmospheric model
-    real(p) :: sst_am(ix, il) ! SST (full-field)
-    real(p) :: sstan_am(ix, il) ! SST anomaly
-    real(p) :: sice_am(ix, il) ! Sea ice fraction
-    real(p) :: tice_am(ix, il) ! Sea ice temperature
-
-    ! Sea sfc. fields from ocean/sea-ice model
-    real(p) :: sst_om(ix, il) ! Ocean model SST
-    real(p) :: sice_om(ix, il) ! Model sea ice fraction
-    real(p) :: tice_om(ix, il) ! Model sea ice temperature
-    real(p) :: ssti_om(ix, il) ! Model SST + sea ice temp.
-
-    ! Weight for obs. SST anomaly in coupled runs
-    real(p) :: wsst_ob(ix, il)
-
-    ! Flag for sea-surface temperature coupling
+    !> sea_coupling_flag: Flag for sea-surface temperature coupling
     ! 0 = precribed SST, no coupling
-    ! 1 = precribed SST, ocean model forced by atmosphere
-    ! 2 = full (uncorrected) SST from coupled ocean model
-    ! 3 = SST anomaly from coupled ocean model + observed SST climatology
-    ! 4 = as 3 with prescribed SST anomaly in ElNino region
-    integer :: sea_coupling_flag = 0
+    ! 1 = precribed SST, ocean model forced by atmosphere (not supoprted!)
+    ! 2 = full (uncorrected) SST from coupled ocean model (not supoprted!)
+    ! 3 = SST anomaly from coupled ocean model + observed SST climatology (not supoprted!)
+    ! 4 = as 3 with prescribed SST anomaly in ElNino region (not supoprted!)
+    integer, parameter :: sea_coupling_flag = 0
 
-    ! Flag for sea-ice coupling
-    integer :: ice_coupling_flag = 1
+    !> ice_coupling_flag: Flag for sea-ice coupling
+    integer, parameter :: ice_coupling_flag = 1
 
-    ! Flag for observed SST anomaly
-    ! 0 = climatological SST
-    ! 1 = observed anomaly
+    !> sst_anomaly_coupling_flag: Flag for observed SST anomaly
+    ! .false. = climatological SST
+    ! .true. = observed anomaly
     ! (active if sea_coupling_flag = 0, 1; set to 1 if sea_coupling_flag = 4)
-    integer :: sst_anomaly_coupling_flag = 1
+
 
 contains
     ! Initialization of sea model
     subroutine sea_model_init(state)
-        use boundaries, only: fill_missing_values, check_surface_fields
-        use geometry, only: radang
-        use model_state, only: ModelState_t
+        use boundaries, only : fill_missing_values, check_surface_fields
+        use geometry, only : radang
+        use model_state, only : ModelState_t
 
         type(ModelState_t), intent(inout) :: state
 
         ! Domain mask
-        real(p) :: dmask(ix, il)
+        real(p), allocatable, dimension(:, :) :: dmask
 
         ! Domain flags
         logical :: l_globe, l_northe, l_natlan, l_npacif, l_tropic, l_indian
@@ -106,7 +67,7 @@ contains
         real(p) :: tdsst = 90.
 
         ! Minimum fraction of sea for the definition of anomalies
-        real(p) :: fseamin = 1./3.
+        real(p) :: fseamin = 1. / 3.
 
         ! Dissipation time (days) for sea-ice temp. anomalies
         real(p) :: tdice = 30.0
@@ -124,6 +85,7 @@ contains
         l_tropic = .false.         ! Tropics (lat 30S-30N)
         l_indian = .false.         ! Indian Ocean (lat 30S-30N, lon 30-120E)
 
+        allocate(dmask(ix, il))
         ! =========================================================================
         ! Initialize sea-surface boundary conditions
         ! =========================================================================
@@ -131,65 +93,62 @@ contains
         ! Fractional and binary sea masks
         do j = 1, il
             do i = 1, ix
-                fmask_s(i, j) = 1.0 - state%fmask_orig(i, j)
+                state%fmask_sea(i, j) = 1.0 - state%fmask_orig(i, j)
 
-                if (fmask_s(i, j) >= thrsh) then
-                    bmask_s(i, j) = 1.0
-                    if (fmask_s(i, j) > (1.0 - thrsh)) fmask_s(i, j) = 1.0
+                if (state%fmask_sea(i, j) >= thrsh) then
+                    state%bmask_sea(i, j) = 1.0
+                    if (state%fmask_sea(i, j) > (1.0 - thrsh)) state%fmask_sea(i, j) = 1.0
                 else
-                    bmask_s(i, j) = 0.0
-                    fmask_s(i, j) = 0.0
+                    state%bmask_sea(i, j) = 0.0
+                    state%fmask_sea(i, j) = 0.0
                 end if
             end do
         end do
 
         ! Grid latitudes for sea-surface variables
-        deglat_s = radang*90.0/asin(1.0)
+        state%deglat_s = radang * 90.0 / asin(1.0)
 
         ! SST
         do month = 1, 12
             call fill_missing_values(state%sst12(:, :, month), 0.0_p)
         end do
 
-        call check_surface_fields(bmask_s, 12, 100.0_p, 400.0_p, 273.0_p, state%sst12)
+        call check_surface_fields(state%bmask_sea, 12, 100.0_p, 400.0_p, 273.0_p, state%sst12)
 
         ! Sea ice concentration
         state%sea_ice_frac12 = max(state%sea_ice_frac12, 0.0_p)
 
-        call check_surface_fields(bmask_s, 12, 0.0_p, 1.0_p, 0.0_p, &
-                                  state%sea_ice_frac12)
+        call check_surface_fields(state%bmask_sea, 12, 0.0_p, 1.0_p, 0.0_p, &
+                state%sea_ice_frac12)
 
-        call check_surface_fields(bmask_s, 3, -50.0_p, 50.0_p, 0.0_p, state%sst_anom)
+        call check_surface_fields(state%bmask_sea, 3, -50.0_p, 50.0_p, 0.0_p, state%sst_anom)
 
         ! Climatological fields for the ocean model (TO BE RECODED)
         ! Annual-mean heat flux into sea-surface
-        hfseacl = 0.0
+        state%hfseacl = 0.0
 
-        if (sea_coupling_flag >= 1) then
-            stop "Model behaviour when sea_coupling_flag >= 1 not implemented yet"
-        end if
+        !        if (sea_coupling_flag >= 1) then
+        !            stop "Model behaviour when sea_coupling_flag >= 1 not implemented yet"
+        !        end if
 
         ! Ocean model SST climatology:
         ! defined by adding SST model bias to observed climatology
         ! (bias may be defined in a different period from climatology)
 
-        if (sea_coupling_flag >= 3) then
-            stop "Model behaviour when sea_coupling_flag >= 3 not implemented yet"
-        end if
+        !        if (sea_coupling_flag >= 3) then
+        !            stop "Model behaviour when sea_coupling_flag >= 3 not implemented yet"
+        !        end if
 
         ! =========================================================================
         ! Compute heat capacities
         ! =========================================================================
 
-        ! Heat flux coefficient at sea/ice interface [(W/m^2)/deg]
-        beta = 1.
-
         ! Heat capacities per m^2 (depth*heat_cap/m^3)
-        crad = asin(1.)/90.
+        crad = asin(1.) / 90.
         do j = 1, il
-            coslat = cos(crad*deglat_s(j))
-            hcaps(j) = 4.18e+6*(depth_ml + (dept0_ml - depth_ml)*coslat**3)
-            hcapi(j) = 1.93e+6*(depth_ice + (dept0_ice - depth_ice)*coslat**2)
+            coslat = cos(crad * state%deglat_s(j))
+            hcaps(j) = 4.18e+6 * (depth_ml + (dept0_ml - depth_ml) * coslat**3)
+            hcapi(j) = 1.93e+6 * (depth_ice + (dept0_ice - depth_ice) * coslat**2)
         end do
 
         ! =========================================================================
@@ -201,44 +160,46 @@ contains
             dmask(:, :) = 1.
         else
             dmask(:, :) = 0.
-            if (l_northe) call sea_domain('northe', dmask)
-            if (l_natlan) call sea_domain('natlan', dmask)
-            if (l_npacif) call sea_domain('npacif', dmask)
-            if (l_tropic) call sea_domain('tropic', dmask)
-            if (l_indian) call sea_domain('indian', dmask)
+            if (l_northe) call sea_domain('northe', dmask, state%deglat_s)
+            if (l_natlan) call sea_domain('natlan', dmask, state%deglat_s)
+            if (l_npacif) call sea_domain('npacif', dmask, state%deglat_s)
+            if (l_tropic) call sea_domain('tropic', dmask, state%deglat_s)
+            if (l_indian) call sea_domain('indian', dmask, state%deglat_s)
         end if
 
         ! Smooth latitudinal boundaries and blank out land points
         do j = 2, il - 1
-            rhcaps(:, j) = 0.25*(dmask(:, j - 1) + 2*dmask(:, j) + dmask(:, j + 1))
+            state%rhcaps(:, j) = 0.25 * (dmask(:, j - 1) + 2 * dmask(:, j) + dmask(:, j + 1))
         end do
-        dmask(:, 2:il - 1) = rhcaps(:, 2:il - 1)
+        dmask(:, 2:il - 1) = state%rhcaps(:, 2:il - 1)
 
         do j = 1, il
             do i = 1, ix
-                if (fmask_s(i, j) .lt. fseamin) dmask(i, j) = 0
+                if (state%fmask_sea(i, j) < fseamin) dmask(i, j) = 0
             end do
         end do
 
         ! Set heat capacity and dissipation time over selected domain
         do j = 1, il
-            rhcaps(:, j) = delt/hcaps(j)
-            rhcapi(:, j) = delt/hcapi(j)
+            state%rhcaps(:, j) = delt / hcaps(j)
+            state%rhcapi(:, j) = delt / hcapi(j)
         end do
 
-        cdsea = dmask*tdsst/(1.+dmask*tdsst)
-        cdice = dmask*tdice/(1.+dmask*tdice)
+        state%cdsea = dmask * tdsst / (1. + dmask * tdsst)
+        state%cdice = dmask * tdice / (1. + dmask * tdice)
+
+        deallocate(dmask)
     end
 
     subroutine couple_sea_atm(state, day, control_params)
-        use model_control, only:
-        use interpolation, only: forin5, forint, monthly_interp
-        use model_control, only: Datetime_t
-        use model_state, only: ModelState_t
-        use model_control, only: ControlParams_t
+        use model_control, only :
+        use interpolation, only : forin5, forint, monthly_interp
+        use model_control, only : Datetime_t
+        use model_state, only : ModelState_t
+        use model_control, only : ControlParams_t
 
-        type(ControlParams_t), intent(in)  :: control_params
-        type(ModelState_t), intent(in) :: state
+        type(ControlParams_t), intent(in) :: control_params
+        type(ModelState_t), intent(inout) :: state
         integer, intent(in) :: day
 
         integer :: i, j
@@ -249,21 +210,21 @@ contains
         !    to actual date
 
         ! Climatological SST
-        call forin5(control_params%imont1, state%sst12, sstcl_ob, control_params%tmonth)
+        call forin5(control_params%imont1, state%sst12, state%sstcl_ob, control_params%tmonth)
 
         ! Climatological sea ice fraction
-        call forint(control_params%imont1, state%sea_ice_frac12, sicecl_ob, control_params%tmonth)
+        call forint(control_params%imont1, state%sea_ice_frac12, state%sicecl_ob, control_params%tmonth)
 
         ! SST anomaly
-        if (sst_anomaly_coupling_flag .gt. 0) then
-            sst_anom_shape = shape(state%sst_anom)  
+        if (state%sst_anomaly_coupling_flag) then
+            sst_anom_shape = shape(state%sst_anom)
             call monthly_interp(control_params%month_idx, state%sst_anom, &
-                                sstan_ob, control_params%tmonth, sst_anom_shape(3))
+                    state%sstan_ob, control_params%tmonth, sst_anom_shape(3))
         end if
 
         ! Ocean model climatological SST
-        if (sea_coupling_flag .ge. 3) then
-            call forin5(control_params%imont1, sstom12, sstcl_om, control_params%tmonth)
+        if (sea_coupling_flag >= 3) then
+            call forin5(control_params%imont1, state%sstom12, state%sstcl_om, control_params%tmonth)
         end if
 
         ! Adjust climatological fields over sea ice
@@ -273,36 +234,36 @@ contains
 
         do i = 1, ix
             do j = 1, il
-                sstcl0 = sstcl_ob(i, j)
+                sstcl0 = state%sstcl_ob(i, j)
 
-                if (sstcl_ob(i, j) > sstfr) then
-                    sicecl_ob(i, j) = min(0.5, sicecl_ob(i, j))
-                    ticecl_ob(i, j) = sstfr
-                    if (sicecl_ob(i, j) .gt. 0.0) then
-                        sstcl_ob(i, j) = sstfr + (sstcl_ob(i, j) - sstfr)/(1.0 - sicecl_ob(i, j))
+                if (state%sstcl_ob(i, j) > sstfr) then
+                    state%sicecl_ob(i, j) = min(0.5, state%sicecl_ob(i, j))
+                    state%ticecl_ob(i, j) = sstfr
+                    if (state%sicecl_ob(i, j) > 0.0) then
+                        state%sstcl_ob(i, j) = sstfr + (state%sstcl_ob(i, j) - sstfr) / (1.0 - state%sicecl_ob(i, j))
                     end if
                 else
-                    sicecl_ob(i, j) = max(0.5, sicecl_ob(i, j))
-                    ticecl_ob(i, j) = sstfr + (sstcl_ob(i, j) - sstfr)/sicecl_ob(i, j)
-                    sstcl_ob(i, j) = sstfr
+                    state%sicecl_ob(i, j) = max(0.5, state%sicecl_ob(i, j))
+                    state%ticecl_ob(i, j) = sstfr + (state%sstcl_ob(i, j) - sstfr) / state%sicecl_ob(i, j)
+                    state%sstcl_ob(i, j) = sstfr
                 end if
 
-                if (sea_coupling_flag >= 3) sstcl_om(i, j) = sstcl_om(i, j) + (sstcl_ob(i, j) - sstcl0)
+                if (sea_coupling_flag >= 3) state%sstcl_om(i, j) = state%sstcl_om(i, j) + (state%sstcl_ob(i, j) - sstcl0)
             end do
         end do
 
         if (day == 0) then
             ! 2. Initialize prognostic variables of ocean/ice model
             !    in case of no restart or no coupling
-            sst_om = sstcl_ob      ! SST
-            tice_om = ticecl_ob     ! sea ice temperature
-            sice_om = sicecl_ob     ! sea ice fraction
+            state%sst_om = state%sstcl_ob      ! SST
+            state%tice_om = state%ticecl_ob     ! sea ice temperature
+            state%sice_om = state%sicecl_ob     ! sea ice fraction
 
-            if (sea_coupling_flag <= 0) sst_om = 0.0
+            if (sea_coupling_flag <= 0) state%sst_om = 0.0
 
             ! 3. Compute additional sea/ice variables
-            wsst_ob = 0.
-            if (sea_coupling_flag >= 4) call sea_domain('elnino', wsst_ob)
+            state%wsst_ob = 0.
+            if (sea_coupling_flag >= 4) call sea_domain('elnino', state%wsst_ob, state%deglat_s)
         else
             if (sea_coupling_flag > 0 .or. ice_coupling_flag > 0) then
                 ! 1. Run ocean mixed layer or
@@ -313,177 +274,188 @@ contains
 
         ! 3. Compute sea-sfc. anomalies and full fields for atm. model
         ! 3.1 SST
-        sstan_am = 0.0
+        state%sstan_am = 0.0
 
         if (sea_coupling_flag <= 1) then
-            if (sst_anomaly_coupling_flag > 0) sstan_am = sstan_ob
+            if (state%sst_anomaly_coupling_flag) state%sstan_am = state%sstan_ob
 
             ! Use observed SST (climatological or full field)
-            sst_am = sstcl_ob + sstan_am
-        else if (sea_coupling_flag .eq. 2) then
+            state%sst_am = state%sstcl_ob + state%sstan_am
+        else if (sea_coupling_flag == 2) then
             ! Use full ocean model SST
-            sst_am = sst_om
+            state%sst_am = state%sst_om
         else if (sea_coupling_flag >= 3) then
             ! Define SST anomaly from ocean model ouput and climatology
-            sstan_am = sst_om - sstcl_om
+            state%sstan_am = state%sst_om - state%sstcl_om
 
             ! Merge with observed SST anomaly in selected area
             if (sea_coupling_flag >= 4) then
-                sstan_am = sstan_am + wsst_ob*(sstan_ob - sstan_am)
+                state%sstan_am = state%sstan_am + state%wsst_ob * (state%sstan_ob - state%sstan_am)
             end if
 
             ! Add observed SST climatology to model SST anomaly
-            sst_am = sstcl_ob + sstan_am
+            state%sst_am = state%sstcl_ob + state%sstan_am
         end if
 
         ! 3.2 Sea ice fraction and temperature
         if (ice_coupling_flag > 0) then
-            sice_am = sice_om
-            tice_am = tice_om
+            state%sice_am = state%sice_om
+            state%tice_am = state%tice_om
         else
-            sice_am = sicecl_ob
-            tice_am = ticecl_ob
+            state%sice_am = state%sicecl_ob
+            state%tice_am = state%ticecl_ob
         end if
 
-        sst_am = sst_am + sice_am*(tice_am - sst_am)
-        ssti_om = sst_om + sice_am*(tice_am - sst_om)
+        state%sst_am = state%sst_am + state%sice_am * (state%tice_am - state%sst_am)
+        state%ssti_om = state%sst_om + state%sice_am * (state%tice_am - state%sst_om)
     end subroutine
 
     ! Purpose : Integrate slab ocean and sea-ice models for one day
-    subroutine run_sea_model(model_vars)
-        use mod_radcon, only: albsea, albice, emisfc
-        use physical_constants, only: alhc, sbc
-        use model_state, only: ModelState_t
+    subroutine run_sea_model(state)
+        use mod_radcon, only : albsea, albice, emisfc
+        use physical_constants, only : alhc, sbc
+        use model_state, only : ModelState_t
 
-        type(ModelState_t) :: model_vars
-        real(p) :: hflux(ix, il)   ! net sfc. heat flux
-        real(p) :: tanom(ix, il)   ! sfc. temperature anomaly
-        real(p) :: cdis(ix, il)    ! dissipation ceofficient
-        real(p) :: difice(ix, il)  ! Difference in net (downw.) heat flux between ice and sea surface
-        real(p) :: hflux_i(ix, il) ! Net heat flux into sea-ice surface
+        type(ModelState_t), intent(inout) :: state
+
+        real(p), allocatable, dimension(:, :) :: &
+                hflux, &  ! net sfc. heat flux
+                tanom, &   ! sfc. temperature anomaly
+                cdis, &   ! dissipation ceofficient
+                difice, &  ! Difference in net (downw.) heat flux between ice and sea surface
+                hflux_i ! Net heat flux into sea-ice surface
 
         real(p) :: anom0, sstfr
 
+        ! Allocate vars
+        allocate(hflux(ix, il), tanom(ix, il), cdis(ix, il), &
+                difice(ix, il), hflux_i(ix, il))
+
         sstfr = 273.2 - 1.8       ! SST at freezing point
+
+
 
         ! 1. Ocean mixed layer
 
         ! Difference in heat flux between ice and sea surface
-        difice = (albsea - albice)*model_vars%ssrd &
-                + emisfc*sbc*(sstfr**4.0 - tice_am**4.0) &
-                + model_vars%shf(:, :, 2) + &
-                    & model_vars%evap(:, :, 2)*alhc
+        difice = (albsea - albice) * state%ssrd &
+                + emisfc * sbc * (sstfr**4.0 - state%tice_am**4.0) &
+                + state%shf(:, :, 2) + &
+                & state%evap(:, :, 2) * alhc
 
         ! Net heat flux into sea-ice surface
-        hflux_i = model_vars%hfluxn(:, :, 2) + difice*(1.0 - sice_am)
+        hflux_i = state%hfluxn(:, :, 2) + difice * (1.0 - state%sice_am)
 
         ! Net heat flux
-        hflux = model_vars%hfluxn(:, :, 2) - hfseacl - sicecl_ob*(hflux_i + beta*(sstfr - tice_om))
+        hflux = state%hfluxn(:, :, 2) - state%hfseacl - state%sicecl_ob * (hflux_i + beta * (sstfr - state%tice_om))
 
         ! Anomaly at t0 minus climatological temp. tendency
-        tanom = sst_om - sstcl_ob
+        tanom = state%sst_om - state%sstcl_ob
 
         ! Time evoloution of temp. anomaly
-        tanom = cdsea*(tanom + rhcaps*hflux)
+        tanom = state%cdsea * (tanom + state%rhcaps * hflux)
 
         ! Full SST at final time
-        sst_om = tanom + sstcl_ob
+        state%sst_om = tanom + state%sstcl_ob
 
         ! 2. Sea-ice slab model
 
         ! Net heat flux
-        hflux = hflux_i + beta*(sstfr - tice_om)
+        hflux = hflux_i + beta * (sstfr - state%tice_om)
 
         ! Anomaly w.r.t final-time climatological temp.
-        tanom = tice_om - ticecl_ob
+        tanom = state%tice_om - state%ticecl_ob
 
         ! Definition of non-linear damping coefficient
         anom0 = 20.
-        cdis = cdice*(anom0/(anom0 + abs(tanom)))
-        !cdis(:,:) = cdice(:,:)
+        cdis = state%cdice * (anom0 / (anom0 + abs(tanom)))
+        !cdis(:,:) = state%cdice(:,:)
 
         ! Time evolution of temp. anomaly
-        tanom = cdis*(tanom + rhcapi*hflux)
+        tanom = cdis * (tanom + state%rhcapi * hflux)
 
         ! Full ice temperature at final time
-        tice_om = tanom + ticecl_ob
+        state%tice_om = tanom + state%ticecl_ob
 
         ! Persistence of sea ice fraction
-        sice_om = sicecl_ob
+        state%sice_om = state%sicecl_ob
+
+        deallocate(hflux, tanom, cdis, difice, hflux_i)
     end
 
     ! Definition of ocean domains
-    subroutine sea_domain(cdomain, dmask)
-        character(len=6), intent(in) :: cdomain           ! domain name
+    subroutine sea_domain(cdomain, dmask, deglat_s)
+        character(len = 6), intent(in) :: cdomain ! domain name
 
         ! Output variables (initialized by calling routine)
-        real(p), intent(inout) :: dmask(ix, il)         ! domain mask
+        real(p), intent(inout) :: dmask(ix, il)
+        real(p), intent(in) :: deglat_s(il)
 
         integer :: i, j
         real(p) :: arlat, dlon, rlon, rlonw, wlat
 
         print *, 'sea domain : ', cdomain
 
-        dlon = 360./float(ix)
+        dlon = 360. / float(ix)
 
-        if (cdomain .eq. 'northe') then
+        if (cdomain == 'northe') then
             do j = 1, il
-                if (deglat_s(j) .gt. 20.0) dmask(:, j) = 1.
+                if (deglat_s(j) > 20.0) dmask(:, j) = 1.
             end do
         end if
 
-        if (cdomain .eq. 'natlan') then
+        if (cdomain == 'natlan') then
             do j = 1, il
-                if (deglat_s(j) .gt. 20.0 .and. deglat_s(j) .lt. 80.0) then
+                if (deglat_s(j) > 20.0 .and. deglat_s(j) < 80.0) then
                     do i = 1, ix
-                        rlon = (i - 1)*dlon
-                        if (rlon .lt. 45.0 .or. rlon .gt. 260.0) dmask(i, j) = 1.
+                        rlon = (i - 1) * dlon
+                        if (rlon < 45.0 .or. rlon > 260.0) dmask(i, j) = 1.
                     end do
                 end if
             end do
         end if
 
-        if (cdomain .eq. 'npacif') then
+        if (cdomain == 'npacif') then
             do j = 1, il
-                if (deglat_s(j) .gt. 20.0 .and. deglat_s(j) .lt. 65.0) then
+                if (deglat_s(j) > 20.0 .and. deglat_s(j) < 65.0) then
                     do i = 1, ix
-                        rlon = (i - 1)*dlon
-                        if (rlon .gt. 120.0 .and. rlon .lt. 260.0) dmask(i, j) = 1.
+                        rlon = (i - 1) * dlon
+                        if (rlon > 120.0 .and. rlon < 260.0) dmask(i, j) = 1.
                     end do
                 end if
             end do
         end if
 
-        if (cdomain .eq. 'tropic') then
+        if (cdomain == 'tropic') then
             do j = 1, il
-                if (deglat_s(j) .gt. -30.0 .and. deglat_s(j) .lt. 30.0) dmask(:, j) = 1.
+                if (deglat_s(j) > -30.0 .and. deglat_s(j) < 30.0) dmask(:, j) = 1.
             end do
         end if
 
-        if (cdomain .eq. 'indian') then
+        if (cdomain == 'indian') then
             do j = 1, il
-                if (deglat_s(j) .gt. -30.0 .and. deglat_s(j) .lt. 30.0) then
+                if (deglat_s(j) > -30.0 .and. deglat_s(j) < 30.0) then
                     do i = 1, ix
-                        rlon = (i - 1)*dlon
-                        if (rlon .gt. 30.0 .and. rlon .lt. 120.0) dmask(i, j) = 1.
+                        rlon = (i - 1) * dlon
+                        if (rlon > 30.0 .and. rlon < 120.0) dmask(i, j) = 1.
                     end do
                 end if
             end do
         end if
 
-        if (cdomain .eq. 'elnino') then
+        if (cdomain == 'elnino') then
             do j = 1, il
                 arlat = abs(deglat_s(j))
-                if (arlat .lt. 25.0) then
+                if (arlat < 25.0) then
                     wlat = 1.
-                    if (arlat .gt. 15.0) wlat = (0.1*(25.-arlat))**2
-                    rlonw = 300.-2*max(deglat_s(j), 0.)
+                    if (arlat > 15.0) wlat = (0.1 * (25. - arlat))**2
+                    rlonw = 300. - 2 * max(deglat_s(j), 0.)
                     do i = 1, ix
-                        rlon = (i - 1)*dlon
-                        if (rlon .gt. 165.0 .and. rlon .lt. rlonw) then
+                        rlon = (i - 1) * dlon
+                        if ((rlon > 165.0) .and. (rlon < rlonw)) then
                             dmask(i, j) = wlat
-                        else if (rlon .gt. 155.0 .and. rlon .lt. 165.0) then
-                            dmask(i, j) = wlat*0.1*(rlon - 155.)
+                        else if ((rlon > 155.0) .and. (rlon < 165.0)) then
+                            dmask(i, j) = wlat * 0.1 * (rlon - 155.)
                         end if
                     end do
                 end if

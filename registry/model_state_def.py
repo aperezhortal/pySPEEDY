@@ -306,6 +306,41 @@ model_state = [
         "Flag for land-coupling (0: off, 1: on)",
         value=".true.",
     ),
+    ###
+    # Sea model
+    ####
+    VarDef("rhcaps", "real(p)", "(ix, il)", "1./heat_capacity (sea)"),
+    VarDef("rhcapi", "real(p)", "(ix, il)", "1./heat_capacity (ice)"),
+    VarDef("cdsea", "real(p)", "(ix, il)", "1./dissip_time (sea)"),
+    VarDef("cdice", "real(p)", "(ix, il)", "1./dissip_time (ice)"),
+    VarDef("fmask_sea", "real(p)", "(ix, il)", "Fraction of sea"),
+    VarDef("bmask_sea", "real(p)", "(ix, il)", "Binary sea mask"),
+    VarDef("deglat_s", "real(p)", "(il)", "Grid latitudes"),
+    VarDef("hfseacl", "real(p)", "(ix, il)", "Annual-mean heat flux into sea sfc."),
+    VarDef("sstom12", "real(p)", "(ix, il, 12)", "Ocean model SST climatology"),
+    VarDef("sstcl_ob", "real(p)", "(ix, il)", "Observed clim. SST"),
+    VarDef("sicecl_ob", "real(p)", "(ix, il)", "Clim. sea ice fraction"),
+    VarDef("ticecl_ob", "real(p)", "(ix, il)", "Clim. sea ice temperature"),
+    VarDef("sstan_ob", "real(p)", "(ix, il)", "Daily observed SST anomaly"),
+    VarDef("sstcl_om", "real(p)", "(ix, il)", "Ocean model clim. SST"),
+    VarDef("sst_am", "real(p)", "(ix, il)", "SST (full-field)"),
+    VarDef("sstan_am", "real(p)", "(ix, il)", "SST anomaly"),
+    VarDef("sice_am", "real(p)", "(ix, il)", "Sea ice fraction"),
+    VarDef("tice_am", "real(p)", "(ix, il)", "Sea ice temperature"),
+    VarDef("sst_om", "real(p)", "(ix, il)", "Ocean model SST"),
+    VarDef("sice_om", "real(p)", "(ix, il)", "Model sea ice fraction"),
+    VarDef("tice_om", "real(p)", "(ix, il)", "Model sea ice temperature"),
+    VarDef("ssti_om", "real(p)", "(ix, il)", "Model SST + sea ice temp."),
+    VarDef(
+        "wsst_ob", "real(p)", "(ix, il)", "Weight for obs. SST anomaly in coupled runs"
+    ),
+    VarDef(
+        "sst_anomaly_coupling_flag",
+        "logical",
+        None,
+        "Weight for obs. SST anomaly in coupled runs",
+        value=".true.",
+    ),
     ###################
     # mod_radcon module
     ###################
