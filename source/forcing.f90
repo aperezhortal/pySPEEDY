@@ -19,9 +19,9 @@ contains
         use physical_constants, only: rgas
         use surface_fluxes, only: set_orog_land_sfc_drag
         use model_control, only: Datetime_t
-        use land_model, only: stl_am, snowd_am, fmask_l, sd2sc
+        use land_model, only: snow_depth2cover
         use sea_model, only: fmask_s, sst_am, sice_am
-        use mod_radcon, only: albsea, albice, albsn
+        use mod_radcon, only : albsea, albice, albsn
         use shortwave_radiation, only: get_zonal_average_fields
         use longwave_radiation, only: radset
         use humidity, only: get_qsat
@@ -57,10 +57,10 @@ contains
 
         do i = 1, ix
             do j = 1, il
-                state%snowc(i,j)  = min(1.0, snowd_am(i,j)/sd2sc)
+                state%snowc(i,j)  = min(1.0, state%snow_depth(i,j)/snow_depth2cover)
                 state%alb_land(i,j)  = state%alb0(i,j) + state%snowc(i,j) * (albsn - state%alb0(i,j))
                 state%alb_sea(i,j)  = albsea + sice_am(i,j) * (albice - albsea)
-                state%alb_surface(i,j) = state%alb_sea(i,j) + fmask_l(i,j) * (state%alb_land(i,j) - state%alb_sea(i,j))
+                state%alb_surface(i,j) = state%alb_sea(i,j) + state%fmask_land(i,j) * (state%alb_land(i,j) - state%alb_sea(i,j))
             end do
         end do
 
@@ -88,7 +88,7 @@ contains
         do j = 1, il
             pexp = 1./(rgas * gamlat(j))
             do i = 1, ix
-                tsfc(i,j) = fmask_l(i,j) * stl_am(i,j) + fmask_s(i,j) * sst_am(i,j)
+                tsfc(i,j) = state%fmask_land(i,j) * state%land_temp(i,j) + fmask_s(i,j) * sst_am(i,j)
                 tref(i,j) = tsfc(i,j) + corh(i,j)
                 psfc(i,j) = (tsfc(i,j)/tref(i,j))**pexp
             end do

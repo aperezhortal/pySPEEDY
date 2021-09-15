@@ -17,6 +17,7 @@ module horizontal_diffusion
         module procedure do_horizontal_diffusion_3d
     end interface
 
+    ! TODO: Move to state.
     ! Make this variables allocatable and initialize them only once.
     real(p), save, allocatable :: dmp(:, :)  !! Damping coefficient for temperature and vorticity (explicit)
     real(p), save, allocatable :: dmpd(:, :) !! Damping coefficient for divergence (explicit)

@@ -15,7 +15,15 @@ NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
 
 class VarDef:
     def __init__(
-            self, name, dtype, dims, desc, units=None, time_dim=None, alt_name=None, value=None
+        self,
+        name,
+        dtype,
+        dims,
+        desc,
+        units=None,
+        time_dim=None,
+        alt_name=None,
+        value=None,
     ):
         """
         If time_dim is not None, the variable is not allocated during the
@@ -155,7 +163,12 @@ model_state = [
     VarDef("hfluxn", "real(8)", "(ix, il,aux_dim)", "Net heat flux into surface"),
     #
     # Saved computations
-    VarDef("tt_rsw", "real(8)", "(ix, il,kx)", "Flux of short-wave radiation absorbed in each atmospheric layer"),
+    VarDef(
+        "tt_rsw",
+        "real(8)",
+        "(ix, il,kx)",
+        "Flux of short-wave radiation absorbed in each atmospheric layer",
+    ),
     ###########################
     # Boundary module variables
     ###########################
@@ -213,32 +226,124 @@ model_state = [
     ),
     ############################
     # Shortware radiation module
-    VarDef("increase_co2", "logical", None, " Flag for CO2 optical thickness increase", value=".false."),
-    VarDef("compute_shortwave", "logical", None,
-           "Flag for shortwave radiation routine (turned on and off in main loop depending on the value of nstrad)",
-           value=".true."),
-    VarDef("air_absortivity_co2", "real(8)", None,
-           "Absorptivity of air in CO2 band",
-           value="6.0"),
-    VarDef("flux_solar_in", "real(8)", "(ix, il)", "Flux of incoming solar radiation"),
-    VarDef("flux_ozone_lower", "real(8)", "(ix, il)", "Flux absorbed by ozone (lower stratosphere)"),
-    VarDef("flux_ozone_upper", "real(8)", "(ix, il)", "Flux absorbed by ozone (upper stratosphere)"),
-    VarDef("zenit_correction", "real(8)", "(ix, il)", "Zenith angle correction to (downward) absorptivity"),
-    VarDef("stratospheric_correction", "real(8)", "(ix, il)", "Stratospheric correction for polar night"),
-    VarDef("qcloud_equiv", "real(8)", "(ix, il)", " Equivalent specific humidity of clouds"),
     ############################
+    VarDef(
+        "increase_co2",
+        "logical",
+        None,
+        " Flag for CO2 optical thickness increase",
+        value=".false.",
+    ),
+    VarDef(
+        "compute_shortwave",
+        "logical",
+        None,
+        "Flag for shortwave radiation routine (turned on and off in main loop depending on the value of nstrad)",
+        value=".true.",
+    ),
+    VarDef(
+        "air_absortivity_co2",
+        "real(8)",
+        None,
+        "Absorptivity of air in CO2 band",
+        value="6.0",
+    ),
+    VarDef("flux_solar_in", "real(8)", "(ix, il)", "Flux of incoming solar radiation"),
+    VarDef(
+        "flux_ozone_lower",
+        "real(8)",
+        "(ix, il)",
+        "Flux absorbed by ozone (lower stratosphere)",
+    ),
+    VarDef(
+        "flux_ozone_upper",
+        "real(8)",
+        "(ix, il)",
+        "Flux absorbed by ozone (upper stratosphere)",
+    ),
+    VarDef(
+        "zenit_correction",
+        "real(8)",
+        "(ix, il)",
+        "Zenith angle correction to (downward) absorptivity",
+    ),
+    VarDef(
+        "stratospheric_correction",
+        "real(8)",
+        "(ix, il)",
+        "Stratospheric correction for polar night",
+    ),
+    VarDef(
+        "qcloud_equiv", "real(8)", "(ix, il)", " Equivalent specific humidity of clouds"
+    ),
+    ###################
+    # Land model module
+    ###################
+    VarDef("rhcapl", "real(8)", "(ix, il)", "1/heat capacity (land)"),
+    VarDef("cdland", "real(8)", "(ix, il)", " 1/dissipation time (land)"),
+    VarDef(
+        "stlcl_obs", "real(8)", "(ix, il)", "Climatological land surface temperature"
+    ),
+    VarDef(
+        "snowdcl_obs",
+        "real(8)",
+        "(ix, il)",
+        "Climatological snow depth (water equivalent)",
+    ),
+    VarDef(
+        "soilwcl_obs", "real(8)", "(ix, il)", "Climatological soil water availability"
+    ),
+    VarDef("land_temp", "real(8)", "(ix, il)", "Land surface temperature"),
+    VarDef("snow_depth", "real(8)", "(ix, il)", "Snow depth (water equivalent)"),
+    VarDef("soil_avail_water", "real(8)", "(ix, il)", "Soil water availability"),
+    VarDef("stl_lm", "real(8)", "(ix, il)", "Land-model surface temperature"),
+    VarDef("fmask_land", "real(8)", "(ix, il)", "Fraction of land"),
+    VarDef("bmask_land", "real(8)", "(ix, il)", " Binary land mask"),
+    VarDef(
+        "land_coupling_flag",
+        "logical",
+        None,
+        "Flag for land-coupling (0: off, 1: on)",
+        value=".true.",
+    ),
     ###################
     # mod_radcon module
     ###################
-    VarDef("ablco2_ref", "real(8)", None, "Initial absorptivity of air in CO2 band (t=t0)"),
-    VarDef("fband", "real(8)", "(100:400,4)", "Energy fraction emitted in each LW band = f(T)"),
-    VarDef("alb_land", "real(8)", "(ix,il)", "Daily-mean albedo over land (bare-land + snow)"),
-    VarDef("alb_sea", "real(8)", "(ix,il)", "Daily-mean albedo over sea  (open sea + sea ice)"),
+    VarDef(
+        "ablco2_ref", "real(8)", None, "Initial absorptivity of air in CO2 band (t=t0)"
+    ),
+    VarDef(
+        "fband",
+        "real(8)",
+        "(100:400,4)",
+        "Energy fraction emitted in each LW band = f(T)",
+    ),
+    VarDef(
+        "alb_land",
+        "real(8)",
+        "(ix,il)",
+        "Daily-mean albedo over land (bare-land + snow)",
+    ),
+    VarDef(
+        "alb_sea",
+        "real(8)",
+        "(ix,il)",
+        "Daily-mean albedo over sea  (open sea + sea ice)",
+    ),
     VarDef("alb_surface", "real(8)", "(ix,il)", "Combined surface albedo (land + sea)"),
     VarDef("snowc", "real(8)", "(ix,il)", "Effective snow cover (fraction)"),
-    VarDef("rad_flux", "real(8)", "(ix,il,4)", "Radiative flux in different spectral bands"),
-    VarDef("rad_tau2", "real(8)", "(ix,il,kx,4)", "Transmissivity of atmospheric layers"),
-    VarDef("rad_st4a", "real(8)", "(ix,il,kx,2)", "Blackbody emission from full and half atmospheric levels"),
+    VarDef(
+        "rad_flux", "real(8)", "(ix,il,4)", "Radiative flux in different spectral bands"
+    ),
+    VarDef(
+        "rad_tau2", "real(8)", "(ix,il,kx,4)", "Transmissivity of atmospheric layers"
+    ),
+    VarDef(
+        "rad_st4a",
+        "real(8)",
+        "(ix,il,kx,2)",
+        "Blackbody emission from full and half atmospheric levels",
+    ),
     VarDef("rad_strat_corr", "real(8)", "(ix,il,2)", "Stratospheric correction term"),
     #############
     # Coordinates
@@ -249,25 +354,37 @@ model_state = [
     #
     # Module instances
     #
-    VarDef("mod_spectral", "class(ModSpectral_t)", None, "Spectral module instance", ),
-    VarDef("mod_implicit", "class(ModImplicit_t)", None, "Implicit module instance", ),
-
+    VarDef(
+        "mod_spectral",
+        "class(ModSpectral_t)",
+        None,
+        "Spectral module instance",
+    ),
+    VarDef(
+        "mod_implicit",
+        "class(ModImplicit_t)",
+        None,
+        "Implicit module instance",
+    ),
 ]
 
 state_arrays = [var for var in model_state if var.dims and not var.is_module_instance]
-state_scalars = [var for var in model_state if var.dims is None and not var.is_module_instance]
-state_modules = [var for var in model_state if  var.is_module_instance]
+state_scalars = [
+    var for var in model_state if var.dims is None and not var.is_module_instance
+]
+state_modules = [var for var in model_state if var.is_module_instance]
 
 file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
 env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
 template = env.get_template("model_state.f90.j2")
-template.stream(state_arrays=state_arrays, state_scalars=state_scalars, state_modules=state_modules).dump(
-    str(SOURCES_DIR / "model_state.f90")
-)
+template.stream(
+    state_arrays=state_arrays, state_scalars=state_scalars, state_modules=state_modules
+).dump(str(SOURCES_DIR / "model_state.f90"))
 
 template = env.get_template("speedy_driver.f90.j2")
 template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
-    str(SOURCES_DIR / "speedy_driver.f90"))
+    str(SOURCES_DIR / "speedy_driver.f90")
+)
 
 ###################################################
 # Export state variables description in JSON format
@@ -309,13 +426,13 @@ worksheet = writer.sheets[sheetname]  # pull worksheet object
 for idx, col in enumerate(my_dataframe):  # loop through all columns
     series = my_dataframe[col]
     max_len = (
-            max(
-                (
-                    series.astype(str).map(len).max(),  # len of largest item
-                    len(str(series.name)),  # len of column name/header
-                )
+        max(
+            (
+                series.astype(str).map(len).max(),  # len of largest item
+                len(str(series.name)),  # len of column name/header
             )
-            + 1
+        )
+        + 1
     )  # adding a little extra space
     worksheet.set_column(idx, idx, max_len)  # set column width
 writer.save()

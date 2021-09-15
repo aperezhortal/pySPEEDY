@@ -39,13 +39,12 @@ contains
     subroutine get_surface_fluxes(&
             psa, ua, va, ta, qa, rh, phi, phi0, fmask, forog, tsea, &
             ssrd, slrd, ustr, vstr, shf, evap, slru, hfluxn, &
-            tsfc, tskin, u0, v0, t0, lfluxland,&
-            alb_land,alb_sea, snowc)
+            tsfc, tskin, u0, v0, t0, lfluxland, &
+            alb_land, alb_sea, snowc, land_temp, soil_avail_water)
 
         use physical_constants, only : p0, rgas, cp, alhc, sbc
         use geometry, only : coa, sigl, wvi
         use mod_radcon, only : emisfc
-        use land_model, only : stl_am, soilw_am
         use humidity, only : get_qsat, rel_hum_to_spec_hum
 
         real(p), intent(in) :: psa(ix, il)    !! Normalised surface pressure
@@ -77,6 +76,9 @@ contains
         real(p), intent(in) :: alb_land(ix, il) !! Daily-mean albedo over land (bare-land + snow)
         real(p), intent(in) :: alb_sea(ix, il) !! Daily-mean albedo over sea  (open sea + sea ice)
         real(p), intent(in) :: snowc(ix, il) !! Effective snow cover (fraction)
+        real(p), intent(in) :: land_temp(ix, il) !! Land surface temperature
+        real(p), intent(in) :: soil_avail_water(ix, il) !! Soil water availability
+
 
         ! Local variables
         integer :: i, j, ks, nl1
@@ -156,7 +158,7 @@ contains
             ! 2.1 Define effective skin temperature to compensate for
             !     non-linearity of heat/moisture fluxes during the daily cycle
             do j = 1, il
-                tskin(:, j) = stl_am(:, j) + ctday * sqrt(coa(j)) * ssrd(:, j) * (1.0 - alb_land(:, j)) * psa(:, j)
+                tskin(:, j) = land_temp(:, j) + ctday * sqrt(coa(j)) * ssrd(:, j) * (1.0 - alb_land(:, j)) * psa(:, j)
             end do
 
             ! 2.2 Stability correction = f[pot.temp.(sfc)-pot.temp.(air)]
@@ -199,7 +201,7 @@ contains
             end if
 
             qsat0(:, :, 1) = get_qsat(tskin, psa, 1.0_p)
-            evap(:, :, 1) = chl * denvvs(:, :, 1) * max(0.0, soilw_am * qsat0(:, :, 1) - q1(:, :, 1))
+            evap(:, :, 1) = chl * denvvs(:, :, 1) * max(0.0, soil_avail_water * qsat0(:, :, 1) - q1(:, :, 1))
 
             ! 3. Compute land-surface energy balance;
             !    adjust skin temperature and heat fluxes
@@ -215,7 +217,7 @@ contains
             if (lskineb) then
                 ! Compute net heat flux including flux into ground
                 clamb = clambda + snowc * (clambsn - clambda)
-                hfluxn(:, :, 1) = hfluxn(:, :, 1) - clamb * (tskin - stl_am)
+                hfluxn(:, :, 1) = hfluxn(:, :, 1) - clamb * (tskin - land_temp)
                 dtskin = tskin + 1.0
 
                 ! Compute d(Evap) for a 1-degree increment of Tskin
@@ -224,7 +226,7 @@ contains
                 do i = 1, ix
                     do j = 1, il
                         if (evap(i, j, 1) > 0.0) then
-                            qsat0(i, j, 2) = soilw_am(i, j) * (qsat0(i, j, 2) - qsat0(i, j, 1))
+                            qsat0(i, j, 2) = soil_avail_water(i, j) * (qsat0(i, j, 2) - qsat0(i, j, 1))
                         else
                             qsat0(i, j, 2) = 0.0
                         end if
@@ -239,7 +241,7 @@ contains
                 shf(:, :, 1) = shf(:, :, 1) + chlcp * denvvs(:, :, 1) * dtskin
                 evap(:, :, 1) = evap(:, :, 1) + chl * denvvs(:, :, 1) * qsat0(:, :, 2) * dtskin
                 slru(:, :, 1) = slru(:, :, 1) + dslr * dtskin
-                hfluxn(:, :, 1) = clamb * (tskin - stl_am)
+                hfluxn(:, :, 1) = clamb * (tskin - land_temp)
             end if
 
             rdth = fstab / dtheta
@@ -301,7 +303,7 @@ contains
             evap(:, :, 3) = evap(:, :, 2) + fmask * (evap(:, :, 1) - evap(:, :, 2))
             slru(:, :, 3) = slru(:, :, 2) + fmask * (slru(:, :, 1) - slru(:, :, 2))
 
-            tsfc = tsea + fmask * (stl_am - tsea)
+            tsfc = tsea + fmask * (land_temp - tsea)
             tskin = tsea + fmask * (tskin - tsea)
             t0 = t1(:, :, 2) + fmask * (t1(:, :, 1) - t1(:, :, 2))
         end if

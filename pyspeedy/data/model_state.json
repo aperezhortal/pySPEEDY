@@ -737,6 +737,147 @@
         ],
         "alt_name": "qcloud_equiv"
     },
+    "rhcapl": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "1/heat capacity (land)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "rhcapl"
+    },
+    "cdland": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": " 1/dissipation time (land)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cdland"
+    },
+    "stlcl_obs": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Climatological land surface temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "stlcl_obs"
+    },
+    "snowdcl_obs": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Climatological snow depth (water equivalent)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snowdcl_obs"
+    },
+    "soilwcl_obs": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Climatological soil water availability",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "soilwcl_obs"
+    },
+    "land_temp": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Land surface temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "land_temp"
+    },
+    "snow_depth": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Snow depth (water equivalent)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snow_depth"
+    },
+    "soil_avail_water": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Soil water availability",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "soil_avail_water"
+    },
+    "stl_lm": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Land-model surface temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "stl_lm"
+    },
+    "fmask_land": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Fraction of land",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "fmask_land"
+    },
+    "bmask_land": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": " Binary land mask",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "bmask_land"
+    },
+    "land_coupling_flag": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": "Flag for land-coupling (0: off, 1: on)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "land_coupling_flag"
+    },
     "ablco2_ref": {
         "dtype": "real(8)",
         "dims": null,

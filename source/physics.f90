@@ -14,7 +14,6 @@ contains
     subroutine get_physical_tendencies(state, j1, utend, vtend, ttend, qtend)
         use physical_constants, only : cp
         use geometry, only : fsg, sigh, grdsig, grdscp
-        use land_model, only : fmask_l
         use sea_model, only : sst_am, ssti_om, sea_coupling_flag
         use sppt, only : mu, gen_sppt
         use convection, only : get_convection_tendencies
@@ -146,7 +145,7 @@ contains
             gse = (se(:, :, kx - 1) - se(:, :, kx)) / (phig(:, :, kx - 1) - phig(:, :, kx))
 
             call clouds(qg, rh, state%precnv, state%precls, iptop, gse, &
-                    fmask_l, icltop, cloudc, clstr, state%qcloud_equiv)
+                    state%fmask_land, icltop, cloudc, clstr, state%qcloud_equiv)
 
             do i = 1, ix
                 do j = 1, il
@@ -169,21 +168,24 @@ contains
 
         ! Compute surface fluxes and land skin temperature
         call get_surface_fluxes(&
-                psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, state%forog, sst_am, &
+                psg, ug, vg, tg, qg, rh, phig, &
+                state%phis0, state%fmask_land, state%forog, sst_am, &
                 & state%ssrd, state%slrd, state%ustr, state%vstr, &
                 state%shf, state%evap, state%slru, state%hfluxn, &
                 ts, tskin, u0, v0, t0, .true., &
-                state%alb_land, state%alb_sea, state%snowc)
+                state%alb_land, state%alb_sea, state%snowc,&
+                state%land_temp, state%soil_avail_water)
 
         ! Recompute sea fluxes in case of anomaly coupling
         if (sea_coupling_flag > 0) then
             call get_surface_fluxes(&
-                    psg, ug, vg, tg, qg, rh, phig, state%phis0, fmask_l, state%forog, &
+                    psg, ug, vg, tg, qg, rh, phig, state%phis0, state%fmask_land, state%forog, &
                     ssti_om, state%ssrd, state%slrd, &
                     state%ustr, state%vstr, state%shf, &
                     state%evap, state%slru, &
                     state%hfluxn, ts, tskin, u0, v0, t0, .false., &
-                    state%alb_land, state%alb_sea, state%snowc)
+                    state%alb_land, state%alb_sea, state%snowc,&
+                    state%land_temp, state%soil_avail_water)
         end if
 
         ! Compute upward longwave fluxes, convert them to tendencies and add
