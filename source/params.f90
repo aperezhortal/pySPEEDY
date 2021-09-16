@@ -29,7 +29,7 @@ module params
     integer, parameter :: aux_dim = 3  !! Auxiliary dimension: 1:land, 2:sea, 3: weighted average
 
     ! Time stepping parameters
-    integer, parameter :: nsteps = 36           !! Number of time steps in one day
+    integer, parameter :: nsteps = 36           !! Number of time steps in one day. Must be an even number?
     real(p), parameter :: delt = 86400.0 / nsteps !! Time step in seconds
     real(p), parameter :: rob = 0.05            !! Damping factor in Robert time filter
     real(p), parameter :: wil = 0.53            !! Parameter of Williams filter

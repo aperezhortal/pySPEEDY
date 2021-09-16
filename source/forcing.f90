@@ -15,7 +15,6 @@ contains
     subroutine set_forcing(state, imode, model_datetime, tyear)
         use dynamical_constants, only : refrh1
         use params
-        use horizontal_diffusion, only : tcorh, qcorh
         use physical_constants, only : rgas
         use surface_fluxes, only : set_orog_land_sfc_drag
         use model_control, only : Datetime_t
@@ -82,8 +81,7 @@ contains
                 corh(i, j) = gamlat(j) * state%phis0(i, j)
             end do
         end do
-
-        tcorh = state%mod_spectral%grid2spec(corh)
+        state%mod_implicit%tcorh = state%mod_spectral%grid2spec(corh)
 
         ! 4. humidity correction term for horizontal diffusion
         do j = 1, il
@@ -100,7 +98,7 @@ contains
 
         corh = refrh1 * (qref - qsfc)
 
-        qcorh = state%mod_spectral%grid2spec(corh)
+        state%mod_implicit%qcorh = state%mod_spectral%grid2spec(corh)
     end subroutine
 
     !> Compute reference lapse rate as a function of latitude and date

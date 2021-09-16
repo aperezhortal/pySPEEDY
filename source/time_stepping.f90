@@ -15,15 +15,15 @@ contains
 
         type(ModelState_t), intent(inout) :: state
 
-        call state%mod_implicit%initialize(0.5 * delt)
+        call state%mod_implicit%set_time_step(0.5 * delt)
 
         call step(state, 1, 1, 0.5 * delt)
 
-        call state%mod_implicit%initialize(delt)
+        call state%mod_implicit%set_time_step(delt)
 
         call step(state, 1, 2, delt)
 
-        call state%mod_implicit%initialize(2 * delt)
+        call state%mod_implicit%set_time_step(2 * delt)
     end
 
     ! Perform one time step starting from F(1) and F(2) and using the following scheme:
@@ -38,8 +38,9 @@ contains
     subroutine step(state, j1, j2, dt)
         use dynamical_constants, only : tdrs
         use model_state, only : ModelState_t
-        use horizontal_diffusion, only : do_horizontal_diffusion, &
-                & dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
+        use horizontal_diffusion, only : do_horizontal_diffusion
+        use implicit, only : ModImplicit_t
+
         use tendencies, only : get_tendencies
 
         type(ModelState_t), intent(inout), target :: state
@@ -55,8 +56,10 @@ contains
         integer :: n, itr, k, m
 
         class(ModSpectral_t), pointer :: mod_spectral
+        class(ModImplicit_t), pointer :: mod_implicit
 
         mod_spectral => state%mod_spectral
+        mod_implicit => state%mod_implicit
 
         ! =========================================================================
         ! Compute tendencies of prognostic variables
@@ -69,18 +72,18 @@ contains
         ! =========================================================================
 
         ! Diffusion of wind and temperature
-        vordt = do_horizontal_diffusion(state%vor(:, :, :, 1), vordt, dmp, dmp1)
-        divdt = do_horizontal_diffusion(state%div(:, :, :, 1), divdt, dmpd, dmp1d)
+        vordt = do_horizontal_diffusion(state%vor(:, :, :, 1), vordt, mod_implicit%dmp, mod_implicit%dmp1)
+        divdt = do_horizontal_diffusion(state%div(:, :, :, 1), divdt, mod_implicit%dmpd, mod_implicit%dmp1d)
 
         do k = 1, kx
             do m = 1, mx
                 do n = 1, nx
-                    ctmp(m, n, k) = state%t(m, n, k, 1) + tcorh(m, n) * tcorv(k)
+                    ctmp(m, n, k) = state%t(m, n, k, 1) + mod_implicit%tcorh(m, n) * mod_implicit%tcorv(k)
                 end do
             end do
         end do
 
-        tdt = do_horizontal_diffusion(ctmp, tdt, dmp, dmp1)
+        tdt = do_horizontal_diffusion(ctmp, tdt, mod_implicit%dmp, mod_implicit%dmp1)
 
         ! Stratospheric diffusion and zonal wind damping
         sdrag = 1.0 / (tdrs * 3600.0)
@@ -89,27 +92,27 @@ contains
             divdt(1, n, 1) = divdt(1, n, 1) - sdrag * state%div(1, n, 1, 1)
         end do
 
-        vordt = do_horizontal_diffusion(state%vor(:, :, :, 1), vordt, dmps, dmp1s)
-        divdt = do_horizontal_diffusion(state%div(:, :, :, 1), divdt, dmps, dmp1s)
-        tdt = do_horizontal_diffusion(ctmp, tdt, dmps, dmp1s)
+        vordt = do_horizontal_diffusion(state%vor(:, :, :, 1), vordt, mod_implicit%dmps, mod_implicit%dmp1s)
+        divdt = do_horizontal_diffusion(state%div(:, :, :, 1), divdt, mod_implicit%dmps, mod_implicit%dmp1s)
+        tdt = do_horizontal_diffusion(ctmp, tdt, mod_implicit%dmps, mod_implicit%dmp1s)
 
         ! Diffusion of tracers
         do k = 1, kx
             do m = 1, mx
                 do n = 1, nx
-                    ctmp(m, n, k) = state%tr(m, n, k, 1, 1) + qcorh(m, n) * qcorv(k)
+                    ctmp(m, n, k) = state%tr(m, n, k, 1, 1) + mod_implicit%qcorh(m, n) * mod_implicit%qcorv(k)
                 end do
             end do
         end do
 
-        trdt(:, :, :, 1) = do_horizontal_diffusion(ctmp, trdt(:, :, :, 1), dmpd, dmp1d)
+        trdt(:, :, :, 1) = do_horizontal_diffusion(ctmp, trdt(:, :, :, 1), mod_implicit%dmpd, mod_implicit%dmp1d)
 
         if (ntr > 1) then
             do itr = 2, ntr
                 !&<
                 trdt(:, :, :, 1) = do_horizontal_diffusion(&
                         state%tr(:, :, :, 1, itr), &
-                        trdt(:, :, :, itr), dmp, dmp1 &
+                        trdt(:, :, :, itr), mod_implicit%dmp, mod_implicit%dmp1 &
                         )
                 !&>
             end do

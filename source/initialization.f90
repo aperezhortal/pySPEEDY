@@ -14,7 +14,6 @@ contains
     ! Intialize global variables in the modules. This is done only once.
     subroutine initialize_modules()
         use geometry, only : initialize_geometry
-        use horizontal_diffusion, only : initialize_horizontal_diffusion
 
         if (modules_initialized_flag) then
             !Do nothing, the module is already initialized.
@@ -24,18 +23,11 @@ contains
         ! Initialize model geometry
         call initialize_geometry
 
-        ! Initialize horizontal diffusion
-        call initialize_horizontal_diffusion
-
         modules_initialized_flag = .true.
     end subroutine
 
     ! Deinitialize the allocatable global variables in the different modules.
     subroutine deinitialize_modules()
-        use horizontal_diffusion, only : deinitialize_horizontal_diffusion
-
-        call deinitialize_horizontal_diffusion
-
         modules_initialized_flag = .false.
     end subroutine
 
@@ -67,10 +59,14 @@ contains
         ! Intialize modules if they were not initialized.
         call initialize_modules()
 
-        ! Initialize spectral transforms
+        ! Initialize spectral transforms module
         call state%mod_spectral%initialize()
 
+        ! Initialize implicit module
+        call state%mod_implicit%initialize()
+
         call initialize_geopotential(state)
+
         ! Check consistency of coupling and prescribed SST anomaly flags
         if (sea_coupling_flag >= 4) state%sst_anomaly_coupling_flag = .true.
 

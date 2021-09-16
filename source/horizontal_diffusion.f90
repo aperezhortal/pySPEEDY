@@ -2,126 +2,114 @@
 !  date: 07/05/2019
 !  For performing horizontal diffusion.
 module horizontal_diffusion
-    use types, only: p
+    use types, only : p
     use params
 
     implicit none
 
     private
-    public initialize_horizontal_diffusion, deinitialize_horizontal_diffusion 
+    public ModHorizontalDiffusion_t
+    public ModHorizontalDiffusion_initialize, ModHorizontalDiffusion_delete
     public do_horizontal_diffusion
-    public dmp, dmpd, dmps, dmp1, dmp1d, dmp1s, tcorv, qcorv, tcorh, qcorh
+
+    type ModHorizontalDiffusion_t
+        real(p), allocatable :: dmp(:, :)  !! Damping coefficient for temperature and vorticity (explicit)
+        real(p), allocatable :: dmpd(:, :) !! Damping coefficient for divergence (explicit)
+        real(p), allocatable :: dmps(:, :) !! Damping coefficient for extra diffusion in the stratosphere (explicit)
+
+        real(p), allocatable :: dmp1(:, :)  !! Damping coefficient for temperature and vorticity (implicit)
+        real(p), allocatable :: dmp1d(:, :) !! Damping coefficient for divergence (implicit)
+        real(p), allocatable :: dmp1s(:, :) !! Damping coefficient for extra diffusion in the stratosphere (implicit)
+
+        real(p), allocatable :: tcorv(:) !! Vertical component of orographic correction for temperature
+        real(p), allocatable :: qcorv(:) !! Vertical component of orographic correction for humidity
+
+        complex(p), allocatable :: tcorh(:, :) !! Horizontal component of orographic correction for temperature
+        complex(p), allocatable :: qcorh(:, :) !! Horizontal component of orographic correction for humidity
+
+        logical :: mod_diffusion_initialized = .false.
+    contains
+        procedure :: initialize => ModHorizontalDiffusion_initialize
+        procedure :: delete => ModHorizontalDiffusion_delete
+        !        procedure :: do_horizontal_diffusion => do_horizontal_diffusion
+    end type ModHorizontalDiffusion_t
 
     interface do_horizontal_diffusion
         module procedure do_horizontal_diffusion_2d
         module procedure do_horizontal_diffusion_3d
     end interface
 
-    ! TODO: Move to state.
-    ! Make this variables allocatable and initialize them only once.
-    real(p), save, allocatable :: dmp(:, :)  !! Damping coefficient for temperature and vorticity (explicit)
-    real(p), save, allocatable :: dmpd(:, :) !! Damping coefficient for divergence (explicit)
-    real(p), save, allocatable :: dmps(:, :) !! Damping coefficient for extra diffusion in the stratosphere (explicit)
-
-    real(p), save, allocatable :: dmp1(:, :)  !! Damping coefficient for temperature and vorticity (implicit)
-    real(p), save, allocatable :: dmp1d(:, :) !! Damping coefficient for divergence (implicit)
-    real(p), save, allocatable :: dmp1s(:, :) !! Damping coefficient for extra diffusion in the stratosphere
-                                              !! (implicit)
-
-    real(p), save, allocatable :: tcorv(:) !! Vertical component of orographic correction for temperature
-    real(p), save, allocatable :: qcorv(:) !! Vertical component of orographic correction for humidity
-
-    complex(p), save, allocatable :: tcorh(:, :) !! Horizontal component of orographic correction for temperature
-    complex(p), save, allocatable :: qcorh(:, :) !! Horizontal component of orographic correction for humidity
-
-    logical, save :: horizontal_diffusion_mod_initialized_flag = .false.
-
 contains
     !> Initializes the arrays used for horizontal diffusion.
-    subroutine initialize_horizontal_diffusion
-        use dynamical_constants, only: thd, thdd, thds, gamma, hscale, hshum
-        use physical_constants, only: grav, rgas
-        use geometry, only: fsg
+    subroutine ModHorizontalDiffusion_initialize(this)
+        use dynamical_constants, only : thd, thdd, thds, gamma, hscale, hshum
+        use physical_constants, only : grav, rgas
+        use geometry, only : fsg
 
-        integer :: j, k, npowhd
+        class(ModHorizontalDiffusion_t), intent(inout) :: this
+
+        integer :: j, k
+
+        integer, parameter :: npowhd = 4 ! Power of Laplacian in horizontal diffusion
+
         real(p) :: elap, elapn, hdifd, hdiff, hdifs, qexp, rgam, rlap, twn
 
-        if (horizontal_diffusion_mod_initialized_flag) then
+        if (this%mod_diffusion_initialized) then
             return
         end if
 
-        if (.not. allocated(dmp)) allocate (dmp(mx, nx))
-        if (.not. allocated(dmpd)) allocate (dmpd(mx, nx))
-        if (.not. allocated(dmps)) allocate (dmps(mx, nx))
-        if (.not. allocated(dmp1)) allocate (dmp1(mx, nx))
-        if (.not. allocated(dmp1d)) allocate (dmp1d(mx, nx))
-        if (.not. allocated(dmp1s)) allocate (dmp1s(mx, nx))
-        if (.not. allocated(dmp1d)) allocate (dmp1d(mx, nx))
-
-        if (.not. allocated(tcorv)) allocate (tcorv(kx))
-        if (.not. allocated(qcorv)) allocate (qcorv(kx))
-
-        if (.not. allocated(tcorh)) allocate (tcorh(mx, nx))
-        if (.not. allocated(qcorh)) allocate (qcorh(mx, nx))
-
-        ! 1. Definition of constants
-        if (mod(nsteps, 2) /= 0) stop ' Invalid no. of time steps'
-
-        ! Power of Laplacian in horizontal diffusion
-        npowhd = 4
+        allocate (this%dmp(mx, nx), this%dmpd(mx, nx), this%dmps(mx, nx))
+        allocate (this%dmp1(mx, nx), this%dmp1d(mx, nx), this%dmp1s(mx, nx))
+        allocate (this%tcorv(kx), this%qcorv(kx))
+        allocate (this%tcorh(mx, nx))
+        allocate (this%qcorh(mx, nx))
 
         ! Coefficients for horizontal diffusion
         ! Spectral damping coefficients
-        hdiff = 1./(thd*3600.)
-        hdifd = 1./(thdd*3600.)
-        hdifs = 1./(thds*3600.)
-        rlap = 1./float(trunc*(trunc + 1))
+        hdiff = 1. / (thd * 3600.)
+        hdifd = 1. / (thdd * 3600.)
+        hdifs = 1. / (thds * 3600.)
+        rlap = 1. / float(trunc * (trunc + 1))
 
         do j = 1, nx
             do k = 1, mx
                 twn = float(k + j - 2)
-                elap = (twn*(twn + 1.)*rlap)
+                elap = (twn * (twn + 1.) * rlap)
                 elapn = elap**npowhd
-                dmp(k, j) = hdiff*elapn
-                dmpd(k, j) = hdifd*elapn
-                dmps(k, j) = hdifs*elap
+                this%dmp(k, j) = hdiff * elapn
+                this%dmpd(k, j) = hdifd * elapn
+                this%dmps(k, j) = hdifs * elap
             end do
-            ! dmps(1,j)=0.
         end do
 
         ! 5.2 Orographic correction terms for temperature and humidity
         !     (vertical component)
-        rgam = rgas*gamma/(1000.*grav)
-        qexp = hscale/hshum
+        rgam = rgas * gamma / (1000. * grav)
+        qexp = hscale / hshum
 
-        tcorv(1) = 0.
-        qcorv(1) = 0.
-        qcorv(2) = 0.
+        this%tcorv(1) = 0.
+        this%qcorv(1) = 0.
+        this%qcorv(2) = 0.
 
         do k = 2, kx
-            tcorv(k) = fsg(k)**rgam
-            if (k .gt. 2) qcorv(k) = fsg(k)**qexp
+            this%tcorv(k) = fsg(k)**rgam
+            if (k > 2) this%qcorv(k) = fsg(k)**qexp
         end do
 
-        horizontal_diffusion_mod_initialized_flag = .true.
+        this%mod_diffusion_initialized = .true.
     end subroutine
 
     ! Deallocate the module data to release memory.
-    subroutine deinitialize_horizontal_diffusion()
-        if ( allocated(dmp)) deallocate (dmp)
-        if ( allocated(dmpd)) deallocate (dmpd)
-        if ( allocated(dmps)) deallocate (dmps)
-        if ( allocated(dmp1)) deallocate (dmp1)
-        if ( allocated(dmp1d)) deallocate (dmp1d)
-        if ( allocated(dmp1s)) deallocate (dmp1s)
-        if ( allocated(dmp1d)) deallocate (dmp1d)
+    subroutine ModHorizontalDiffusion_delete(this)
+        class(ModHorizontalDiffusion_t), intent(inout) :: this
 
-        if ( allocated(tcorv)) deallocate (tcorv)
-        if ( allocated(qcorv)) deallocate (qcorv)
+        if (this%mod_diffusion_initialized) then
+            deallocate (this%dmp, this%dmpd, this%dmps)
+            deallocate (this%dmp1, this%dmp1d, this%dmp1s)
+            deallocate (this%tcorv, this%qcorv, this%tcorh, this%qcorh)
+            this%mod_diffusion_initialized = .false.
+        end if
 
-        if ( allocated(tcorh)) deallocate (tcorh)
-        if ( allocated(qcorh)) deallocate (qcorh)
-        horizontal_diffusion_mod_initialized_flag = .false.
     end subroutine
 
     !> Adds horizontal diffusion tendency of field to spectral tendency fdt
@@ -131,7 +119,7 @@ contains
         complex(p) :: fdt_out(mx, nx)
         real(p), intent(in) :: dmp_in(mx, nx), dmp1_in(mx, nx)
 
-        fdt_out = (fdt_in - dmp_in*field)*dmp1_in
+        fdt_out = (fdt_in - dmp_in * field) * dmp1_in
     end function
 
     !> Adds horizontal diffusion tendency of field to spectral tendency fdt
@@ -144,8 +132,8 @@ contains
 
         do k = 1, kx
             fdt_out(:, :, k) = do_horizontal_diffusion_2d(field(:, :, k), &
-                                                          fdt_in(:, :, k), &
-                                                          dmp_in, dmp1_in)
+                    fdt_in(:, :, k), &
+                    dmp_in, dmp1_in)
         end do
     end function
 end module

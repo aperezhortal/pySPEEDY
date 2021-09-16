@@ -4,25 +4,28 @@
 module implicit
     use types, only : p
     use params
+    use horizontal_diffusion, only : ModHorizontalDiffusion_t
 
     implicit none
 
     private
     public ModImplicit_t
 
-    type ModImplicit_t
-        logical :: allocated_flag = .false.
+    type, extends(ModHorizontalDiffusion_t) :: ModImplicit_t
+        logical :: mod_implicit_initialize_flag = .false.
 
         real(p), allocatable, dimension(:) :: tref, tref2, tref3, dhsx
         real(p), allocatable, dimension(:, :) :: xc, xd, elz
         real(p), allocatable, dimension(:, :, :) :: xj
     contains
         procedure :: initialize => ModImplicit_initialize
+        procedure :: set_time_step => ModImplicit_set_time_step
         procedure :: delete => ModImplicit_delete
         procedure :: implicit_terms => ModImplicit_implicit_terms
     end type ModImplicit_t
 
 contains
+
     !> Initialize constants for implicit computation of horizontal diffusion and
     !  gravity waves.
     !
@@ -35,11 +38,50 @@ contains
     !  terms anyway to reduce roundoff error; also the constants needed for
     !  the biharmonic diffusion, which is assumed always to be backwards
     !  implicit, are defined in initialize_implicit).
-    subroutine ModImplicit_initialize(this, dt)
+    subroutine ModImplicit_initialize(this)
+        use dynamical_constants, only : gamma
+        use physical_constants, only : akap, rgas, grav
+        use geometry, only : fsg, fsgr
+        use horizontal_diffusion, only : ModHorizontalDiffusion_initialize
+        use matrix_inversion, only : inv
+
+        class(ModImplicit_t), intent(inout) :: this
+
+        integer :: k
+        real(p) :: rgam
+
+        ! Initialize horizontal diffusion module
+        call ModHorizontalDiffusion_initialize(this)
+
+        if (this%mod_implicit_initialize_flag) then
+            return
+        end if
+
+        ! Add to the state
+        allocate(this%tref(kx), this%tref2(kx), this%tref3(kx), this%dhsx(kx))
+        allocate(this%xc(kx, kx), this%xd(kx, kx))
+        allocate(this%xj(kx, kx, mx + nx + 1))
+        allocate(this%elz(mx, nx))
+
+        ! 1. Constants for implicit gravity wave computation
+        ! reference atmosphere, function of sigma only
+        rgam = rgas * gamma / (1000. * grav)
+
+        do k = 1, kx
+            this%tref(k) = 288. * max(0.2, fsg(k))**rgam
+            this%tref2(k) = akap * this%tref(k)
+            this%tref3(k) = fsgr(k) * this%tref(k)
+        end do
+
+        this%mod_implicit_initialize_flag = .true.
+
+    end subroutine
+
+    subroutine ModImplicit_set_time_step(this, dt)
         use dynamical_constants, only : gamma
         use physical_constants, only : akap, rgas, grav, rearth
         use geometry, only : hsg, dhs, fsg, fsgr
-        use horizontal_diffusion, only : dmp, dmpd, dmps, dmp1, dmp1d, dmp1s
+        use horizontal_diffusion, only : ModHorizontalDiffusion_initialize
         use matrix_inversion, only : inv
 
         class(ModImplicit_t), intent(inout) :: this
@@ -57,32 +99,14 @@ contains
         allocate(xa(kx, kx), xb(kx, kx), xe(kx, kx), ya(kx, kx))
         allocate(xf(kx, kx, mx + nx + 1))
 
-        if (.not. this%allocated_flag) then
-            ! Add to the state
-            allocate(this%tref(kx), this%tref2(kx), this%tref3(kx), this%dhsx(kx))
-            allocate(this%xc(kx, kx), this%xd(kx, kx))
-            allocate(this%xj(kx, kx, mx + nx + 1))
-            allocate(this%elz(mx, nx))
-            this%allocated_flag = .true.
-        end if
-
+        !~~~~~~~~~~~~~~
         ! 1. Constants for backwards implicit biharmonic diffusion
         do m = 1, mx
             do n = 1, nx
-                dmp1 (m, n) = 1. / (1. + dmp (m, n) * dt)
-                dmp1d(m, n) = 1. / (1. + dmpd(m, n) * dt)
-                dmp1s(m, n) = 1. / (1. + dmps(m, n) * dt)
+                this%dmp1 (m, n) = 1. / (1. + this%dmp (m, n) * dt)
+                this%dmp1d(m, n) = 1. / (1. + this%dmpd(m, n) * dt)
+                this%dmp1s(m, n) = 1. / (1. + this%dmps(m, n) * dt)
             end do
-        end do
-
-        ! 1. Constants for implicit gravity wave computation
-        ! reference atmosphere, function of sigma only
-        rgam = rgas * gamma / (1000. * grav)
-
-        do k = 1, kx
-            this%tref(k) = 288. * max(0.2, fsg(k))**rgam
-            this%tref2(k) = akap * this%tref(k)
-            this%tref3(k) = fsgr(k) * this%tref(k)
         end do
 
         ! Other constants
@@ -187,11 +211,15 @@ contains
     end subroutine
 
     subroutine ModImplicit_delete(this)
+        use horizontal_diffusion, only : ModHorizontalDiffusion_delete
+
         class(ModImplicit_t), intent(inout) :: this
-        if (this%allocated_flag) then
+
+        if (this%mod_implicit_initialize_flag) then
             deallocate(this%tref, this%tref2, this%tref3)
             deallocate(this%xc, this%xd, this%xj, this%elz)
-            this%allocated_flag = .false.
+            this%mod_implicit_initialize_flag = .false.
+            call ModHorizontalDiffusion_delete(this)
         end if
     end subroutine
 
