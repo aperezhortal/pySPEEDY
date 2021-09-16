@@ -355,21 +355,7 @@ class Speedy:
             encoding[alt_name] = {"dtype": "float32", "zlib": True}
 
         file_name = self.model_date.strftime("%Y%m%d%H%M.nc")
+
+        os.makedirs(self.output_dir, exist_ok=True)
         output_ds.to_netcdf(os.path.join(self.output_dir, file_name), encoding=encoding)
         return output_ds
-
-
-if __name__ == "__main__":
-    model = Speedy()
-    model.set_sst_anomalies()
-    model.default_init()
-    model.run()
-
-    # model.set_params(end_date=datetime(1982, 2, 1),
-    #                  history_interval=36*15, # in time steps
-    #                  diag_interval=36*15)
-
-    # from matplotlib import pyplot as plt
-    # plt.pcolormesh(t[:,:,4])
-    # plt.colorbar()
-    # plt.show()
