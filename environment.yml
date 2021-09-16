@@ -1,0 +1,13 @@
+name: pysteps
+channels:
+- conda-forge
+- defaults
+dependencies:
+  - python>=3.7
+  - netCDF4
+  - netcdf-fortran
+  - numpy
+  - jinja2
+  - xarray
+  - pytest
+  - openpyxl

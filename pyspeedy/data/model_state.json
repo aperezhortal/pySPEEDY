@@ -1,0 +1,1340 @@
+{
+    "current_step": {
+        "dtype": "integer",
+        "dims": null,
+        "desc": "Current model step.",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "current_step"
+    },
+    "vor": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx, kx, t_levs)",
+        "desc": "Vorticity",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx",
+            "nx",
+            "lev",
+            "t_levs"
+        ],
+        "alt_name": "vor"
+    },
+    "div": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx, kx, t_levs)",
+        "desc": "Divergence",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx",
+            "nx",
+            "lev",
+            "t_levs"
+        ],
+        "alt_name": "div"
+    },
+    "t": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx, kx, t_levs)",
+        "desc": "Temperature",
+        "time_dim": null,
+        "units": "K",
+        "nc_dims": [
+            "mx",
+            "nx",
+            "lev",
+            "t_levs"
+        ],
+        "alt_name": "t"
+    },
+    "ps": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx, t_levs)",
+        "desc": "Log of (normalised) surface pressure",
+        "time_dim": null,
+        "units": "(p_s/p0)",
+        "nc_dims": [
+            "mx",
+            "nx",
+            "t_levs"
+        ],
+        "alt_name": "ps"
+    },
+    "tr": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx, kx, t_levs,ntr)",
+        "desc": "Tracers (tr(1): specific humidity in g/kg)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx",
+            "nx",
+            "lev",
+            "t_levs",
+            "ntr"
+        ],
+        "alt_name": "tr"
+    },
+    "phi": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx, kx)",
+        "desc": "Atmospheric geopotential",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx",
+            "nx",
+            "lev"
+        ],
+        "alt_name": "phi"
+    },
+    "phis": {
+        "dtype": "complex(8)",
+        "dims": "(mx, nx)",
+        "desc": "Surface geopotential",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "mx",
+            "nx"
+        ],
+        "alt_name": "phis"
+    },
+    "u_grid": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, kx)",
+        "desc": "eastward_wind",
+        "time_dim": null,
+        "units": "m/s",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "u"
+    },
+    "v_grid": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, kx)",
+        "desc": "northward_wind",
+        "time_dim": null,
+        "units": "m/s",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "v"
+    },
+    "t_grid": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, kx)",
+        "desc": "air_temperature",
+        "time_dim": null,
+        "units": "K",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "t"
+    },
+    "q_grid": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, kx)",
+        "desc": "specific_humidity",
+        "time_dim": null,
+        "units": "Kg/Kg",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "q"
+    },
+    "phi_grid": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, kx)",
+        "desc": "geopotential_height",
+        "time_dim": null,
+        "units": "m",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "phi"
+    },
+    "ps_grid": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "surface_air_pressure",
+        "time_dim": null,
+        "units": "Pa",
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ps"
+    },
+    "precnv": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Convective precipitation, total",
+        "time_dim": null,
+        "units": "g/(m^2 s)",
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "precnv"
+    },
+    "precls": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Large-scale precipitation, total",
+        "time_dim": null,
+        "units": "g/(m^2 s)",
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "precls"
+    },
+    "snowcv": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Convective precipitation, snow only",
+        "time_dim": null,
+        "units": "g/(m^2 s)",
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snowcv"
+    },
+    "snowls": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Large-scale precipitation, snow only",
+        "time_dim": null,
+        "units": "g/(m^2 s)",
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snowls"
+    },
+    "cbmf": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Cloud-base mass flux",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cbmf"
+    },
+    "tsr": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Top-of-atmosphere shortwave radiation (downward)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "tsr"
+    },
+    "ssrd": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Surface shortwave radiation (downward-only)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ssrd"
+    },
+    "ssr": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Surface shortwave radiation (net downward)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ssr"
+    },
+    "slrd": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Surface longwave radiation (downward-only)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "slrd"
+    },
+    "slr": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Surface longwave radiation (net upward)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "slr"
+    },
+    "olr": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Outgoing longwave radiation (upward)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "olr"
+    },
+    "slru": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,aux_dim)",
+        "desc": "Surface longwave emission (upward)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "aux_dim"
+        ],
+        "alt_name": "slru"
+    },
+    "ustr": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,aux_dim)",
+        "desc": "U-stress",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "aux_dim"
+        ],
+        "alt_name": "ustr"
+    },
+    "vstr": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,aux_dim)",
+        "desc": "Vstress",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "aux_dim"
+        ],
+        "alt_name": "vstr"
+    },
+    "shf": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,aux_dim)",
+        "desc": "Sensible heat flux",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "aux_dim"
+        ],
+        "alt_name": "shf"
+    },
+    "evap": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,aux_dim)",
+        "desc": "Evaporation",
+        "time_dim": null,
+        "units": "g/(m^2 s)",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "aux_dim"
+        ],
+        "alt_name": "evap"
+    },
+    "hfluxn": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,aux_dim)",
+        "desc": "Net heat flux into surface",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "aux_dim"
+        ],
+        "alt_name": "hfluxn"
+    },
+    "tt_rsw": {
+        "dtype": "real(8)",
+        "dims": "(ix, il,kx)",
+        "desc": "Flux of short-wave radiation absorbed in each atmospheric layer",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev"
+        ],
+        "alt_name": "tt_rsw"
+    },
+    "phi0": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Unfiltered surface geopotential",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "phi0"
+    },
+    "orog": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Orography",
+        "time_dim": null,
+        "units": "m",
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "orog"
+    },
+    "phis0": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Spectrally-filtered surface geopotential",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "phis0"
+    },
+    "alb0": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Bare-land annual-mean albedo",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb0"
+    },
+    "forog": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Orographic factor for land surface drag",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "forog"
+    },
+    "fmask_orig": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Original (fractional) land-sea mask",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "fmask_orig"
+    },
+    "xgeop1": {
+        "dtype": "real(8)",
+        "dims": "(kx)",
+        "desc": "Constant 1 for hydrostatic equation",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lev"
+        ],
+        "alt_name": "xgeop1"
+    },
+    "xgeop2": {
+        "dtype": "real(8)",
+        "dims": "(kx)",
+        "desc": "Constant 2 for hydrostatic equation",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lev"
+        ],
+        "alt_name": "xgeop2"
+    },
+    "stl12": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Land surface temperature monthly-mean climatology",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "stl12"
+    },
+    "snowd12": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Snow depth (water equivalent) monthly-mean climatology",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "snowd12"
+    },
+    "soilw12": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Soil water availability monthly-mean climatology",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "soilw12"
+    },
+    "veg_low": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Low vegetation fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "veg_low"
+    },
+    "veg_high": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "High vegetation fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "veg_high"
+    },
+    "soil_wc_l1": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Soil water content: Layer 1",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "soil_wc_l1"
+    },
+    "soil_wc_l2": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Soil water content: Layer 2",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "soil_wc_l2"
+    },
+    "soil_wc_l3": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Soil water content: Layer 3",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "soil_wc_l3"
+    },
+    "sst12": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Sea/ice surface temperature",
+        "time_dim": null,
+        "units": "K",
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "sst12"
+    },
+    "sea_ice_frac12": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 12)",
+        "desc": "Sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "sea_ice_frac12"
+    },
+    "sst_anom": {
+        "dtype": "real(8)",
+        "dims": "(ix, il, 0:n_months+1)",
+        "desc": "Observed SST anomaly (input).",
+        "time_dim": "n_months",
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "0:n_months+1"
+        ],
+        "alt_name": "sst_anom"
+    },
+    "increase_co2": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": " Flag for CO2 optical thickness increase",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "increase_co2"
+    },
+    "compute_shortwave": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": "Flag for shortwave radiation routine (turned on and off in main loop depending on the value of nstrad)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "compute_shortwave"
+    },
+    "air_absortivity_co2": {
+        "dtype": "real(8)",
+        "dims": null,
+        "desc": "Absorptivity of air in CO2 band",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "air_absortivity_co2"
+    },
+    "flux_solar_in": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Flux of incoming solar radiation",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "flux_solar_in"
+    },
+    "flux_ozone_lower": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Flux absorbed by ozone (lower stratosphere)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "flux_ozone_lower"
+    },
+    "flux_ozone_upper": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Flux absorbed by ozone (upper stratosphere)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "flux_ozone_upper"
+    },
+    "zenit_correction": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Zenith angle correction to (downward) absorptivity",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "zenit_correction"
+    },
+    "stratospheric_correction": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Stratospheric correction for polar night",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "stratospheric_correction"
+    },
+    "qcloud_equiv": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": " Equivalent specific humidity of clouds",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "qcloud_equiv"
+    },
+    "rhcapl": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "1/heat capacity (land)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "rhcapl"
+    },
+    "cdland": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": " 1/dissipation time (land)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cdland"
+    },
+    "stlcl_obs": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Climatological land surface temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "stlcl_obs"
+    },
+    "snowdcl_obs": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Climatological snow depth (water equivalent)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snowdcl_obs"
+    },
+    "soilwcl_obs": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Climatological soil water availability",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "soilwcl_obs"
+    },
+    "land_temp": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Land surface temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "land_temp"
+    },
+    "snow_depth": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Snow depth (water equivalent)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snow_depth"
+    },
+    "soil_avail_water": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Soil water availability",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "soil_avail_water"
+    },
+    "stl_lm": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Land-model surface temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "stl_lm"
+    },
+    "fmask_land": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": "Fraction of land",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "fmask_land"
+    },
+    "bmask_land": {
+        "dtype": "real(8)",
+        "dims": "(ix, il)",
+        "desc": " Binary land mask",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "bmask_land"
+    },
+    "land_coupling_flag": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": "Flag for land-coupling (0: off, 1: on)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "land_coupling_flag"
+    },
+    "rhcaps": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./heat_capacity (sea)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "rhcaps"
+    },
+    "rhcapi": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./heat_capacity (ice)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "rhcapi"
+    },
+    "cdsea": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./dissip_time (sea)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cdsea"
+    },
+    "cdice": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "1./dissip_time (ice)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "cdice"
+    },
+    "fmask_sea": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Fraction of sea",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "fmask_sea"
+    },
+    "bmask_sea": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Binary sea mask",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "bmask_sea"
+    },
+    "deglat_s": {
+        "dtype": "real(p)",
+        "dims": "(il)",
+        "desc": "Grid latitudes",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lat"
+        ],
+        "alt_name": "deglat_s"
+    },
+    "hfseacl": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Annual-mean heat flux into sea sfc.",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "hfseacl"
+    },
+    "sstom12": {
+        "dtype": "real(p)",
+        "dims": "(ix, il, 12)",
+        "desc": "Ocean model SST climatology",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "12"
+        ],
+        "alt_name": "sstom12"
+    },
+    "sstcl_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Observed clim. SST",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstcl_ob"
+    },
+    "sicecl_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Clim. sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sicecl_ob"
+    },
+    "ticecl_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Clim. sea ice temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ticecl_ob"
+    },
+    "sstan_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Daily observed SST anomaly",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstan_ob"
+    },
+    "sstcl_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Ocean model clim. SST",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstcl_om"
+    },
+    "sst_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "SST (full-field)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sst_am"
+    },
+    "sstan_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "SST anomaly",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sstan_am"
+    },
+    "sice_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sice_am"
+    },
+    "tice_am": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Sea ice temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "tice_am"
+    },
+    "sst_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Ocean model SST",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sst_om"
+    },
+    "sice_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Model sea ice fraction",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "sice_om"
+    },
+    "tice_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Model sea ice temperature",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "tice_om"
+    },
+    "ssti_om": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Model SST + sea ice temp.",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "ssti_om"
+    },
+    "wsst_ob": {
+        "dtype": "real(p)",
+        "dims": "(ix, il)",
+        "desc": "Weight for obs. SST anomaly in coupled runs",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "wsst_ob"
+    },
+    "sst_anomaly_coupling_flag": {
+        "dtype": "logical",
+        "dims": null,
+        "desc": "Weight for obs. SST anomaly in coupled runs",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "sst_anomaly_coupling_flag"
+    },
+    "ablco2_ref": {
+        "dtype": "real(8)",
+        "dims": null,
+        "desc": "Initial absorptivity of air in CO2 band (t=t0)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "ablco2_ref"
+    },
+    "fband": {
+        "dtype": "real(8)",
+        "dims": "(100:400,4)",
+        "desc": "Energy fraction emitted in each LW band = f(T)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "100:400",
+            "4"
+        ],
+        "alt_name": "fband"
+    },
+    "alb_land": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Daily-mean albedo over land (bare-land + snow)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb_land"
+    },
+    "alb_sea": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Daily-mean albedo over sea  (open sea + sea ice)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb_sea"
+    },
+    "alb_surface": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Combined surface albedo (land + sea)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "alb_surface"
+    },
+    "snowc": {
+        "dtype": "real(8)",
+        "dims": "(ix,il)",
+        "desc": "Effective snow cover (fraction)",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat"
+        ],
+        "alt_name": "snowc"
+    },
+    "rad_flux": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,4)",
+        "desc": "Radiative flux in different spectral bands",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "4"
+        ],
+        "alt_name": "rad_flux"
+    },
+    "rad_tau2": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,kx,4)",
+        "desc": "Transmissivity of atmospheric layers",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev",
+            "4"
+        ],
+        "alt_name": "rad_tau2"
+    },
+    "rad_st4a": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,kx,2)",
+        "desc": "Blackbody emission from full and half atmospheric levels",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "lev",
+            "2"
+        ],
+        "alt_name": "rad_st4a"
+    },
+    "rad_strat_corr": {
+        "dtype": "real(8)",
+        "dims": "(ix,il,2)",
+        "desc": "Stratospheric correction term",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": [
+            "lon",
+            "lat",
+            "2"
+        ],
+        "alt_name": "rad_strat_corr"
+    },
+    "lon": {
+        "dtype": "real",
+        "dims": "(ix)",
+        "desc": "longitude",
+        "time_dim": null,
+        "units": "[degrees]",
+        "nc_dims": [
+            "lon"
+        ],
+        "alt_name": "lon"
+    },
+    "lat": {
+        "dtype": "real",
+        "dims": "(il)",
+        "desc": "latitude",
+        "time_dim": null,
+        "units": "[degrees]",
+        "nc_dims": [
+            "lat"
+        ],
+        "alt_name": "lat"
+    },
+    "lev": {
+        "dtype": "real",
+        "dims": "(kx)",
+        "desc": "atmosphere_sigma_coordinate",
+        "time_dim": null,
+        "units": "[]",
+        "nc_dims": [
+            "lev"
+        ],
+        "alt_name": "lev"
+    },
+    "mod_spectral": {
+        "dtype": "class(ModSpectral_t)",
+        "dims": null,
+        "desc": "Spectral module instance",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "mod_spectral"
+    },
+    "mod_implicit": {
+        "dtype": "class(ModImplicit_t)",
+        "dims": null,
+        "desc": "Implicit module instance",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "mod_implicit"
+    }
+}

@@ -25,8 +25,8 @@ contains
     !> Compute convective fluxes of dry static energy and moisture using a
     !  simplified mass-flux scheme
     subroutine get_convection_tendencies(psa, se, qa, qsat, itop, cbmf, precnv, dfse, dfqa)
-        use physical_constants, only: p0, alhc, alhs, wvi, grav
-        use geometry, only: fsg, dhs
+        use physical_constants, only: p0, grav, alhc, alhs
+        use geometry, only: fsg, dhs, wvi
 
         real(p), intent(in)  :: psa(ix,il)     !! Normalised surface pressure [p/p0]
         real(p), intent(in)  :: se(ix,il,kx)   !! Dry static energy [c_p.T + g.z]
@@ -168,7 +168,8 @@ contains
     !  relative humidity in the boundary-layer level and lowest tropospheric
     !  level exceed a set threshold (rhbl).
     subroutine diagnose_convection(psa, se, qa, qsat, itop, qdif)
-        use physical_constants, only: alhc, wvi
+        use physical_constants, only: alhc
+        use geometry, only : wvi
 
         real(p), intent(in)  :: psa(ix,il)     !! Normalised surface pressure [p/p0]
         real(p), intent(in)  :: se(ix,il,kx)   !! Dry static energy [c_p.T + g.z]
@@ -178,10 +179,16 @@ contains
         real(p), intent(out) :: qdif(ix,il)    !! Excess humidity in convective gridboxes
 
         integer :: i, j, k, ktop1, ktop2, nl1, nlp
-        real(p) :: mss(ix,il,2:kx), mse0, mse1, mss0, mss2, msthr
+        real(p) :: mse0, mse1, mss0, mss2, msthr
         real(p) :: qthr0, qthr1, rlhc
         logical :: lqthr
 
+        real(p), allocatable :: mss(:,:,:)
+
+        allocate(mss(ix,il,2:kx))
+        
+        msthr = 0 
+        
         nl1 = kx - 1
         nlp = kx + 1
 
@@ -242,5 +249,6 @@ contains
                 end if
             end do
         end do
-    end
+        deallocate(mss)
+    end subroutine
 end module

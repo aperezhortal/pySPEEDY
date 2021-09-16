@@ -5,91 +5,113 @@ module initialization
     implicit none
 
     private
-    public initialize
+    public initialize_state, initialize_modules, deinitialize_modules
+
+    logical, save :: modules_initialized_flag = .false.
 
 contains
+
+    ! Intialize global variables in the modules. This is done only once.
+    subroutine initialize_modules()
+        use geometry, only : initialize_geometry
+
+        if (modules_initialized_flag) then
+            !Do nothing, the module is already initialized.
+            return
+        end if
+
+        ! Initialize model geometry
+        call initialize_geometry
+
+        modules_initialized_flag = .true.
+    end subroutine
+
+    ! Deinitialize the allocatable global variables in the different modules.
+    subroutine deinitialize_modules()
+        modules_initialized_flag = .false.
+    end subroutine
+
     !> Initializes everything.
-    subroutine initialize
-        use params, only: issty0, initialize_params
-        use date, only: isst0, initialize_date, start_datetime
-        use coupler, only: initialize_coupler
-        use sea_model, only: sea_coupling_flag, sst_anomaly_coupling_flag
-        use geometry, only: initialize_geometry
-        use spectral, only: initialize_spectral
-        use geopotential, only: initialize_geopotential
-        use horizontal_diffusion, only: initialize_horizontal_diffusion
-        use physics, only: initialize_physics
-        use input_output, only: output
-        use time_stepping, only: first_step
-        use boundaries, only: initialize_boundaries
-        use prognostics, only: initialize_prognostics
-        use forcing, only: set_forcing
+    subroutine initialize_state(state, control_params)
+        use model_control, only : ControlParams_t
+        use coupler, only : initialize_coupler
+        use sea_model, only : sea_coupling_flag
+        use time_stepping, only : first_step
+        use boundaries, only : initialize_boundaries
+        use model_state, only : ModelState_t
+        use prognostics, only : initialize_prognostics
+        use geopotential, only : initialize_geopotential
+        use forcing, only : set_forcing
+        use geometry, only : fsg, radang
+        use params, only : ix, il
 
-        call print_speedy_title
+        integer :: k
 
-        ! Initialize model parameters
-        call initialize_params
+        ! =========================================================================
+        ! Subroutine definitions
+        ! =========================================================================
+        type(ModelState_t), intent(inout) :: state
+        type(ControlParams_t), intent(out) :: control_params
 
-        ! Initialize date
-        call initialize_date
+        ! call print_speedy_title
+        state%current_step = 0
 
-        ! Initialize month index for reading SST anomaly file
-        isst0 = (start_datetime%year - issty0) * 12 + start_datetime%month
+        ! Intialize modules if they were not initialized.
+        call initialize_modules()
+
+        ! Initialize spectral transforms module
+        call state%mod_spectral%initialize()
+
+        ! Initialize implicit module
+        call state%mod_implicit%initialize()
+
+        call initialize_geopotential(state)
 
         ! Check consistency of coupling and prescribed SST anomaly flags
-        if (sea_coupling_flag >= 4) sst_anomaly_coupling_flag = 1
+        if (sea_coupling_flag >= 4) state%sst_anomaly_coupling_flag = .true.
 
         ! =========================================================================
         ! Initialization of atmospheric model constants and variables
         ! =========================================================================
 
-        ! Initialize model geometry
-        call initialize_geometry
-
-        ! Initialize spectral transforms
-        call initialize_spectral
-
-        ! Initialize geopotential calculations
-        call initialize_geopotential
-
-        ! Initialize horizontal diffusion
-        call initialize_horizontal_diffusion
-
-        ! Initialize constants for physical parametrization
-        call initialize_physics
-
         ! Initialize boundary conditions (land-sea mask, sea ice etc.)
-        call initialize_boundaries
+        call initialize_boundaries(state)
 
         ! Initialize model variables
-        call initialize_prognostics
+        call initialize_prognostics(state, control_params)
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)
         ! =========================================================================
-
-        call initialize_coupler
+        call initialize_coupler(state, control_params)
 
         ! =========================================================================
         ! Initialization of first time step
         ! =========================================================================
-
         ! Set up the forcing fields for the first time step
-        call set_forcing(0)
+        call set_forcing(state, 0, control_params%model_datetime, control_params%tyear)
 
         ! Do the initial (2nd-order) time step, initialize the semi-implicit scheme
-        call first_step
+        call first_step(state)
+
+        ! Initialize coordinates
+        state%lev(:) = fsg(:)
+        state%lon(:) = (/(3.75 * k, k = 0, ix - 1)/)
+        state%lat(:) = (/(radang(k) * 90.0 / asin(1.0), k = 1, il)/)
+
+        state%initialized = .true.
+
     end subroutine
 
     !> Prints SPEEDY.f90 banner.
     subroutine print_speedy_title
-        write (*,'(A)') ''
-        write (*,'(A)') '  _____ ______  _____  _____ ______ __   __     __  _____  _____'
-        write (*,'(A)') ' /  ___|| ___ \|  ___||  ___||  _  \\ \ / /    / _||  _  ||  _  |'
-        write (*,'(A)') ' \ `--. | |_/ /| |__  | |__  | | | | \ V /    | |_ | |_| || |/  |'
-        write (*,'(A)') '  `--. \|  __/ |  __| |  __| | | | |  \ /     |  _|\____ ||  /| |'
-        write (*,'(A)') ' /\__/ /| |    | |___ | |___ | |/ /   | |   _ | |  .___/ /\ |_/ /'
-        write (*,'(A)') ' \____/ \_|    \____/ \____/ |___/    \_/  (_)|_|  \____/  \___/'
-        write (*,'(A)') ''
+        write (*, '(A)') ''
+        write (*, '(A)') '  _____ ______  _____  _____ ______ __   __     __  _____  _____'
+        write (*, '(A)') ' /  ___|| ___ \|  ___||  ___||  _  \\ \ / /    / _||  _  ||  _  |'
+        write (*, '(A)') ' \ `--. | |_/ /| |__  | |__  | | | | \ V /    | |_ | |_| || |/  |'
+        write (*, '(A)') '  `--. \|  __/ |  __| |  __| | | | |  \ /     |  _|\____ ||  /| |'
+        write (*, '(A)') ' /\__/ /| |    | |___ | |___ | |/ /   | |   _ | |  .___/ /\ |_/ /'
+        write (*, '(A)') ' \____/ \_|    \____/ \____/ |___/    \_/  (_)|_|  \____/  \___/'
+        write (*, '(A)') ''
     end subroutine
 end module

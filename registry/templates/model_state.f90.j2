@@ -1,0 +1,123 @@
+!> author: Andres Perez Hortal
+!  date: 23/06/2021
+!  Module where all the model state variables are declared.
+!  THIS CODE IS AUTOMATICALLY GENERATED.
+!  DO NOT MODIFY IT DIRECTLY.
+
+module model_state
+    use types, only: p
+    use spectral, only: ModSpectral_t
+    use implicit, only: ModImplicit_t
+    use horizontal_diffusion,only: ModHorizontalDiffusion_t
+
+    implicit none
+
+    private
+    public ModelState_t, ModelState_Ptr_t
+    public ModelState_allocate, ModelState_deallocate
+    {% for var in state_arrays if var.time_dim %}
+    public ModelState_allocate_{{var.name}}
+    {% endfor %}
+
+
+    !> Model state
+    type ModelState_t
+
+        logical :: initialized = .false.
+
+        {% for var in state_modules %}
+        {{ var.dtype }}, allocatable :: {{ var.name }} ! {{ var.desc }}
+        logical :: {{var.name}}_initialized = .false.
+        {% endfor %}
+
+        {% for var in state_arrays %}
+        {{ var.dtype }}, allocatable, {{ var.dimension }}  :: {{ var.name }} ! {{ var.desc }}
+        logical :: {{var.name}}_initialized = .false.
+
+        {% endfor %}
+
+        {% for var in state_scalars %}
+        {{ var.dtype }} :: {{ var.name }} ! {{ var.desc }}
+        {% endfor %}
+
+    end type
+
+    type ModelState_Ptr_t
+        type(ModelState_t), pointer :: p => NULL()
+    end type
+
+contains
+
+    !> Allocate Model State variables
+    subroutine ModelState_allocate(state)
+        use params, only: mx, nx, kx, ntr, ix, il, iy, t_levs, aux_dim
+        type(ModelState_t), intent(out) :: state
+
+        {% for var in state_modules %}
+        allocate( state%{{var.name}} ) ! {{ var.desc }}
+        state%{{var.name}}_initialized = .true.
+        {% endfor %}
+
+        !========================================================
+        ! Allocate model state variables
+        {% for var in state_arrays if not var.time_dim %}
+        allocate( state%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
+        state%{{var.name}}_initialized = .true.
+        state%{{var.name}}=0
+
+        {% endfor %}
+
+        {% for var in state_arrays if var.time_dim %}
+        ! IMPORTANT: {{var.name}} is not initialized here
+        {% endfor %}
+
+        ! Initialize default values for scalars
+        {% for var in state_scalars if var.value is not none %}
+        state%{{var.name}}= {{var.value}}
+        {% endfor %}
+
+    end subroutine
+
+
+    {% for var in state_arrays if var.time_dim %}
+    !> Allocate {{var.name}}
+    subroutine ModelState_allocate_{{var.name}}(state, {{var.time_dim}})
+        use params, only: mx, nx, kx, ntr, ix, il, iy, t_levs, aux_dim
+        type(ModelState_t), intent(inout) :: state
+        integer, intent(in) :: {{var.time_dim}}
+
+        !=========================================
+        ! Allocate {{var.name}}(lon, lat, {{var.time_dim}})
+        allocate( state%{{var.name}}{{var.dims}} ) ! {{ var.desc }}
+        state%{{var.name}} = 0
+        state%{{var.name}}_initialized = .true.
+    end subroutine
+    {% endfor %}
+
+
+    !> Deallocate model state variables
+    subroutine ModelState_deallocate(state)
+        type(ModelState_t), intent(inout) :: state
+
+        !========================================================
+        ! Safely deallocate the model state variables
+        {% for var in state_arrays %}
+        if( allocated(state%{{var.name}}) ) deallocate( state%{{var.name}} ) ! {{ var.desc }}
+        state%{{var.name}}_initialized = .false.
+
+        {% endfor %}
+
+        {% for var in state_modules %}
+        if( allocated(state%{{var.name}}) ) then
+            call state%{{var.name}}%delete()
+            deallocate( state%{{var.name}} ) ! {{ var.desc }}
+        end if
+        state%{{var.name}}_initialized = .false.
+
+        {% endfor %}
+
+
+        state%initialized = .false.
+    end subroutine
+
+end module

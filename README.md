@@ -8,3 +8,10 @@ SPEEDY.f90 has only one dependency: the NetCDF library. To build SPEEDY.f90:
 2. Set the `NETCDF` environment variable to point to the directory containing the NetCDF `include` and `lib` directories. For example, for my system I run `export NETCDF=/usr`.
 3. Run `build.sh` to build SPEEDY.f90: `bash build.sh`. A binary directory, `bin`, will be created an the SPEEDY.f90 executable `speedy` will be placed in this directory.
 4. Run `run.sh` to run SPEEDY.f90: `bash run.sh`. The output will be stored in `rundir`. By default, SPEEDY.f90 will run for two days and output one NetCDF file for each time step.
+
+
+## Dependencies
+
+- numpy
+- xarray
+- python-dateutil
