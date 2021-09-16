@@ -52,21 +52,21 @@ contains
             end do
         end do
 
-        ! 2. Print results to screen
-        if (mod(istep, nstdia) == 0) then
-            print 2001, istep, (diag(k, 1), k=1, kx)
-            print 2002, (diag(k, 2), k=1, kx)
-            print 2003, (diag(k, 3), k=1, kx)
-        end if
+!        ! 2. Print results to screen
+!        if (mod(istep, nstdia) == 0) then
+!            print 2001, istep, (diag(k, 1), k=1, kx)
+!            print 2002, (diag(k, 2), k=1, kx)
+!            print 2003, (diag(k, 3), k=1, kx)
+!        end if
 
         ! 3. Stop integration if model variables are out of range
         do k = 1, kx
             if (diag(k, 1) > 500.0 .or. diag(k, 2) > 500.0 .or. diag(k, 3) < 180.0 .or. &
                 & diag(k, 3) > 320.0) then
 
-                print 2001, istep, (diag(kk, 1), kk=1, kx)
-                print 2002, (diag(kk, 2), kk=1, kx)
-                print 2003, (diag(kk, 3), kk=1, kx)
+!                print 2001, istep, (diag(kk, 1), kk=1, kx)
+!                print 2002, (diag(kk, 2), kk=1, kx)
+!                print 2003, (diag(kk, 3), kk=1, kx)
 
                 stop 'Model variables out of accepted range'
             end if

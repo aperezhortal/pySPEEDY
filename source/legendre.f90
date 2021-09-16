@@ -42,7 +42,6 @@ contains
         allocate(mm(mx), wavenum_tot(mx, nx))
 
         ! Allocate internal arrays
-        write(*,*) "this%cpol", allocated(this%cpol)
         allocate(this%cpol(2 * mx, nx, iy))  !! The Legendre polynomials
         allocate(this%epsi(mx + 1, nx + 1))   !! Epsilon function used for various spectral calculations
         allocate(this%repsi(mx + 1, nx + 1))  !! 1/epsi
@@ -81,7 +80,7 @@ contains
                 end if
             end do
         end do
-        write(*, *) "D"
+
         ! Generate associated Legendre polynomials
         do j = 1, iy
             poly = get_legendre_poly(j, this%epsi, this%repsi)

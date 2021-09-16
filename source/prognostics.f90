@@ -48,7 +48,6 @@ contains
         state%phis = mod_spectral%grid2spec(state%phis0)
 
         ! 2. Start from reference atmosphere (at rest)
-        write (*, '(A)') 'Starting from rest'
 
         ! 2.1 Set vorticity, divergence and tracers to zero
         state%vor(:, :, :, 1) = (0.0, 0.0)
