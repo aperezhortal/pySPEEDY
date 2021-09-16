@@ -1,5 +1,5 @@
 module matrix_inversion
-    use types, only: p
+    use types, only : p
 
     implicit none
 
@@ -7,8 +7,8 @@ module matrix_inversion
     public inv
 
 contains
-    subroutine ludcmp(a,n,np,indx,d)
-        real(p), intent(inout) :: a(np,np), d
+    subroutine ludcmp(a, n, np, indx, d)
+        real(p), intent(inout) :: a(np, np), d
         integer, intent(inout) :: indx(n)
         integer, intent(in) :: n, np
         integer, parameter :: nmax = 100
@@ -18,103 +18,108 @@ contains
 
         d = 1.0
         imax = 0
-        
-        do i=1,n
-            aamax=0.
-            do j=1,n
-                if(abs(a(i,j)).gt.aamax) aamax=abs(a(i,j))
+
+        do i = 1, n
+            aamax = 0.
+            do j = 1, n
+                if(abs(a(i, j))>aamax) aamax = abs(a(i, j))
             end do
-            if(aamax.eq.0.) stop 'singular'
-            vv(i)=1./aamax
+            if(aamax==0.) then
+                write(0,*) "Error during the LU decomposition. The input matrix is singular."
+                stop
+            end if
+            vv(i) = 1. / aamax
         end do
 
-        do j=1,n
-            if(j.gt.1) then
-                do i=1,j-1
-                    sum=a(i,j)
-                    if(i.gt.1) then
-                        do k=1,i-1
-                            sum=sum-a(i,k)*a(k,j)
+        do j = 1, n
+            if(j>1) then
+                do i = 1, j - 1
+                    sum = a(i, j)
+                    if(i>1) then
+                        do k = 1, i - 1
+                            sum = sum - a(i, k) * a(k, j)
                         end do
-                        a(i,j)=sum
+                        a(i, j) = sum
                     end if
                 end do
             end if
 
-            aamax=0.
-            do i=j,n
-                sum=a(i,j)
-                if(j.gt.1) then
-                    do k=1,j-1
-                      sum=sum-a(i,k)*a(k,j)
+            aamax = 0.
+            do i = j, n
+                sum = a(i, j)
+                if (j>1) then
+                    do k = 1, j - 1
+                        sum = sum - a(i, k) * a(k, j)
                     end do
-                    a(i,j)=sum
+                    a(i, j) = sum
                 end if
-                dum=vv(i)*abs(sum)
-                if(dum.ge.aamax) then
-                    imax=i
-                    aamax=dum
+                dum = vv(i) * abs(sum)
+                if(dum>=aamax) then
+                    imax = i
+                    aamax = dum
                 end if
             end do
 
-            if(j.ne.imax) then
-                do k=1,n
-                    dum=a(imax,k)
-                    a(imax,k)=a(j,k)
-                    a(j,k)=dum
+            if (j/=imax) then
+                do k = 1, n
+                    dum = a(imax, k)
+                    a(imax, k) = a(j, k)
+                    a(j, k) = dum
                 end do
-                d=-d
-                vv(imax)=vv(j)
+                d = -d
+                vv(imax) = vv(j)
             end if
 
-            indx(j)=imax
-            if(j.ne.n) then
-                if(a(j,j).eq.0) a(j,j)=tiny
-                dum=1./a(j,j)
-                do i=j+1,n
-                    a(i,j)=a(i,j)*dum
+            indx(j) = imax
+            if(j/=n) then
+                if(a(j, j)==0) a(j, j) = tiny
+                dum = 1. / a(j, j)
+                do i = j + 1, n
+                    a(i, j) = a(i, j) * dum
                 end do
             end if
         end do
 
-        if(a(n,n).eq.0.) a(n,n)=tiny
+        if (a(n, n)==0.) then
+            a(n, n) = tiny
+        end if
     end
 
-    subroutine lubksb(a,n,np,indx,b)
-        real(p), intent(inout) :: a(np,np), b(n)
+    subroutine lubksb(a, n, np, indx, b)
+        real(p), intent(inout) :: a(np, np), b(n)
         integer, intent(in) :: n, np, indx(n)
         integer :: ii, i, ll, j
         real(p) :: sum
 
-        ii=0
+        ii = 0
 
-        do i=1,n
-            ll=indx(i)
-            sum=b(ll)
-            b(ll)=b(i)
-            if(ii.ne.0) then
-                do j=ii,i-1
-                    sum=sum-a(i,j)*b(j)
+        do i = 1, n
+            ll = indx(i)
+            sum = b(ll)
+            b(ll) = b(i)
+            if(ii/=0) then
+                do j = ii, i - 1
+                    sum = sum - a(i, j) * b(j)
                 end do
-            else if(sum.ne.0) then
-                ii=i
+            else if(sum/=0) then
+                ii = i
             end if
-            b(i)=sum
+            b(i) = sum
         end do
 
-        do i=n,1,-1
-            sum=b(i)
-            if(i.lt.n) then
-              do j=i+1,n
-                sum=sum-a(i,j)*b(j)
-              end do
+        do i = n, 1, -1
+            sum = b(i)
+            if(i<n) then
+                do j = i + 1, n
+                    sum = sum - a(i, j) * b(j)
+                end do
             end if
-            b(i)=sum/a(i,i)
+            b(i) = sum / a(i, i)
         end do
     end
 
-    subroutine inv(a,y,indx,n)
-        real(p), intent(inout) :: a(n,n), y(n,n)
+    subroutine inv(a, y, indx, n)
+        real(p), intent(inout) :: a(n, n), y(n, n)
         integer, intent(inout) :: indx(n)
         integer, intent(in) :: n
         integer :: i
@@ -122,14 +127,14 @@ contains
 
         y = 0.0
 
-        do i=1,n
-            y(i,i)=1.
+        do i = 1, n
+            y(i, i) = 1.
         end do
 
-        call ludcmp(a,n,n,indx,d)
+        call ludcmp(a, n, n, indx, d)
 
-        do i=1,n
-            call lubksb(a,n,n,indx,y(1,i))
+        do i = 1, n
+            call lubksb(a, n, n, indx, y(1, i))
         end do
     end
 end module

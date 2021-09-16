@@ -26,7 +26,7 @@ contains
 
     !> Initializes all spectral variables starting from a reference atmosphere.
     subroutine initialize_from_rest_state(state, control_params)
-        use dynamical_constants, only : gamma, hscale, hshum, refrh1
+        use physical_constants, only : gamma, hscale, hshum, refrh1
         use physical_constants, only : grav, rgas
         use geometry, only : fsg
         use diagnostics, only : check_diagnostics

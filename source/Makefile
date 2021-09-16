@@ -33,7 +33,6 @@ FILES= \
        coupler.o \
 	   model_control.o \
 	   diagnostics.o \
-	   dynamical_constants.o \
 	   forcing.o \
 	   fourier.o \
 	   geometry.o \
@@ -87,18 +86,17 @@ boundaries.o           : physical_constants.o params.o  spectral.o types.o
 convection.o           : params.o physical_constants.o types.o
 coupler.o              : land_model.o sea_model.o
 model_control.o        : types.o
-dynamical_constants.o  : types.o
 fourier.o              : params.o geometry.o fftpack.o types.o
 geometry.o             : params.o physical_constants.o types.o
 geopotential.o         : params.o physical_constants.o geometry.o
-horizontal_diffusion.o : params.o dynamical_constants.o types.o
+horizontal_diffusion.o : params.o physical_constants.o types.o
 humidity.o             : params.o types.o
-implicit.o             : params.o dynamical_constants.o physical_constants.o geometry.o\
+implicit.o             : params.o physical_constants.o geometry.o\
                          horizontal_diffusion.o matrix_inversion.o types.o
 initialization.o       : coupler.o params.o model_control.o  time_stepping.o boundaries.o\
                          spectral.o sea_model.o physics.o geopotential.o \
 						 prognostics.o forcing.o model_state.o
-forcing.o              : dynamical_constants.o shortwave_radiation.o params.o \
+forcing.o              : physical_constants.o shortwave_radiation.o params.o \
                          physical_constants.o boundaries.o model_control.o land_model.o mod_radcon.o\
 						 surface_fluxes.o model_control.o sea_model.o longwave_radiation.o humidity.o\
 						 horizontal_diffusion.o types.o
@@ -108,7 +106,7 @@ large_scale_condensation.o : params.o physical_constants.o types.o
 legendre.o             : params.o physical_constants.o geometry.o types.o
 matrix_inversion.o     : types.o
 diagnostics.o          : params.o spectral.o types.o
-prognostics.o          : params.o dynamical_constants.o physical_constants.o geometry.o\
+prognostics.o          : params.o physical_constants.o geometry.o\
                          boundaries.o diagnostics.o spectral.o  types.o
 interpolation.o        : params.o model_control.o types.o
 physical_constants.o   : params.o types.o
@@ -128,6 +126,6 @@ spectral.o             : params.o physical_constants.o legendre.o fourier.o type
 sppt.o                 : params.o physical_constants.o spectral.o types.o
 tendencies.o           : params.o implicit.o prognostics.o physical_constants.o geometry.o\
                          physics.o spectral.o geopotential.o types.o
-time_stepping.o        : dynamical_constants.o params.o prognostics.o tendencies.o\
+time_stepping.o        : physical_constants.o params.o prognostics.o tendencies.o\
                          horizontal_diffusion.o types.o
 vertical_diffusion     : params.o physical_constants.o geometry.o types.o

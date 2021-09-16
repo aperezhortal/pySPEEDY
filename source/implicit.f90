@@ -39,7 +39,7 @@ contains
     !  the biharmonic diffusion, which is assumed always to be backwards
     !  implicit, are defined in initialize_implicit).
     subroutine ModImplicit_initialize(this)
-        use dynamical_constants, only : gamma
+        use physical_constants, only : gamma
         use physical_constants, only : akap, rgas, grav
         use geometry, only : fsg, fsgr
         use horizontal_diffusion, only : ModHorizontalDiffusion_initialize
@@ -78,7 +78,7 @@ contains
     end subroutine
 
     subroutine ModImplicit_set_time_step(this, dt)
-        use dynamical_constants, only : gamma
+        use physical_constants, only : gamma
         use physical_constants, only : akap, rgas, grav, rearth
         use geometry, only : hsg, dhs, fsg
         use horizontal_diffusion, only : ModHorizontalDiffusion_initialize

@@ -42,7 +42,7 @@ module horizontal_diffusion
 contains
     !> Initializes the arrays used for horizontal diffusion.
     subroutine ModHorizontalDiffusion_initialize(this)
-        use dynamical_constants, only : thd, thdd, thds, gamma, hscale, hshum
+        use physical_constants, only : thd, thdd, thds, gamma, hscale, hshum
         use physical_constants, only : grav, rgas
         use geometry, only : fsg
 

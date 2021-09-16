@@ -105,13 +105,12 @@ class Speedy:
 
     @staticmethod
     def _dealloc_date(container):
+        """Deallocate a datetime fortran object."""
         if container is not None:
             _speedy.close_datetime(container)
 
     def __getitem__(self, var_name):
-        """
-        Getter for state variables
-        """
+        """Getter for state variables."""
         _getter = getattr(_speedy, f"get_{var_name}", None)
         if _getter is None:
             raise AttributeError(f"The state variable '{var_name}' does not exist.")
@@ -123,7 +122,7 @@ class Speedy:
         return _getter(self._state_cnt)
 
     def get_shape(self, var_name):
-        """Get state variable shape."""
+        """Get the shape of an state variable."""
         _getter = getattr(_speedy, f"get_{var_name}_shape", None)
         if _getter is None:
             raise AttributeError(
@@ -173,8 +172,7 @@ class Speedy:
 
     @staticmethod
     def _set_fortran_date(container, date_value):
-        """Create a datetime object from a fortran datetime"""
-
+        """Create a python datetime object from a fortran datetime"""
         Speedy._dealloc_date(container)
         if isinstance(date_value, datetime):
             return _speedy.create_datetime(
@@ -212,6 +210,7 @@ class Speedy:
         self._end_date = self._set_fortran_date(self._end_date, value)
 
     def default_init(self, bc_file=None):
+        """Initialization using the default initial and boundary conditions."""
         # In the model state, the variables follow the lon/lat dimension ordering.
 
         if bc_file is None:

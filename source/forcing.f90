@@ -13,7 +13,7 @@ contains
     !> Compute forcing fields for the current date and correction terms for
     !  horizontal diffusion
     subroutine set_forcing(state, imode, model_datetime, tyear)
-        use dynamical_constants, only : refrh1
+        use physical_constants, only : refrh1
         use params
         use physical_constants, only : rgas
         use surface_fluxes, only : set_orog_land_sfc_drag
@@ -103,7 +103,7 @@ contains
 
     !> Compute reference lapse rate as a function of latitude and date
     subroutine setgam(gamlat)
-        use dynamical_constants, only : gamma
+        use physical_constants, only : gamma
         use params
         use physical_constants, only : grav
 

@@ -36,7 +36,7 @@ contains
     ! If j1 == 2, j2 == 2 : leapfrog time step with time filter (eps = ROB)
     ! dt = time step
     subroutine step(state, j1, j2, dt)
-        use dynamical_constants, only : tdrs
+        use physical_constants, only : tdrs
         use model_state, only : ModelState_t
         use horizontal_diffusion, only : do_horizontal_diffusion
         use implicit, only : ModImplicit_t
