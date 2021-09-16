@@ -80,7 +80,7 @@ contains
     subroutine ModImplicit_set_time_step(this, dt)
         use dynamical_constants, only : gamma
         use physical_constants, only : akap, rgas, grav, rearth
-        use geometry, only : hsg, dhs, fsg, fsgr
+        use geometry, only : hsg, dhs, fsg
         use horizontal_diffusion, only : ModHorizontalDiffusion_initialize
         use matrix_inversion, only : inv
 
@@ -88,7 +88,7 @@ contains
         real(p), intent(in) :: dt !! Time step
 
         integer :: m, n, k, k1, k2, l
-        real(p) :: rgam, xi, xxi, xxx
+        real(p) :: xi, xxi, xxx
 
         real(p), allocatable, dimension(:) :: dsum
         integer, allocatable, dimension(:) :: indx

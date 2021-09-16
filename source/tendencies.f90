@@ -74,15 +74,16 @@ contains
         complex(p), intent(inout) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
         integer, intent(in) :: j1, j2
 
-        complex(p) :: dumc(mx, nx, 2)
+        ! Local vars
+        complex(p), allocatable, dimension(:, :, :) :: dumc
 
-        real(p), dimension(ix, il, kx) :: utend, vtend, ttend
-        real(p) :: trtend(ix, il, kx, ntr)
+        real(p), allocatable, dimension(:, :, :) :: utend, vtend, ttend
+        real(p), allocatable, dimension(:, :, :, :) :: trtend
 
-        real(p), dimension(ix, il, kx) :: ug, vg, tg, vorg, divg, tgg, puv
-        real(p), dimension(ix, il) :: px, py, umean, vmean, dmean
-        real(p) :: trg(ix, il, kx, ntr), sigdt(ix, il, kx + 1)
-        real(p) :: temp(ix, il, kx + 1), sigm(ix, il, kx + 1)
+        real(p), allocatable, dimension(:, :, :) :: ug, vg, tg, vorg, divg, tgg, puv
+        real(p), allocatable, dimension(:, :) :: px, py, umean, vmean, dmean
+        real(p), allocatable, dimension(:, :, :, :) :: trg
+        real(p), allocatable, dimension(:, :, :) :: sigdt, temp, sigm
 
         integer :: k, i, itr, j
 
@@ -90,6 +91,16 @@ contains
         class(ModImplicit_t), pointer :: mod_implicit
         mod_spectral => state%mod_spectral
         mod_implicit => state%mod_implicit
+
+        allocate(dumc(mx, nx, 2))
+        allocate(utend(ix, il, kx), vtend(ix, il, kx), ttend(ix, il, kx))
+        allocate(trtend(ix, il, kx, ntr))
+        allocate(ug(ix, il, kx), vg(ix, il, kx), tg(ix, il, kx))
+        allocate(vorg(ix, il, kx), divg(ix, il, kx), tgg(ix, il, kx), puv(ix, il, kx))
+        allocate(px(ix, il), py(ix, il), umean(ix, il), vmean(ix, il), dmean(ix, il))
+        allocate(trg(ix, il, kx, ntr), sigdt(ix, il, kx + 1))
+        allocate(temp(ix, il, kx + 1), sigm(ix, il, kx + 1))
+
         ! =========================================================================
         ! Convert prognostics to grid point space
         ! =========================================================================
@@ -254,6 +265,13 @@ contains
                 trdt(:, :, k, itr) = trdt(:, :, k, itr) + mod_spectral%grid2spec(trtend(:, :, k, itr))
             end do
         end do
+
+        deallocate(dumc)
+        deallocate(utend, vtend, ttend, trtend)
+        deallocate(ug, vg, tg, vorg, divg, tgg, puv)
+        deallocate(px, py, umean, vmean, dmean)
+        deallocate(trg, sigdt, temp, sigm)
+
     end subroutine
 
     ! Compute spectral tendencies of divergence, temperature  and log(surface pressure)
@@ -274,13 +292,16 @@ contains
         complex(p), intent(inout) :: psdt(mx, nx), divdt(mx, nx, kx), tdt(mx, nx, kx)
         integer, intent(in) :: j2
 
-        complex(p) :: dumk(mx, nx, kx + 1), dmeanc(mx, nx), sigdtc(mx, nx, kx + 1)
+        complex(p), allocatable, dimension(:,:,:) :: dumk, sigdtc
+        complex(p), allocatable, dimension(:,:) :: dmeanc
         integer :: k
 
         class(ModSpectral_t), pointer :: mod_spectral
         class(ModImplicit_t), pointer :: mod_implicit
         mod_spectral => state%mod_spectral
         mod_implicit => state%mod_implicit
+
+        allocate(dumk(mx, nx, kx + 1), dmeanc(mx, nx), sigdtc(mx, nx, kx + 1))
 
         ! Vertical mean div and pressure tendency
         dmeanc(:, :) = (0.0, 0.0)
@@ -323,5 +344,7 @@ contains
                     - mod_spectral%laplacian(state%phi(:, :, k) &
                             + rgas * mod_implicit%tref(k) * state%ps(:, :, j2))
         end do
+
+        deallocate(dumk, sigdtc, dmeanc)
     end subroutine
 end module

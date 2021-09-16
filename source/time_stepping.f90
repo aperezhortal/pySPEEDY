@@ -47,13 +47,14 @@ contains
 
         integer, intent(in) :: j1, j2
         real(p), intent(in) :: dt
-        complex(p), dimension(mx, nx, kx) :: vordt, divdt, tdt
-        complex(p) :: psdt(mx, nx), trdt(mx, nx, kx, ntr)
+
+        ! Local vars
         real(p) :: eps, sdrag
-
-        complex(p) :: ctmp(mx, nx, kx)
-
         integer :: n, itr, k, m
+
+        complex(p), allocatable, dimension(:, :, :) :: vordt, divdt, tdt, ctmp
+        complex(p), allocatable, dimension(:, :) :: psdt
+        complex(p), allocatable, dimension(:, :, :, :) :: trdt
 
         class(ModSpectral_t), pointer :: mod_spectral
         class(ModImplicit_t), pointer :: mod_implicit
@@ -61,10 +62,12 @@ contains
         mod_spectral => state%mod_spectral
         mod_implicit => state%mod_implicit
 
+        allocate(vordt(mx, nx, kx), divdt(mx, nx, kx), tdt(mx, nx, kx), ctmp(mx, nx, kx))
+        allocate(psdt(mx, nx), trdt(mx, nx, kx, ntr))
+
         ! =========================================================================
         ! Compute tendencies of prognostic variables
         ! =========================================================================
-
         call get_tendencies(state, vordt, divdt, tdt, psdt, trdt, j2)
 
         ! =========================================================================
@@ -139,6 +142,8 @@ contains
                     state%tr(:, :, :, :, itr), trdt(:, :, :, itr) &
                     )
         end do
+
+        deallocate(vordt, divdt, tdt, ctmp, psdt, trdt)
     end
 
     ! Perform time integration of field across all model levels using tendency fdt
