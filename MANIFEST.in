@@ -1,0 +1,6 @@
+include LICENSE
+include README.rst
+include Makefile
+recursive-include registry *
+recursive-include source *
+recursive-include examples *.py *.ipynb

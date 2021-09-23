@@ -6,6 +6,14 @@ import json
 import pandas as pd
 import re
 
+try:
+    # Used to export the model state vars into an excel file
+    import xlsxwriter
+
+    XLSXWRITER_IMPORTED = True
+except ImportError:
+    XLSXWRITER_IMPORTED = False
+
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
 PYSPEEDY_DATA_DIR = (THIS_FILE_DIR / "../pyspeedy/data").resolve()
@@ -15,15 +23,15 @@ NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
 
 class VarDef:
     def __init__(
-        self,
-        name,
-        dtype,
-        dims,
-        desc,
-        units=None,
-        time_dim=None,
-        alt_name=None,
-        value=None,
+            self,
+            name,
+            dtype,
+            dims,
+            desc,
+            units=None,
+            time_dim=None,
+            alt_name=None,
+            value=None,
     ):
         """
         If time_dim is not None, the variable is not allocated during the
@@ -441,33 +449,34 @@ with open(PYSPEEDY_DATA_DIR / "model_state.json", "w") as outfile:
 
 ####################################################
 # Export state variables description in Excel format
-_data = defaultdict(list)
-for var in model_state:
-    _data["name"].append(var.name)
-    _data["dtype"].append(var.dtype)
-    _data["dims"].append(var.dims)
-    _data["nc_dims"].append(var.dims)
-    _data["desc"].append(var.desc)
-    _data["units"].append(var.units)
-    _data["time_dim"].append(var.time_dim)
-    _data["alt_name"].append(var.alt_name)
+if XLSXWRITER_IMPORTED:
+    _data = defaultdict(list)
+    for var in model_state:
+        _data["name"].append(var.name)
+        _data["dtype"].append(var.dtype)
+        _data["dims"].append(var.dims)
+        _data["nc_dims"].append(var.dims)
+        _data["desc"].append(var.desc)
+        _data["units"].append(var.units)
+        _data["time_dim"].append(var.time_dim)
+        _data["alt_name"].append(var.alt_name)
 
-my_dataframe = pd.DataFrame(data=_data)
-writer = pd.ExcelWriter("output.xlsx", engine="xlsxwriter")
-sheetname = "state_variables"
-my_dataframe.to_excel(writer, sheet_name=sheetname, index=False)
-# Adjust the columns size
-worksheet = writer.sheets[sheetname]  # pull worksheet object
-for idx, col in enumerate(my_dataframe):  # loop through all columns
-    series = my_dataframe[col]
-    max_len = (
-        max(
-            (
-                series.astype(str).map(len).max(),  # len of largest item
-                len(str(series.name)),  # len of column name/header
-            )
-        )
-        + 1
-    )  # adding a little extra space
-    worksheet.set_column(idx, idx, max_len)  # set column width
-writer.save()
+    my_dataframe = pd.DataFrame(data=_data)
+    writer = pd.ExcelWriter("output.xlsx", engine="xlsxwriter")
+    sheetname = "state_variables"
+    my_dataframe.to_excel(writer, sheet_name=sheetname, index=False)
+    # Adjust the columns size
+    worksheet = writer.sheets[sheetname]  # pull worksheet object
+    for idx, col in enumerate(my_dataframe):  # loop through all columns
+        series = my_dataframe[col]
+        max_len = (
+                max(
+                    (
+                        series.astype(str).map(len).max(),  # len of largest item
+                        len(str(series.name)),  # len of column name/header
+                    )
+                )
+                + 1
+        )  # adding a little extra space
+        worksheet.set_column(idx, idx, max_len)  # set column width
+    writer.save()

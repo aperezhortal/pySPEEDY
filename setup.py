@@ -1,7 +1,12 @@
-# -*- coding: utf-8 -*-
-import os
-import subprocess
-from distutils.errors import DistutilsSetupError
+###############################################################################
+# From `numpy/setup.py`
+# We need to import setuptools here in order for it to persist in sys.modules.
+# Its presence/absence is used in subclassing setup in numpy/distutils/core.py.
+# However, we need to run the distutils version of sdist, so import that first
+# so that it is in sys.modules
+import numpy.distutils.command.sdist  # noqa
+import setuptools  # noqa
+###############################################################################
 
 import numpy
 from numpy.distutils.command.build_ext import build_ext
@@ -33,37 +38,35 @@ class specialized_build_ext(build_ext):
     """
     Specialized builder for the speedy model that uses the Makefile.
     """
-
     special_extension = pyspeedy_extension.name
-
     def build_extension(self, ext):
-        if ext.name != self.special_extension:
-            # Handle unspecial extensions with the parent class' method
-            super(specialized_build_ext, self).build_extension(ext)
-        else:
+        import subprocess
+        from distutils.errors import DistutilsSetupError
+
+        if ext.name == self.special_extension:
+            # First compile the special extensions using Make
             make_process = subprocess.Popen("make", cwd=PROJECT_ROOT_DIR)
             stdout, stderr = make_process.communicate()
             print(stdout)
             print(stderr)
+            print("-----")
             if make_process.returncode != 0:
+                print(PROJECT_ROOT_DIR)
+                import sys
+                import glob
+                print(glob.glob(str(PROJECT_ROOT_DIR / "*")))
+
                 raise DistutilsSetupError(
                     "An error occurred while building the speedy.so"
                 )
-
-            # After making the library build the c library's python interface with the
-            # parent build_extension method.
-            super(specialized_build_ext, self).build_extension(ext)
+        # After making the library build the c library's python interface with the
+        # parent build_extension method.
+        super().build_extension(ext)
 
 
 if __name__ == "__main__":
     from numpy.distutils.core import setup
-
     setup(
-        name="pyspeedy",
         ext_modules=[pyspeedy_extension],
-        packages=["pyspeedy"],
         cmdclass={"build_ext": specialized_build_ext},
-        package_data={
-            "pyspeedy": ["data/*.nc"],
-        },
     )

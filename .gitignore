@@ -9,3 +9,4 @@ source/speedy_driver.f90
 build
 .pytest_cache
 .ipynb_checkpoints
+/MANIFEST
