@@ -2,6 +2,7 @@
 module shortwave_radiation
     use types, only : p
     use params
+    use geometry, only: ModGeometry_t
 
     implicit none
 
@@ -47,11 +48,10 @@ contains
     !> Compute the absorption of shortwave radiation and initialize arrays
     !  for longwave-radiation routines
     subroutine get_shortwave_rad_fluxes(state, psa, qa, icltop, cloudc, clstr)
-        use geometry, only : fsg, dhs
         use mod_radcon
         use model_state, only : ModelState_t
 
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
         real(p), intent(in) :: psa(ix, il)       !! Normalised surface pressure [p/p0]
         real(p), intent(in) :: qa(ix, il, kx)     !! Specific humidity [g/kg]
         integer, intent(in) :: icltop(ix, il)    !! Cloud top level
@@ -61,6 +61,9 @@ contains
         integer :: i, j, k, nl1
         real(p) :: acloud(ix, il), psaz(ix, il), abs1, acloud1, deltap, eps1
         real(p) :: fband1, fband2
+
+        class(ModGeometry_t), pointer :: mod_geometry
+        mod_geometry => state%mod_geometry
 
         nl1 = kx - 1
 
@@ -84,28 +87,29 @@ contains
         ! abs. humidity and cloud cover (in the troposphere)
         psaz = psa * state%zenit_correction
         acloud = cloudc * min(abscl1 * state%qcloud_equiv, abscl2)
-        state%rad_tau2(:, :, 1, 1) = exp(-psaz * dhs(1) * absdry)
+        state%rad_tau2(:, :, 1, 1) = exp(-psaz * mod_geometry%dhs(1) * absdry)
 
         do k = 2, nl1
-            abs1 = absdry + absaer * fsg(k)**2
+            abs1 = absdry + absaer * mod_geometry%fsg(k)**2
 
             do i = 1, ix
                 do j = 1, il
                     if (k >= icltop(i, j)) then
                         state%rad_tau2(i, j, k, 1) = exp(&
-                                -psaz(i, j) * dhs(k) * (abs1 + abswv1 * qa(i, j, k) + acloud(i, j)))
+                                -psaz(i, j) * mod_geometry%dhs(k) * (abs1 + abswv1 * qa(i, j, k) + acloud(i, j)))
                     else
-                        state%rad_tau2(i, j, k, 1) = exp(-psaz(i, j) * dhs(k) * (abs1 + abswv1 * qa(i, j, k)))
+                        state%rad_tau2(i, j, k, 1) = exp(&
+                                -psaz(i, j) * mod_geometry%dhs(k) * (abs1 + abswv1 * qa(i, j, k)))
                     end if
                 end do
             end do
         end do
 
-        abs1 = absdry + absaer * fsg(kx)**2
-        state%rad_tau2(:, :, kx, 1) = exp(-psaz * dhs(kx) * (abs1 + abswv1 * qa(:, :, kx)))
+        abs1 = absdry + absaer * mod_geometry%fsg(kx)**2
+        state%rad_tau2(:, :, kx, 1) = exp(-psaz * mod_geometry%dhs(kx) * (abs1 + abswv1 * qa(:, :, kx)))
 
         do k = 2, kx
-            state%rad_tau2(:, :, k, 2) = exp(-psaz * dhs(k) * abswv2 * qa(:, :, k))
+            state%rad_tau2(:, :, k, 2) = exp(-psaz * mod_geometry%dhs(k) * abswv2 * qa(:, :, k))
         end do
 
         ! 3. Shortwave downward flux
@@ -169,16 +173,16 @@ contains
 
         ! Cloud-free levels (stratosphere + PBL)
         k = 1
-        state%rad_tau2(:, :, k, 1) = exp(-psa * dhs(k) * ablwin)
-        state%rad_tau2(:, :, k, 2) = exp(-psa * dhs(k) * state%air_absortivity_co2)
+        state%rad_tau2(:, :, k, 1) = exp(-psa * mod_geometry%dhs(k) * ablwin)
+        state%rad_tau2(:, :, k, 2) = exp(-psa * mod_geometry%dhs(k) * state%air_absortivity_co2)
         state%rad_tau2(:, :, k, 3) = 1.0
         state%rad_tau2(:, :, k, 4) = 1.0
 
         do k = 2, kx, kx - 2
-            state%rad_tau2(:, :, k, 1) = exp(-psa * dhs(k) * ablwin)
-            state%rad_tau2(:, :, k, 2) = exp(-psa * dhs(k) * state%air_absortivity_co2)
-            state%rad_tau2(:, :, k, 3) = exp(-psa * dhs(k) * ablwv1 * qa(:, :, k))
-            state%rad_tau2(:, :, k, 4) = exp(-psa * dhs(k) * ablwv2 * qa(:, :, k))
+            state%rad_tau2(:, :, k, 1) = exp(-psa * mod_geometry%dhs(k) * ablwin)
+            state%rad_tau2(:, :, k, 2) = exp(-psa * mod_geometry%dhs(k) * state%air_absortivity_co2)
+            state%rad_tau2(:, :, k, 3) = exp(-psa * mod_geometry%dhs(k) * ablwv1 * qa(:, :, k))
+            state%rad_tau2(:, :, k, 4) = exp(-psa * mod_geometry%dhs(k) * ablwv2 * qa(:, :, k))
         end do
 
         ! Cloudy layers (free troposphere)
@@ -187,7 +191,7 @@ contains
         do k = 3, nl1
             do i = 1, ix
                 do j = 1, il
-                    deltap = psa(i, j) * dhs(k)
+                    deltap = psa(i, j) * mod_geometry%dhs(k)
 
                     if (k < icltop(i, j)) then
                         acloud1 = acloud(i, j)
@@ -204,7 +208,7 @@ contains
         end do
 
         ! 5.2  Stratospheric correction terms
-        eps1 = epslw / (dhs(1) + dhs(2))
+        eps1 = epslw / (mod_geometry%dhs(1) + mod_geometry%dhs(2))
         state%rad_strat_corr(:, :, 1) = state%stratospheric_correction * psa
         state%rad_strat_corr(:, :, 2) = eps1 * psa
     end subroutine
@@ -212,16 +216,18 @@ contains
     !> Compute zonally-averaged fields to be used in the computation of
     !  short-wave absorption
     subroutine get_zonal_average_fields(state, tyear)
-        use geometry, only : sia, coa
         use model_state, only : ModelState_t
 
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
 
         real(p), intent(in) :: tyear !! time as fraction of year (0-1, 0 = 1jan.h00)
 
         real(p) :: topsr(il), alpha, azen, coz1, coz2, dalpha, flat2, fs0
         real(p) :: nzen, rzen
         integer :: j
+
+        class(ModGeometry_t), pointer :: mod_geometry
+        mod_geometry => state%mod_geometry
 
         ! alpha = year phase ( 0 - 2pi, 0 = winter solstice = 22dec.h00 )
         alpha = 4.0 * asin(1.0) * (tyear + 10.0 / 365.0)
@@ -238,21 +244,22 @@ contains
         fs0 = 6.0
 
         ! Solar radiation at the top
-        call solar(tyear, 4.0 * solc, topsr)
+        call solar(tyear, 4.0 * solc, topsr, mod_geometry%coa, mod_geometry%sia)
 
         do j = 1, il
-            flat2 = 1.5 * sia(j)**2 - 0.5
+            flat2 = 1.5 * mod_geometry%sia(j)**2 - 0.5
 
             ! Solar radiation at the top
             state%flux_solar_in(:, j) = topsr(j)
 
             ! Ozone depth in upper and lower stratosphere
             state%flux_ozone_upper(:, j) = 0.5 * epssw
-            state%flux_ozone_lower(:, j) = 0.4 * epssw * (1.0 + coz1 * sia(j) + coz2 * flat2)
+            state%flux_ozone_lower(:, j) = 0.4 * epssw * (1.0 + coz1 * mod_geometry%sia(j) + coz2 * flat2)
 
             ! Optical depth ratio (function of solar zenith angle)
             ! Zenith angle correction to (downward) absorptivity
-            state%zenit_correction(:, j) = 1.0 + azen * (1.0 - (coa(j) * cos(rzen) + sia(j) * sin(rzen)))**nzen
+            state%zenit_correction(:, j) = &
+                    1.0 + azen * (1.0 - (mod_geometry%coa(j) * cos(rzen) + mod_geometry%sia(j) * sin(rzen)))**nzen
 
             ! Ozone absorption in upper and lower stratosphere
             state%flux_ozone_upper(:, j) = &
@@ -266,13 +273,17 @@ contains
     end
 
     ! Average daily flux of solar radiation, from Hartmann (1994)
-    subroutine solar(tyear, csol, topsr)
-        use geometry, only : coa, sia
+    subroutine solar(tyear, csol, topsr, coa, sia)
 
         real(p), intent(in) :: tyear     !! time as fraction of year (0-1, 0 = 1jan.h00)
         real(p), intent(in) :: csol       !! The solar constant [W/m^2]
-        real(p), intent(out) :: topsr(il) !! Daily-average insolation at the top of the atmosphere
-        !! as a function of latitude
+
+        !> Daily-average insolation at the top of the atmosphere as a function of latitude
+        real(p), intent(out) :: topsr(il)
+
+        real(p), intent(in) :: coa(il)    !! cosine(latitude)
+        real(p), intent(in) :: sia(il)    !! sine(latitude)
+
 
         integer :: j
         real(p) :: ca1, ca2, ca3, cdecl, ch0, csolp, decl, fdis, h0, alpha, pigr, sa1

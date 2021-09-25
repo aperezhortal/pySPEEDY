@@ -7,6 +7,7 @@ module prognostics
     use model_control, only : ControlParams_t
     use model_state, only : ModelState_t
     use spectral, only : ModSpectral_t
+    use geometry, only: ModGeometry_t
 
     implicit none
 
@@ -28,7 +29,6 @@ contains
     subroutine initialize_from_rest_state(state, control_params)
         use physical_constants, only : gamma, hscale, hshum, refrh1
         use physical_constants, only : grav, rgas
-        use geometry, only : fsg
         use diagnostics, only : check_diagnostics
 
         type(ModelState_t), intent(inout), target :: state
@@ -40,7 +40,10 @@ contains
         integer :: i, j, k
 
         class(ModSpectral_t), pointer :: mod_spectral
+        class(ModGeometry_t), pointer :: mod_geometry
+
         mod_spectral => state%mod_spectral
+        mod_geometry => state%mod_geometry
 
         gam1 = gamma / (1000.0 * grav)
 
@@ -74,7 +77,7 @@ contains
 
         ! Temperature at tropospheric levels
         do k = 3, kx
-            state%t(:, :, k, 1) = surfs * fsg(k)**rgam
+            state%t(:, :, k, 1) = surfs * mod_geometry%fsg(k)**rgam
         end do
 
         ! 2.3 Set log(ps) consistent with temperature profile
@@ -108,7 +111,7 @@ contains
 
         ! Specific humidity at tropospheric levels
         do k = 3, kx
-            state%tr(:, :, k, 1, 1) = surfs * fsg(k)**qexp
+            state%tr(:, :, k, 1, 1) = surfs * mod_geometry%fsg(k)**qexp
         end do
 
         ! Print diagnostics from initial conditions

@@ -23,15 +23,15 @@ NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
 
 class VarDef:
     def __init__(
-            self,
-            name,
-            dtype,
-            dims,
-            desc,
-            units=None,
-            time_dim=None,
-            alt_name=None,
-            value=None,
+        self,
+        name,
+        dtype,
+        dims,
+        desc,
+        units=None,
+        time_dim=None,
+        alt_name=None,
+        value=None,
     ):
         """
         If time_dim is not None, the variable is not allocated during the
@@ -398,6 +398,12 @@ model_state = [
     # Module instances
     #
     VarDef(
+        "mod_geometry",
+        "class(ModGeometry_t)",
+        None,
+        "Geometry module instance",
+    ),
+    VarDef(
         "mod_spectral",
         "class(ModSpectral_t)",
         None,
@@ -470,13 +476,13 @@ if XLSXWRITER_IMPORTED:
     for idx, col in enumerate(my_dataframe):  # loop through all columns
         series = my_dataframe[col]
         max_len = (
-                max(
-                    (
-                        series.astype(str).map(len).max(),  # len of largest item
-                        len(str(series.name)),  # len of column name/header
-                    )
+            max(
+                (
+                    series.astype(str).map(len).max(),  # len of largest item
+                    len(str(series.name)),  # len of column name/header
                 )
-                + 1
+            )
+            + 1
         )  # adding a little extra space
         worksheet.set_column(idx, idx, max_len)  # set column width
     writer.save()

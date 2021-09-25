@@ -4,6 +4,7 @@
 module horizontal_diffusion
     use types, only : p
     use params
+    use geometry, only : ModGeometry_t
 
     implicit none
 
@@ -28,6 +29,11 @@ module horizontal_diffusion
         complex(p), allocatable :: qcorh(:, :) !! Horizontal component of orographic correction for humidity
 
         logical :: mod_diffusion_initialized = .false.
+
+        ! We keep a pointer to a ModGeometry_t instance
+        class(ModGeometry_t), pointer :: mod_geometry => null() !! Spectral module instance
+        logical :: mod_geometry_initialized = .false.
+
     contains
         procedure :: initialize => ModHorizontalDiffusion_initialize
         procedure :: delete => ModHorizontalDiffusion_delete
@@ -41,21 +47,25 @@ module horizontal_diffusion
 
 contains
     !> Initializes the arrays used for horizontal diffusion.
-    subroutine ModHorizontalDiffusion_initialize(this)
-        use physical_constants, only : thd, thdd, thds, gamma, hscale, hshum
-        use physical_constants, only : grav, rgas
-        use geometry, only : fsg
+    subroutine ModHorizontalDiffusion_initialize(this, mod_geometry)
+        use physical_constants, only : thd, thdd, thds, gamma, hscale, hshum, grav, rgas
 
         class(ModHorizontalDiffusion_t), intent(inout) :: this
+        class(ModGeometry_t), intent(in), target :: mod_geometry
 
+        ! Local definitions
         integer :: j, k
-
         integer, parameter :: npowhd = 4 ! Power of Laplacian in horizontal diffusion
-
         real(p) :: elap, elapn, hdifd, hdiff, hdifs, qexp, rgam, rlap, twn
 
         if (this%mod_diffusion_initialized) then
             return
+        end if
+
+        ! First lets initialize the pointer to the geometry module
+        this%mod_geometry => mod_geometry
+        if (.not. this%mod_geometry%mod_geometry_initialized) then
+            call this%mod_geometry%initialize()
         end if
 
         allocate (this%dmp(mx, nx), this%dmpd(mx, nx), this%dmps(mx, nx))
@@ -92,8 +102,8 @@ contains
         this%qcorv(2) = 0.
 
         do k = 2, kx
-            this%tcorv(k) = fsg(k)**rgam
-            if (k > 2) this%qcorv(k) = fsg(k)**qexp
+            this%tcorv(k) = this%mod_geometry%fsg(k)**rgam
+            if (k > 2) this%qcorv(k) = this%mod_geometry%fsg(k)**qexp
         end do
 
         this%mod_diffusion_initialized = .true.
@@ -108,6 +118,10 @@ contains
             deallocate (this%dmp1, this%dmp1d, this%dmp1s)
             deallocate (this%tcorv, this%qcorv, this%tcorh, this%qcorh)
             this%mod_diffusion_initialized = .false.
+
+            ! Clean the pointer to the geometry module
+            this%mod_geometry => null()
+            ! IMPORTANT: The geometry module is not deleted here!
         end if
 
     end subroutine

@@ -5,31 +5,9 @@ module initialization
     implicit none
 
     private
-    public initialize_state, initialize_modules, deinitialize_modules
-
-    logical, save :: modules_initialized_flag = .false.
+    public initialize_state
 
 contains
-
-    ! Intialize global variables in the modules. This is done only once.
-    subroutine initialize_modules()
-        use geometry, only : initialize_geometry
-
-        if (modules_initialized_flag) then
-            !Do nothing, the module is already initialized.
-            return
-        end if
-
-        ! Initialize model geometry
-        call initialize_geometry
-
-        modules_initialized_flag = .true.
-    end subroutine
-
-    ! Deinitialize the allocatable global variables in the different modules.
-    subroutine deinitialize_modules()
-        modules_initialized_flag = .false.
-    end subroutine
 
     !> Initializes everything.
     subroutine initialize_state(state, control_params)
@@ -42,7 +20,6 @@ contains
         use prognostics, only : initialize_prognostics
         use geopotential, only : initialize_geopotential
         use forcing, only : set_forcing
-        use geometry, only : fsg, radang
         use params, only : ix, il
 
         integer :: k
@@ -56,14 +33,18 @@ contains
         ! call print_speedy_title
         state%current_step = 0
 
-        ! Intialize modules if they were not initialized.
-        call initialize_modules()
+        ! =========================================================================
+        ! Module instances initialization
+        ! =========================================================================
+
+        ! IMPORTANT: This module need to be intialized first!
+        call state%mod_geometry%initialize()
 
         ! Initialize spectral transforms module
-        call state%mod_spectral%initialize()
+        call state%mod_spectral%initialize(state%mod_geometry)
 
         ! Initialize implicit module
-        call state%mod_implicit%initialize()
+        call state%mod_implicit%initialize(state%mod_geometry)
 
         call initialize_geopotential(state)
 
@@ -95,23 +76,12 @@ contains
         call first_step(state)
 
         ! Initialize coordinates
-        state%lev(:) = fsg(:)
+        state%lev(:) = real(state%mod_geometry%fsg(:))
         state%lon(:) = (/(3.75 * k, k = 0, ix - 1)/)
-        state%lat(:) = (/(radang(k) * 90.0 / asin(1.0), k = 1, il)/)
+        state%lat(:) = (/(real(state%mod_geometry%radang(k)) * 90.0 / asin(1.0), k = 1, il)/)
 
         state%initialized = .true.
 
     end subroutine
 
-    !> Prints SPEEDY.f90 banner.
-    subroutine print_speedy_title
-        write (*, '(A)') ''
-        write (*, '(A)') '  _____ ______  _____  _____ ______ __   __     __  _____  _____'
-        write (*, '(A)') ' /  ___|| ___ \|  ___||  ___||  _  \\ \ / /    / _||  _  ||  _  |'
-        write (*, '(A)') ' \ `--. | |_/ /| |__  | |__  | | | | \ V /    | |_ | |_| || |/  |'
-        write (*, '(A)') '  `--. \|  __/ |  __| |  __| | | | |  \ /     |  _|\____ ||  /| |'
-        write (*, '(A)') ' /\__/ /| |    | |___ | |___ | |/ /   | |   _ | |  .___/ /\ |_/ /'
-        write (*, '(A)') ' \____/ \_|    \____/ \____/ |___/    \_/  (_)|_|  \____/  \___/'
-        write (*, '(A)') ''
-    end subroutine
 end module

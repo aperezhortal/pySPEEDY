@@ -2,6 +2,7 @@
 module surface_fluxes
     use types, only : p
     use params
+    use geometry, only : ModGeometry_t
 
     implicit none
 
@@ -40,10 +41,11 @@ contains
             psa, ua, va, ta, qa, rh, phi, phi0, fmask, forog, tsea, &
             ssrd, slrd, ustr, vstr, shf, evap, slru, hfluxn, &
             tsfc, tskin, u0, v0, t0, lfluxland, &
-            alb_land, alb_sea, snowc, land_temp, soil_avail_water)
+            alb_land, alb_sea, snowc, land_temp, soil_avail_water, &
+            coa, sigl, wvi)
 
         use physical_constants, only : p0, rgas, cp, alhc, sbc
-        use geometry, only : coa, sigl, wvi
+
         use mod_radcon, only : emisfc
         use humidity, only : get_qsat, rel_hum_to_spec_hum
 
@@ -79,6 +81,9 @@ contains
         real(p), intent(in) :: land_temp(ix, il) !! Land surface temperature
         real(p), intent(in) :: soil_avail_water(ix, il) !! Soil water availability
 
+        real(p), intent(in) :: coa(il)      !! cosine(latitude)
+        real(p), intent(in) :: sigl(kx)   !! Logarithm of full-level sigma
+        real(p), intent(in) :: wvi(kx, 2)    !! Weights for vertical interpolation
 
         ! Local variables
         integer :: i, j, ks, nl1

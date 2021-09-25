@@ -26,18 +26,6 @@ contains
     ! =========================================================================
     ! Speedy interface
     ! =========================================================================
-    !> Initialize the Speedy modules. This needs to be run once.
-    subroutine initialize_module()
-        use initialization, only: initialize_modules
-        call initialize_modules()
-    end subroutine
-
-    !> Deinitialize the Speedy modules.
-    subroutine close_module()
-        use initialization, only: deinitialize_modules
-        call deinitialize_modules()
-    end subroutine
-
     subroutine init(state_container, control_container)
         use initialization, only: initialize_state
         

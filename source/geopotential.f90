@@ -4,40 +4,58 @@
 module geopotential
     use types, only : p
     use params
+    use geometry, only : ModGeometry_t
 
     implicit none
 
     private
-    public initialize_geopotential, get_geopotential
+    public initialize_geopotential, set_geopotential
 
 contains
     !> Initializes the arrays used for geopotential calculations
     subroutine initialize_geopotential(state)
         use physical_constants, only : rgas
-        use geometry, only : hsg, fsg
         use model_state, only : ModelState_t
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
 
         integer :: k
+        class(ModGeometry_t), pointer :: mod_geometry
+        mod_geometry => state%mod_geometry
 
         ! Coefficients to compute geopotential
         do k = 1, kx
-            state%xgeop1(k) = rgas * log(hsg(k + 1) / fsg(k))
-            if (k /= kx) state%xgeop2(k + 1) = rgas * log(fsg(k + 1) / hsg(k + 1))
+            state%xgeop1(k) = rgas * log(mod_geometry%hsg(k + 1) / mod_geometry%fsg(k))
+            if (k /= kx) state%xgeop2(k + 1) = rgas * log(mod_geometry%fsg(k + 1) / mod_geometry%hsg(k + 1))
         end do
 
     end subroutine
 
     !> Computes spectral geopotential from spectral temperature T and spectral
-    !  topography phis, as in GFDL Climate Group GCM.
-    function get_geopotential(t, phis, xgeop1, xgeop2) result(phi)
-        use geometry, only : hsg, fsg
+    ! topography phis, as in GFDL Climate Group GCM.
+    ! The result is updated in the state%phi variable.
+    subroutine set_geopotential(state, time_level)
+        use physical_constants, only : rgas
+        use model_state, only : ModelState_t
+
+        type(ModelState_t), intent(inout) :: state
+        integer, intent(in) :: time_level
+
+        state%phi = get_geopotential(state%t(:, :, :, time_level), &
+                state%phis, state%xgeop1, state%xgeop2, &
+                state%mod_geometry%hsg, state%mod_geometry%fsg)
+
+    end subroutine set_geopotential
+
+    function get_geopotential(t, phis, xgeop1, xgeop2, hsg, fsg) result(phi)
 
         complex(p), intent(in) :: t(mx, nx, kx) !! Spectral temperature
         complex(p), intent(in) :: phis(mx, nx) !! Spectral surface geopotential
-        complex(p) :: phi(mx, nx, kx)           !! Spectral geopotential
-        real(p) :: xgeop1(kx) !! Constants for hydrostatic equation
-        real(p) :: xgeop2(kx) !! Constants for hydrostatic equation
+        real(p), intent(in) :: xgeop1(kx) !! Constants for hydrostatic equation
+        real(p), intent(in) :: xgeop2(kx) !! Constants for hydrostatic equation
+        real(p), intent(in) :: hsg(kx + 1) !! Half sigma levels
+        real(p), intent(in) :: fsg(kx)   !! Full sigma levels
+
+        complex(p) :: phi(mx, nx, kx)  !! Spectral geopotential
 
         integer :: k
         real(p) :: corf

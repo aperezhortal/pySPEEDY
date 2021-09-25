@@ -5,6 +5,7 @@ module fourier
     use types, only : p
     use params
     use legendre, only : ModLegendre_t
+    use geometry, only : ModGeometry_t
 
     implicit none
 
@@ -29,11 +30,12 @@ module fourier
 
 contains
     !> Initializes the ModFourier instance.
-    subroutine ModFourier_initialize(this)
+    subroutine ModFourier_initialize(this, mod_geometry)
         use legendre, only : ModLegendre_initialize
         class(ModFourier_t), intent(inout) :: this
+        class(ModGeometry_t), intent(in), target :: mod_geometry
 
-        call ModLegendre_initialize(this)
+        call ModLegendre_initialize(this, mod_geometry)
         if (this%mod_fourier_initialized) then
             return
         end if
@@ -59,7 +61,6 @@ contains
 
     !> Transforms Fourier coefficients to grid-point data.
     function ModFourier_fourier_inv(this, input, kcos) result(output)
-        use geometry, only : cosgr
         class(ModFourier_t), intent(in) :: this
 
         real(p), intent(in) :: input(2 * mx, il) !! Input field
@@ -86,7 +87,7 @@ contains
             if (kcos == 1) then
                 output(:, j) = fvar
             else
-                output(:, j) = fvar * cosgr(j)
+                output(:, j) = fvar * this%mod_geometry%cosgr(j)
             end if
         end do
     end function

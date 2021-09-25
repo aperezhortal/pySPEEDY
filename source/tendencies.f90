@@ -51,11 +51,11 @@ contains
     subroutine get_grid_point_tendencies(state, vordt, divdt, tdt, psdt, trdt, j1, j2)
         use model_state, only : ModelState_t
         use physical_constants, only : akap, rgas
-        use geometry, only : dhs, dhsr, fsgr, coriol
-        use implicit, only : ModImplicit_t
-        use geopotential, only : get_geopotential
+        use geopotential, only : set_geopotential
         use physics, only : get_physical_tendencies
         use spectral, only : ModSpectral_t
+        use implicit, only : ModImplicit_t
+        use geometry,  only: ModGeometry_t
 
         type(ModelState_t), intent(inout), target :: state
 
@@ -89,8 +89,10 @@ contains
 
         class(ModSpectral_t), pointer :: mod_spectral
         class(ModImplicit_t), pointer :: mod_implicit
+        class(ModGeometry_t), pointer :: mod_geometry
         mod_spectral => state%mod_spectral
         mod_implicit => state%mod_implicit
+        mod_geometry => state%mod_geometry
 
         allocate(dumc(mx, nx, 2))
         allocate(utend(ix, il, kx), vtend(ix, il, kx), ttend(ix, il, kx))
@@ -122,7 +124,7 @@ contains
 
             do j = 1, il
                 do i = 1, ix
-                    vorg(i, j, k) = vorg(i, j, k) + coriol(j)
+                    vorg(i, j, k) = vorg(i, j, k) + mod_geometry%coriol(j)
                 end do
             end do
         end do
@@ -132,9 +134,9 @@ contains
         dmean(:, :) = 0.0
 
         do k = 1, kx
-            umean(:, :) = umean(:, :) + ug(:, :, k) * dhs(k)
-            vmean(:, :) = vmean(:, :) + vg(:, :, k) * dhs(k)
-            dmean(:, :) = dmean(:, :) + divg(:, :, k) * dhs(k)
+            umean(:, :) = umean(:, :) + ug(:, :, k) * mod_geometry%dhs(k)
+            vmean(:, :) = vmean(:, :) + vg(:, :, k) * mod_geometry%dhs(k)
+            dmean(:, :) = dmean(:, :) + divg(:, :, k) * mod_geometry%dhs(k)
         end do
 
         ! Compute tendency of log(surface pressure)
@@ -159,8 +161,8 @@ contains
         end do
 
         do k = 1, kx
-            sigdt(:, :, k + 1) = sigdt(:, :, k) - dhs(k) * (puv(:, :, k) + divg(:, :, k) - dmean)
-            sigm(:, :, k + 1) = sigm(:, :, k) - dhs(k) * puv(:, :, k)
+            sigdt(:, :, k + 1) = sigdt(:, :, k) - mod_geometry%dhs(k) * (puv(:, :, k) + divg(:, :, k) - dmean)
+            sigm(:, :, k + 1) = sigm(:, :, k) - mod_geometry%dhs(k) * puv(:, :, k)
         end do
 
         ! Subtract part of temperature field that is used as reference for
@@ -179,7 +181,7 @@ contains
 
         do k = 1, kx
             utend(:, :, k) = vg(:, :, k) * vorg(:, :, k) - tgg(:, :, k) * rgas * px &
-                    & - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
+                    & - (temp(:, :, k + 1) + temp(:, :, k)) * mod_geometry%dhsr(k)
         end do
 
         ! Meridional wind tendency
@@ -189,7 +191,7 @@ contains
 
         do k = 1, kx
             vtend(:, :, k) = -ug(:, :, k) * vorg(:, :, k) - tgg(:, :, k) * rgas * py &
-                    & - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
+                    & - (temp(:, :, k + 1) + temp(:, :, k)) * mod_geometry%dhsr(k)
         end do
 
         ! Temperature tendency
@@ -200,8 +202,8 @@ contains
 
         do k = 1, kx
             ttend(:, :, k) = tgg(:, :, k) * divg(:, :, k) &
-                    - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k) &
-                    + fsgr(k) * tgg(:, :, k) * (sigdt(:, :, k + 1) + sigdt(:, :, k)) &
+                    - (temp(:, :, k + 1) + temp(:, :, k)) * mod_geometry%dhsr(k) &
+                    + mod_geometry%fsgr(k) * tgg(:, :, k) * (sigdt(:, :, k + 1) + sigdt(:, :, k)) &
                     + mod_implicit%tref3(k) * (sigm(:, :, k + 1) &
                             + sigm(:, :, k)) &
                     + akap * (tg(:, :, k) * puv(:, :, k) - tgg(:, :, k) * dmean(:, :))
@@ -217,15 +219,14 @@ contains
 
             do k = 1, kx
                 trtend(:, :, k, itr) = trg(:, :, k, itr) * divg(:, :, k) &
-                        - (temp(:, :, k + 1) + temp(:, :, k)) * dhsr(k)
+                        - (temp(:, :, k + 1) + temp(:, :, k)) * mod_geometry%dhsr(k)
             end do
         end do
 
         ! =========================================================================
         ! Compute physical tendencies
         ! =========================================================================
-
-        state%phi = get_geopotential(state%t(:, :, :, j1), state%phis, state%xgeop1, state%xgeop2)
+        call set_geopotential(state, j1)
 
         call get_physical_tendencies(state, j1, &
                 utend, vtend, ttend, trtend)
@@ -282,10 +283,10 @@ contains
     subroutine get_spectral_tendencies(state, divdt, tdt, psdt, j2)
         use model_state, only : ModelState_t
         use physical_constants, only : rgas
-        use geometry, only : dhs, dhsr
-        use geopotential, only : get_geopotential
+        use geopotential, only : set_geopotential
         use implicit, only : ModImplicit_t
         use spectral, only : ModSpectral_t
+        use geometry, only : ModGeometry_t
 
         type(ModelState_t), intent(inout), target :: state
 
@@ -298,6 +299,8 @@ contains
 
         class(ModSpectral_t), pointer :: mod_spectral
         class(ModImplicit_t), pointer :: mod_implicit
+        class(ModGeometry_t), pointer :: mod_geometry
+        mod_geometry => state%mod_geometry
         mod_spectral => state%mod_spectral
         mod_implicit => state%mod_implicit
 
@@ -306,7 +309,7 @@ contains
         ! Vertical mean div and pressure tendency
         dmeanc(:, :) = (0.0, 0.0)
         do k = 1, kx
-            dmeanc = dmeanc + state%div(:, :, k, j2) * dhs(k)
+            dmeanc = dmeanc + state%div(:, :, k, j2) * mod_geometry%dhs(k)
         end do
 
         psdt = psdt - dmeanc
@@ -318,7 +321,7 @@ contains
 
         do k = 1, kx - 1
             sigdtc(:, :, k + 1) = sigdtc(:, :, k) &
-                    - dhs(k) * (state%div(:, :, k, j2) - dmeanc)
+                    - mod_geometry%dhs(k) * (state%div(:, :, k, j2) - dmeanc)
 
         end do
 
@@ -331,13 +334,13 @@ contains
 
         do k = 1, kx
             tdt(:, :, k) = tdt(:, :, k) &
-                    - (dumk(:, :, k + 1) + dumk(:, :, k)) * dhsr(k)&
+                    - (dumk(:, :, k + 1) + dumk(:, :, k)) * mod_geometry%dhsr(k)&
                     + mod_implicit%tref3(k) * (sigdtc(:, :, k + 1) + sigdtc(:, :, k))&
                     - mod_implicit%tref2(k) * dmeanc
         end do
 
         ! Geopotential and divergence tendency
-        state%phi = get_geopotential(state%t(:, :, :, j2), state%phis, state%xgeop1, state%xgeop2)
+        call set_geopotential(state, j2)
 
         do k = 1, kx
             divdt(:, :, k) = divdt(:, :, k) &

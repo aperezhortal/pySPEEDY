@@ -2,7 +2,7 @@ module spectral
     use types, only : p
     use params
     use fourier, only : ModFourier_t
-
+    use geometry, only : ModGeometry_t
     implicit none
 
     private
@@ -36,15 +36,16 @@ contains
 
 
     !> Initialize the spectral module instance
-    subroutine ModSpectral_initialize(this)
+    subroutine ModSpectral_initialize(this, mod_geometry)
         use physical_constants, only : rearth
         use fourier, only : ModFourier_initialize
         class(ModSpectral_t), intent(inout) :: this
+        class(ModGeometry_t), intent(in), target :: mod_geometry
 
         ! Local variables declarations
         real(p) :: el1
         integer :: m, m1, m2, n, wavenum_tot(mx, nx), mm(mx)
-        call ModFourier_initialize(this)
+        call ModFourier_initialize(this, mod_geometry)
 
         if (this%spectral_mod_initialized_flag) then
             !Do nothing, the module is already initialized.
@@ -215,7 +216,6 @@ contains
     !> Convert u and v in the grid space to Vorticity and Divergence
     ! in the spectral space.
     subroutine ModSpectral_grid_vel2vort(this, ug, vg, vorm, divm, kcos)
-        use geometry, only : cosgr, cosgr2
         class(ModSpectral_t), intent(in) :: this
 
         real(p), intent(in) :: ug(ix, il), vg(ix, il)
@@ -229,15 +229,15 @@ contains
         if (kcos == 2) then
             do j = 1, il
                 do i = 1, ix
-                    ug1(i, j) = ug(i, j) * cosgr(j)
-                    vg1(i, j) = vg(i, j) * cosgr(j)
+                    ug1(i, j) = ug(i, j) * this%mod_geometry%cosgr(j)
+                    vg1(i, j) = vg(i, j) * this%mod_geometry%cosgr(j)
                 end do
             end do
         else
             do j = 1, il
                 do i = 1, ix
-                    ug1(i, j) = ug(i, j) * cosgr2(j)
-                    vg1(i, j) = vg(i, j) * cosgr2(j)
+                    ug1(i, j) = ug(i, j) * this%mod_geometry%cosgr2(j)
+                    vg1(i, j) = vg(i, j) * this%mod_geometry%cosgr2(j)
                 end do
             end do
         end if

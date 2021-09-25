@@ -13,7 +13,6 @@ contains
     !  to the dynamical grid-point tendencies
     subroutine get_physical_tendencies(state, j1, utend, vtend, ttend, qtend)
         use physical_constants, only : cp
-        use geometry, only : fsg, sigh, grdsig, grdscp
         use sea_model, only : sea_coupling_flag
         use sppt, only : mu, gen_sppt
         use convection, only : get_convection_tendencies
@@ -25,8 +24,10 @@ contains
         use vertical_diffusion, only : get_vertical_diffusion_tend
         use humidity, only : spec_hum_to_rel_hum
         use model_state, only : ModelState_t
+        use geometry, only : ModGeometry_t
+        use Spectral, only : ModSpectral_t
 
-        type(ModelState_t), intent(inout) :: state
+        type(ModelState_t), intent(inout), target :: state
         integer, intent(in) :: j1
 
         real(p), intent(inout) :: utend(ix, il, kx) !! Zonal velocity tendency
@@ -52,6 +53,11 @@ contains
         real(p), allocatable, dimension(:, :, :) :: se, rh, qsat
         real(p), allocatable, dimension(:, :, :) :: tt_cnv, qt_cnv, tt_lsc, qt_lsc
         real(p), allocatable, dimension(:, :, :) :: sppt_pattern
+
+        class(ModGeometry_t), pointer :: mod_geometry
+        class(ModSpectral_t), pointer :: mod_spectral
+        mod_geometry => state%mod_geometry
+        mod_spectral => state%mod_spectral
 
         allocate(tt_cnv(ix, il, kx), qt_cnv(ix, il, kx), tt_lsc(ix, il, kx), qt_lsc(ix, il, kx))
         allocate(tt_rlw(ix, il, kx), ut_pbl(ix, il, kx), vt_pbl(ix, il, kx), tt_pbl(ix, il, kx))
@@ -81,18 +87,18 @@ contains
         ! =========================================================================
         ! Convert model spectral variables to grid-point variables
         do k = 1, kx
-            call state%mod_spectral%vort2vel(&
+            call mod_spectral%vort2vel(&
                     state%vor(:, :, k, j1), state%div(:, :, k, j1), ucos, vcos)
 
-            ug(:, :, k) = state%mod_spectral%spec2grid(ucos, 2)
-            vg(:, :, k) = state%mod_spectral%spec2grid(vcos, 2)
-            tg(:, :, k) = state%mod_spectral%spec2grid(state%t(:, :, k, j1), 1)
-            qg(:, :, k) = state%mod_spectral%spec2grid(state%tr(:, :, k, j1, 1), 1) ! q
-            phig(:, :, k) = state%mod_spectral%spec2grid(state%phi(:, :, k), 1)
+            ug(:, :, k) = mod_spectral%spec2grid(ucos, 2)
+            vg(:, :, k) = mod_spectral%spec2grid(vcos, 2)
+            tg(:, :, k) = mod_spectral%spec2grid(state%t(:, :, k, j1), 1)
+            qg(:, :, k) = mod_spectral%spec2grid(state%tr(:, :, k, j1, 1), 1) ! q
+            phig(:, :, k) = mod_spectral%spec2grid(state%phi(:, :, k), 1)
 
         end do
 
-        pslg = state%mod_spectral%spec2grid(state%ps(:, :, j1), 1)
+        pslg = mod_spectral%spec2grid(state%ps(:, :, j1), 1)
 
         ! =========================================================================
         ! Compute thermodynamic variables
@@ -105,7 +111,7 @@ contains
         se = cp * tg + phig
 
         do k = 1, kx
-            call spec_hum_to_rel_hum(tg(:, :, k), psg, fsg(k), qg(:, :, k), &
+            call spec_hum_to_rel_hum(tg(:, :, k), psg, mod_geometry%fsg(k), qg(:, :, k), &
                     rh(:, :, k), qsat(:, :, k))
         end do
 
@@ -115,18 +121,19 @@ contains
 
         ! Deep convection
         call get_convection_tendencies(psg, se, qg, qsat, iptop, state%cbmf, &
-                state%precnv, tt_cnv, qt_cnv)
+                state%precnv, tt_cnv, qt_cnv, &
+                mod_geometry%fsg, mod_geometry%dhs, mod_geometry%wvi)
 
         do k = 2, kx
-            tt_cnv(:, :, k) = tt_cnv(:, :, k) * rps * grdscp(k)
-            qt_cnv(:, :, k) = qt_cnv(:, :, k) * rps * grdsig(k)
+            tt_cnv(:, :, k) = tt_cnv(:, :, k) * rps * mod_geometry%grdscp(k)
+            qt_cnv(:, :, k) = qt_cnv(:, :, k) * rps * mod_geometry%grdsig(k)
         end do
 
         icnv = kx - iptop
 
         ! Large-scale condensation
         call get_large_scale_condensation_tendencies(psg, qg, qsat, iptop, &
-                state%precls, tt_lsc, qt_lsc)
+                state%precls, tt_lsc, qt_lsc, mod_geometry%fsg, mod_geometry%dhs)
 
         ttend = ttend + tt_cnv + tt_lsc
         qtend = qtend + qt_cnv + qt_lsc
@@ -149,7 +156,7 @@ contains
 
             do i = 1, ix
                 do j = 1, il
-                    cltop(i, j) = sigh(icltop(i, j, 1) - 1) * psg(i, j)
+                    cltop(i, j) = mod_geometry%sigh(icltop(i, j, 1) - 1) * psg(i, j)
                     prtop(i, j) = float(iptop(i, j))
                 end do
             end do
@@ -157,14 +164,14 @@ contains
             call get_shortwave_rad_fluxes(state, psg, qg, icltop, cloudc, clstr)
 
             do k = 1, kx
-                state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) * rps * grdscp(k)
+                state%tt_rsw(:, :, k) = state%tt_rsw(:, :, k) * rps * mod_geometry%grdscp(k)
             end do
         end if
 
         ! Compute downward longwave fluxes
         call get_downward_longwave_rad_fluxes(&
                 tg, state%slrd, tt_rlw, state%fband, state%rad_flux, &
-                state%rad_tau2, state%rad_st4a)
+                state%rad_tau2, state%rad_st4a, mod_geometry%wvi)
 
         ! Compute surface fluxes and land skin temperature
         call get_surface_fluxes(&
@@ -173,8 +180,9 @@ contains
                 & state%ssrd, state%slrd, state%ustr, state%vstr, &
                 state%shf, state%evap, state%slru, state%hfluxn, &
                 ts, tskin, u0, v0, t0, .true., &
-                state%alb_land, state%alb_sea, state%snowc,&
-                state%land_temp, state%soil_avail_water)
+                state%alb_land, state%alb_sea, state%snowc, &
+                state%land_temp, state%soil_avail_water, &
+                mod_geometry%coa, mod_geometry%sigl, mod_geometry%wvi)
 
         ! Recompute sea fluxes in case of anomaly coupling
         if (sea_coupling_flag > 0) then
@@ -184,8 +192,9 @@ contains
                     state%ustr, state%vstr, state%shf, &
                     state%evap, state%slru, &
                     state%hfluxn, ts, tskin, u0, v0, t0, .false., &
-                    state%alb_land, state%alb_sea, state%snowc,&
-                    state%land_temp, state%soil_avail_water)
+                    state%alb_land, state%alb_sea, state%snowc, &
+                    state%land_temp, state%soil_avail_water, &
+                    mod_geometry%coa, mod_geometry%sigl, mod_geometry%wvi)
         end if
 
         ! Compute upward longwave fluxes, convert them to tendencies and add
@@ -193,9 +202,10 @@ contains
         call get_upward_longwave_rad_fluxes(tg, ts, state%slrd, &
                 state%slru(:, :, 3), state%slr, &
                 state%olr, tt_rlw, state%fband, &
-                state%rad_flux, state%rad_tau2, state%rad_st4a, state%rad_strat_corr)
+                state%rad_flux, state%rad_tau2, state%rad_st4a, state%rad_strat_corr, &
+                mod_geometry%dhs)
         do k = 1, kx
-            tt_rlw(:, :, k) = tt_rlw(:, :, k) * rps * grdscp(k)
+            tt_rlw(:, :, k) = tt_rlw(:, :, k) * rps * mod_geometry%grdscp(k)
         end do
 
         ttend = ttend + state%tt_rsw + tt_rlw
@@ -205,14 +215,15 @@ contains
         ! =========================================================================
 
         ! Vertical diffusion and shallow convection
-        call get_vertical_diffusion_tend(se, rh, qg, qsat, phig, icnv, ut_pbl, vt_pbl, &
-                & tt_pbl, qt_pbl)
+        call get_vertical_diffusion_tend(&
+                se, rh, qg, qsat, phig, icnv, ut_pbl, vt_pbl, tt_pbl, qt_pbl, &
+                mod_geometry%fsg, mod_geometry%dhs, mod_geometry%sigh)
 
         ! Add tendencies due to surface fluxes
-        ut_pbl(:, :, kx) = ut_pbl(:, :, kx) + state%ustr(:, :, 3) * rps * grdsig(kx)
-        vt_pbl(:, :, kx) = vt_pbl(:, :, kx) + state%vstr(:, :, 3) * rps * grdsig(kx)
-        tt_pbl(:, :, kx) = tt_pbl(:, :, kx) + state%shf(:, :, 3) * rps * grdscp(kx)
-        qt_pbl(:, :, kx) = qt_pbl(:, :, kx) + state%evap(:, :, 3) * rps * grdsig(kx)
+        ut_pbl(:, :, kx) = ut_pbl(:, :, kx) + state%ustr(:, :, 3) * rps * mod_geometry%grdsig(kx)
+        vt_pbl(:, :, kx) = vt_pbl(:, :, kx) + state%vstr(:, :, 3) * rps * mod_geometry%grdsig(kx)
+        tt_pbl(:, :, kx) = tt_pbl(:, :, kx) + state%shf(:, :, 3) * rps * mod_geometry%grdscp(kx)
+        qt_pbl(:, :, kx) = qt_pbl(:, :, kx) + state%evap(:, :, 3) * rps * mod_geometry%grdsig(kx)
 
         utend = utend + ut_pbl
         vtend = vtend + vt_pbl
@@ -221,7 +232,7 @@ contains
 
         ! Add SPPT noise
         if (sppt_on) then
-            sppt_pattern = gen_sppt(state%mod_spectral)
+            sppt_pattern = gen_sppt(mod_spectral)
 
             ! The physical contribution to the tendency is *tend - *tend_dyn, where * is u, v, t, q
             do k = 1, kx

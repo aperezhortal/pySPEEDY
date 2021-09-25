@@ -13,9 +13,8 @@ module longwave_radiation
 
 contains
     !> Compute the downward flux of long-wave radiation
-    subroutine get_downward_longwave_rad_fluxes(ta, fsfcd, dfabs, fband, rad_flux, rad_tau2, rad_st4a)
+    subroutine get_downward_longwave_rad_fluxes(ta, fsfcd, dfabs, fband, rad_flux, rad_tau2, rad_st4a, wvi)
         use physical_constants, only : sbc
-        use geometry, only : wvi
         use mod_radcon, only : epslw, emisfc
 
         real(p), intent(in) :: ta(ix, il, kx)    !! Absolute temperature [K]
@@ -25,6 +24,7 @@ contains
         real(p), intent(inout) :: rad_flux(ix,il,4) !! Radiative flux in different spectral bands
         real(p), intent(in) :: rad_tau2(ix,il,kx,4) !! Transmissivity of atmospheric layers
         real(p), intent(inout) :: rad_st4a(ix,il,kx,2) !! Blackbody emission from full and half atmospheric levels
+        real(p), intent(in) :: wvi(kx, 2)  !! Weights for vertical interpolation
 
         integer :: i, j, jb, k, nl1
         real(p) :: anis, brad, corlw(ix, il), emis
@@ -123,8 +123,7 @@ contains
     !> Compute the absorption of upward long-wave radiation fluxes
     subroutine get_upward_longwave_rad_fluxes(&
             ta, ts, fsfcd, fsfcu, fsfc, ftop, dfabs, fband, &
-            rad_flux, rad_tau2, rad_st4a, rad_strat_corr)
-        use geometry, only : dhs
+            rad_flux, rad_tau2, rad_st4a, rad_strat_corr, dhs)
         use mod_radcon, only : epslw, emisfc
 
         real(p), intent(in) :: ta(ix, il, kx)    !! Absolute temperature
@@ -141,6 +140,8 @@ contains
         real(p), intent(in) :: rad_st4a(ix,il,kx,2)!! Blackbody emission from full and half atmospheric levels
         real(p), intent(inout) :: rad_tau2(ix,il,kx,4) !! Transmissivity of atmospheric layers
         real(p), intent(inout) :: rad_strat_corr(ix,il,2) !! Stratospheric correction term
+        real(p), intent(in) :: dhs(kx)   !! Sigma level thicknesses
+
 
 
         integer :: i, j, jb, k

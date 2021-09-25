@@ -1319,6 +1319,15 @@
         ],
         "alt_name": "lev"
     },
+    "mod_geometry": {
+        "dtype": "class(ModGeometry_t)",
+        "dims": null,
+        "desc": "Geometry module instance",
+        "time_dim": null,
+        "units": null,
+        "nc_dims": null,
+        "alt_name": "mod_geometry"
+    },
     "mod_spectral": {
         "dtype": "class(ModSpectral_t)",
         "dims": null,

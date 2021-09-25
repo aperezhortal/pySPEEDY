@@ -5,12 +5,15 @@ module implicit
     use types, only : p
     use params
     use horizontal_diffusion, only : ModHorizontalDiffusion_t
+    use geometry, only : ModGeometry_t
 
     implicit none
 
     private
     public ModImplicit_t
 
+    !> Implicit solver module.
+    !! This module extends the ModHorizontalDiffusion module.
     type, extends(ModHorizontalDiffusion_t) :: ModImplicit_t
         logical :: mod_implicit_initialize_flag = .false.
 
@@ -38,20 +41,20 @@ contains
     !  terms anyway to reduce roundoff error; also the constants needed for
     !  the biharmonic diffusion, which is assumed always to be backwards
     !  implicit, are defined in initialize_implicit).
-    subroutine ModImplicit_initialize(this)
+    subroutine ModImplicit_initialize(this, mod_geometry)
         use physical_constants, only : gamma
         use physical_constants, only : akap, rgas, grav
-        use geometry, only : fsg, fsgr
         use horizontal_diffusion, only : ModHorizontalDiffusion_initialize
         use matrix_inversion, only : inv
 
         class(ModImplicit_t), intent(inout) :: this
+        class(ModGeometry_t), intent(in), target :: mod_geometry
 
         integer :: k
         real(p) :: rgam
 
         ! Initialize horizontal diffusion module
-        call ModHorizontalDiffusion_initialize(this)
+        call ModHorizontalDiffusion_initialize(this, mod_geometry)
 
         if (this%mod_implicit_initialize_flag) then
             return
@@ -68,9 +71,9 @@ contains
         rgam = rgas * gamma / (1000. * grav)
 
         do k = 1, kx
-            this%tref(k) = 288. * max(0.2, fsg(k))**rgam
+            this%tref(k) = 288. * max(0.2, this%mod_geometry%fsg(k))**rgam
             this%tref2(k) = akap * this%tref(k)
-            this%tref3(k) = fsgr(k) * this%tref(k)
+            this%tref3(k) = this%mod_geometry%fsgr(k) * this%tref(k)
         end do
 
         this%mod_implicit_initialize_flag = .true.
@@ -80,11 +83,10 @@ contains
     subroutine ModImplicit_set_time_step(this, dt)
         use physical_constants, only : gamma
         use physical_constants, only : akap, rgas, grav, rearth
-        use geometry, only : hsg, dhs, fsg
         use horizontal_diffusion, only : ModHorizontalDiffusion_initialize
         use matrix_inversion, only : inv
 
-        class(ModImplicit_t), intent(inout) :: this
+        class(ModImplicit_t), intent(inout), target :: this
         real(p), intent(in) :: dt !! Time step
 
         integer :: m, n, k, k1, k2, l
@@ -94,6 +96,9 @@ contains
         integer, allocatable, dimension(:) :: indx
         real(p), allocatable, dimension(:, :) :: xa, xb, xe, ya
         real(p), allocatable, dimension(:, :, :) :: xf
+
+        class(ModGeometry_t), pointer :: mod_geometry
+        mod_geometry => this%mod_geometry
 
         allocate(dsum(kx), indx(kx))
         allocate(xa(kx, kx), xb(kx, kx), xe(kx, kx), ya(kx, kx))
@@ -113,7 +118,7 @@ contains
         xi = dt * alph
         xxi = xi / (rearth * rearth)
 
-        this%dhsx = xi * dhs
+        this%dhsx = xi * mod_geometry%dhs
 
         do n = 1, nx
             do m = 1, mx
@@ -127,28 +132,30 @@ contains
 
         do k = 1, kx
             do k1 = 1, kx
-                ya(k, k1) = -akap * this%tref(k) * dhs(k1)
+                ya(k, k1) = -akap * this%tref(k) * mod_geometry%dhs(k1)
             end do
         end do
 
         do k = 2, kx
-            xa(k, k - 1) = 0.5 * (akap * this%tref(k) / fsg(k) - (this%tref(k) - this%tref(k - 1)) / dhs(k))
+            xa(k, k - 1) = 0.5 * (akap * this%tref(k) / mod_geometry%fsg(k) &
+                    - (this%tref(k) - this%tref(k - 1)) / mod_geometry%dhs(k))
         end do
 
         do k = 1, kx - 1
-            xa(k, k) = 0.5 * (akap * this%tref(k) / fsg(k) - (this%tref(k + 1) - this%tref(k)) / dhs(k))
+            xa(k, k) = 0.5 * (akap * this%tref(k) / mod_geometry%fsg(k) &
+                    - (this%tref(k + 1) - this%tref(k)) / mod_geometry%dhs(k))
         end do
 
         !sig(k)=xb(k,k')*d(k')
-        dsum(1) = dhs(1)
+        dsum(1) = mod_geometry%dhs(1)
         do k = 2, kx
-            dsum(k) = dsum(k - 1) + dhs(k)
+            dsum(k) = dsum(k - 1) + mod_geometry%dhs(k)
         end do
 
         do k = 1, kx - 1
             do k1 = 1, kx
-                xb(k, k1) = dhs(k1) * dsum(k)
-                if(k1<=k) xb(k, k1) = xb(k, k1) - dhs(k1)
+                xb(k, k1) = mod_geometry%dhs(k1) * dsum(k)
+                if(k1<=k) xb(k, k1) = xb(k, k1) - mod_geometry%dhs(k1)
             end do
         end do
 
@@ -167,11 +174,11 @@ contains
 
         do k = 1, kx
             do k1 = k + 1, kx
-                this%xd(k, k1) = rgas * log(hsg(k1 + 1) / hsg(k1))
+                this%xd(k, k1) = rgas * log(mod_geometry%hsg(k1 + 1) / mod_geometry%hsg(k1))
             end do
         end do
         do k = 1, kx
-            this%xd(k, k) = rgas * log(hsg(k + 1) / fsg(k))
+            this%xd(k, k) = rgas * log(mod_geometry%hsg(k + 1) / mod_geometry%fsg(k))
         end do
 
         !P(K)=YE(K)+XE(K,K')*D(K')
@@ -188,7 +195,7 @@ contains
             xxx = (float(l) * float(l + 1)) / (rearth * rearth)
             do k = 1, kx
                 do k1 = 1, kx
-                    xf(k, k1, l) = xi * xi * xxx * (rgas * this%tref(k) * dhs(k1) - xe(k, k1))
+                    xf(k, k1, l) = xi * xi * xxx * (rgas * this%tref(k) * mod_geometry%dhs(k1) - xe(k, k1))
                 end do
             end do
             do k = 1, kx

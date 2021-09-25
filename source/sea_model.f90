@@ -32,7 +32,6 @@ contains
     ! Initialization of sea model
     subroutine sea_model_init(state)
         use boundaries, only : fill_missing_values, check_surface_fields
-        use geometry, only : radang
         use model_state, only : ModelState_t
 
         type(ModelState_t), intent(inout) :: state
@@ -106,7 +105,7 @@ contains
         end do
 
         ! Grid latitudes for sea-surface variables
-        state%deglat_s = radang * 90.0 / asin(1.0)
+        state%deglat_s = state%mod_geometry%radang * 90.0 / asin(1.0)
 
         ! SST
         do month = 1, 12
