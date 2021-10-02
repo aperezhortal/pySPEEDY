@@ -1,5 +1,6 @@
 # Set variables depending on target
-default : COMPOPTS = $(OPT) $(BASE) -fPIC  -g -fbacktrace -fcheck=bounds
+# Usefull options for debugging: -g -fbacktrace -fcheck=bounds
+default : COMPOPTS = $(OPT) $(BASE) -fPIC
 profile : COMPOPTS = -pg $(BASE)
 
 # Default
@@ -12,18 +13,23 @@ profile : base_target
 BASE=-fconvert=swap -Wall -cpp
 
 # Optimisation flags (disabled for debugging, profiling etc.)
-OPT= -Ofast
+OPT=-O3 \
+    -fno-math-errno \
+    -fno-signaling-nans \
+    -ffinite-math-only \
+    -fno-rounding-math \
+    -fcx-limited-range
+# IMPORTANT: The "-funsafe-math-optimizations" option may change the
+# results of the simulation!
+# This optimization flag allows the compiler to take advantage of associativity and commutativity rules that may not be
+# valid in IEEE754 arithmetic.
+# Note that "-Ofast" includes this flag.
 
 # # Location of NetCDF module (netcdf.mod)
 INC=-I/usr/include
-INC=-I/home/aperez/.conda/envs/speedy/include
-
-# -I/usr/include
 
 # Library flags
-#-L/usr/lib
 LIB=-L$/usr/lib -lnetcdff -lnetcdf
-LIB=-L/home/aperez/.conda/envs/speedy/lib -lnetcdff -lnetcdf
 
 FILES= \
        error_codes.o \

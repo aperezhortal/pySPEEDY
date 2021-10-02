@@ -17,7 +17,7 @@ start_dates = (
 
 @pytest.mark.parametrize("start_date, end_date", start_dates)
 def test_speedy_run(start_date, end_date):
-    """Run speeedy for 1 month and compare the output with a reference."""
+    """Run speedy and compare the output with a reference."""
 
     file_name = end_date.strftime("%Y%m%d%H%M.nc")
 
@@ -33,6 +33,13 @@ def test_speedy_run(start_date, end_date):
         model_file = os.path.join(tmp_work_dir, file_name)
         model_ds = xr.open_dataset(model_file)
 
+        # Let's compare using different relative tolerance.
+        # By doing so, if the fields differ, the we can identify how far away they are.
+        # ALL THESE TESTS SHOULD PASS.
+        xr.testing.assert_allclose(model_ds, reference_ds, rtol=1e-01, atol=0)
+        xr.testing.assert_allclose(model_ds, reference_ds, rtol=1e-02, atol=0)
+        xr.testing.assert_allclose(model_ds, reference_ds, rtol=1e-03, atol=0)
+        xr.testing.assert_allclose(model_ds, reference_ds, rtol=1e-04, atol=0)
         xr.testing.assert_allclose(model_ds, reference_ds, rtol=1e-06, atol=0)
 
 
@@ -59,7 +66,6 @@ def test_speedy_concurrent():
             output_dir=tmp_work_dir2, start_date=start_date, end_date=end_date
         )
         model2.set_bc()
-        model2._set_sst_anomalies()
 
         for day in range(ndays):
             model.start_date = start_date + timedelta(days=day)

@@ -4,31 +4,22 @@
 # Its presence/absence is used in subclassing setup in numpy/distutils/core.py.
 # However, we need to run the distutils version of sdist, so import that first
 # so that it is in sys.modules
+import numpy
 import numpy.distutils.command.sdist  # noqa
 import setuptools  # noqa
-
-###############################################################################
-
-import numpy
 from numpy.distutils.command.build_ext import build_ext
 from numpy.distutils.core import Extension
 from pathlib import Path
 
+###############################################################################
+
 PROJECT_ROOT_DIR = Path(__file__).parent
 SPEEDY_SOURCE_DIR = PROJECT_ROOT_DIR / "source"
-F2CMAP = SPEEDY_SOURCE_DIR.resolve() / "f2py_f2cmap"
+F2CMAP = SPEEDY_SOURCE_DIR.resolve() / ".f2py_f2cmap"
 
 pyspeedy_extension = Extension(
     name="pyspeedy.speedy_driver",
     sources=["source/types.f90", "source/params.f90", "source/speedy_driver.f90"],
-    extra_compile_args=[
-        "-O2",
-        "-ffast-math",
-        "-L./source" "-lspeedy",
-        "-g",
-        "-fbacktrace",
-        "-fcheck=bounds",
-    ],
     extra_link_args=["-fopenmp", "-L./source", "-lspeedy", "-lnetcdf", "-lnetcdff"],
     include_dirs=[numpy.get_include()],
     f2py_options=["--f2cmap", str(F2CMAP)],
@@ -70,6 +61,14 @@ class specialized_build_ext(build_ext):
 
 if __name__ == "__main__":
     from numpy.distutils.core import setup
+    import sys
+
+    sys.path.insert(0, str(PROJECT_ROOT_DIR / "registry"))
+
+    from model_state_def import export_model_state_json, build_fortran_sources  # noqa
+
+    build_fortran_sources()
+    export_model_state_json()
 
     setup(
         ext_modules=[pyspeedy_extension],

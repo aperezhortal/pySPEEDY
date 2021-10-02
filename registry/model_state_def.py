@@ -3,7 +3,6 @@ from collections import defaultdict
 from jinja2 import FileSystemLoader, Environment
 from pathlib import Path
 import json
-import pandas as pd
 import re
 
 try:
@@ -13,6 +12,15 @@ try:
     XLSXWRITER_IMPORTED = True
 except ImportError:
     XLSXWRITER_IMPORTED = False
+
+try:
+    # Used to export the model state vars into an excel file
+    import pandas as pd
+
+    PANDAS_IMPORTED = True
+except ImportError:
+    PANDAS_IMPORTED = False
+
 
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
@@ -432,16 +440,20 @@ def build_fortran_sources():
     file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
     env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
     template = env.get_template("model_state.f90.j2")
+    output_file = str(SOURCES_DIR / "model_state.f90")
     template.stream(
         state_arrays=state_arrays,
         state_scalars=state_scalars,
         state_modules=state_modules,
-    ).dump(str(SOURCES_DIR / "model_state.f90"))
+    ).dump(output_file)
+    print(f"Saved source: {output_file} file.")
 
     template = env.get_template("speedy_driver.f90.j2")
+    output_file = str(SOURCES_DIR / "speedy_driver.f90")
     template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
         str(SOURCES_DIR / "speedy_driver.f90")
     )
+    print(f"Saved source: {output_file} file.")
 
 
 def export_model_state_html():
@@ -474,12 +486,14 @@ def export_model_state_json():
     file_path = PYSPEEDY_DATA_DIR / "model_state.json"
     with open(file_path, "w") as outfile:
         json.dump(data2json, outfile, indent=4)
+
+    print(f"Saved state definition: {file_path} file.")
     return file_path
 
 
 def export_model_state_excel():
     """Export state variables description in Excel format."""
-    if XLSXWRITER_IMPORTED:
+    if XLSXWRITER_IMPORTED and PANDAS_IMPORTED:
         _data = defaultdict(list)
         for var in model_state:
             _data["name"].append(var.name)
@@ -518,6 +532,5 @@ def export_model_state_excel():
 
 if __name__ == "__main__":
     build_fortran_sources()
-    export_model_state_html()
     export_model_state_json()
     export_model_state_excel()

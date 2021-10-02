@@ -1,0 +1,57 @@
+name: Test pySPEEDY
+
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ main  ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit_tests:
+    name: Unit Tests (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "ubuntu-latest" ]
+        python-version: [ "3.7", "3.8" ]
+      max-parallel: 2
+
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install netcdf libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnetcdf-dev libnetcdff-dev gfortran
+
+      - name: Install package dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade numpy pytest
+          python -m pip install -r requirements.txt
+
+      - name: Install pySPEEDY
+        run: |
+          python registry/model_state_def.py
+          python setup.py build_ext -i
+
+      - name: Print debuggin information
+        run: |
+          gfortran --version
+          python --version
+          python -c "import numpy ; print(\"numpy version:\", numpy.version.version)"
+          python -c "import setuptools ; print(\"setuptools version:\", setuptools.__version__)"
+          tree
+
+      - name: Run tests
+        run: pytest
