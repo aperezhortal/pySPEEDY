@@ -2,6 +2,7 @@
 pySPEEDY
 ========
 
+
 What is pySPEEDY?
 =================
 
@@ -9,7 +10,7 @@ pySPEEDY is a fork of the `SPEEDY.f90 <https://github.com/samhatfield/speedy.f90
 by `Sam Hatfield <https://samhatfield.co.uk/>`_ that uses a python interface for running and controlling
 the SPEEDY.f90 model.
 
-The original SPEEDY.f90 model is modern fortran implementation of the intermediate complexity atmospheric
+The SPEEDY.f90 is a modern Fortran implementation of the intermediate complexity atmospheric
 general circulation
 `SPEEDY model <http://users.ictp.it/~kucharsk/speedy_description/km_ver41_appendixA.pdf>`_,
 developed by Fred Kucharski, Franco Molteni, and Martin P. King.
@@ -18,17 +19,17 @@ developed by Fred Kucharski, Franco Molteni, and Martin P. King.
 What are the differences between pySPEEDY and SPEEDY.f90?
 =========================================================
 
-The pySPEEDY model is build on top of the SPEEDY.f90. However, in order to control the Speedy.f90 model from python,
+The pySPEEDY model is built on top of the SPEEDY.f90. However, to control the SPEEDY.f90 model from python,
 the original SPEEDY.f90 code was considerably refactored to make it thread-safe and allow multiples instances of the
 Speedy model to run in parallel.
 
-Perhaps the most significant change is the encapsulation all the model state variables in a Fortran data type,
-called `ModelState_t`, and the use of the jinja template engine to generation of the model state definitions and
+Perhaps the most significant change is the encapsulation of all the model state variables in a Fortran data type,
+called `ModelState_t`, and the use of the jinja template engine to generate the model state declarations and the
 python interface.
 
 Additionally, to expose the state variables to python and facilitate memory management,
 pySPEEDY uses **variable registry** (the `registry/model_state_def.py` file) to define all the state variables.
-These changes were inspired the "grid" data type and the registry used by the Weather Research and Forecasting (WRF)
+These changes were inspired by the "grid" data type and the registry used by the Weather Research and Forecasting (WRF)
 model for managing the state variables.
 
 The pySPEEDY **variable registry** and the Jinja template engine are used to generate the necessary Fortran sources
@@ -45,16 +46,15 @@ exposed using the "container" approach described in
 Finally, to allow running different instances of the speedy model in parallel, each Speedy instance
 was made self-contained.
 That means that all the variables needed to run the model are contained inside the "Model State".
-To made each model instance self-contained, all the global variables defined across
-the modules where removed and moved to the **ModelState_t** structure.
-This was done in two parts. First, the model state variables where directly added as attributes in the **ModelState_t**
+To make each model instance self-contained, all the global variables defined across the modules were removed and moved to the **ModelState_t** structure.
+This was done in two parts. First, the model state variables were directly added as attributes in the **ModelState_t**
 structure. The other change was encapsulating the Legendre, Fourier, Spectral, Diffusion, Geometry, and Implicit
-Fortran modules into a Fortran data type, and add an instance of each module to the model state.
+Fortran modules into a Fortran data type and add an instance of each module to the model state.
 
 Simple usage example
 ====================
 
-The next example runs the SPEEDY model for four days, from 1982/01/01 to 1982/01/04,
+The following example runs the SPEEDY model for four days, from 1982/01/01 to 1982/01/04,
 using the default initial and boundary conditions::
 
     from datetime import datetime
@@ -77,7 +77,7 @@ Installation
 ============
 
 To install the pySPEEDY model, you need jinja2 and numpy installed already in your system.
-Then, to install pySPEEDy, run::
+Then, to install pySPEEDY, run::
 
     # From PyPI
     pip install pySPEEDY
@@ -99,8 +99,3 @@ These are the minimal dependencies needed to run pySPEEDY:
 - numpy
 - xarray
 - python-dateutil
-
-
-
-
-
