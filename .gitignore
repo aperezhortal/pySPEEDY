@@ -1,6 +1,7 @@
 *.swp
 *.so
 speedy.f90/*.o
+speedy.f90/*.a
 speedy.f90/*.mod
 speedy.f90/model_state.f90
 speedy.f90/speedy_driver.f90
@@ -22,3 +23,4 @@ examples/data
 /pyspeedy/data/model_state.csv
 /pyspeedy/data/model_state.xlsx
 /pyspeedy/data/model_state.json
+/docs/source/speedy_f90/

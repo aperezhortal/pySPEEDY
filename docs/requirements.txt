@@ -1,4 +1,4 @@
-# Additional requeriments needed to build the documentation
+# Additional requirements needed to build the documentation
 sphinx
 numpydoc
 sphinx_rtd_theme
@@ -8,3 +8,4 @@ ipykernel
 nbsphinx
 nbsphinx-link
 sphinx-gallery
+ford

@@ -7,6 +7,7 @@
     user_guide
     example_gallery
     pyspeedy_reference
+    speedy_f90_reference.rst
 
 
 
