@@ -2,7 +2,7 @@
 
 .PHONY:clean
 all: 
-	$(MAKE) -C source
+	$(MAKE) -C speedy.f90
 
 .PHONY:clean
 test:	
@@ -10,6 +10,6 @@ test:
 
 .PHONY:clean
 clean:   
-	$(MAKE) -C source clean
+	$(MAKE) -C speedy.f90 clean
 	@rm -f pyspeedy/*.so
 

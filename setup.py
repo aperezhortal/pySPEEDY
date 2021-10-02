@@ -14,13 +14,17 @@ from pathlib import Path
 ###############################################################################
 
 PROJECT_ROOT_DIR = Path(__file__).parent
-SPEEDY_SOURCE_DIR = PROJECT_ROOT_DIR / "source"
-F2CMAP = SPEEDY_SOURCE_DIR.resolve() / ".f2py_f2cmap"
+SPEEDY_F90_SOURCE_DIR = PROJECT_ROOT_DIR / "speedy.f90"
+F2CMAP = SPEEDY_F90_SOURCE_DIR.resolve() / ".f2py_f2cmap"
 
 pyspeedy_extension = Extension(
     name="pyspeedy.speedy_driver",
-    sources=["source/types.f90", "source/params.f90", "source/speedy_driver.f90"],
-    extra_link_args=["-fopenmp", "-L./source", "-lspeedy", "-lnetcdf", "-lnetcdff"],
+    sources=[
+        "speedy.f90/types.f90",
+        "speedy.f90/params.f90",
+        "speedy.f90/speedy_driver.f90",
+    ],
+    extra_link_args=["-fopenmp", "-L./speedy.f90", "-lspeedy", "-lnetcdf", "-lnetcdff"],
     include_dirs=[numpy.get_include()],
     f2py_options=["--f2cmap", str(F2CMAP)],
 )

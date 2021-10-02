@@ -1,9 +1,9 @@
 *.swp
 *.so
-source/*.o
-source/*.mod
-source/model_state.f90
-source/speedy_driver.f90
+speedy.f90/*.o
+speedy.f90/*.mod
+speedy.f90/model_state.f90
+speedy.f90/speedy_driver.f90
 *.pyc
 
 .tox

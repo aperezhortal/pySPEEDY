@@ -1,7 +1,7 @@
 project: SPEEDY.f90
 summary: An intermediate complexity atmospheric general circulation model
-src_dir: ./source/
-output_dir: ./docs
+src_dir: ../../../speedy.f90/
+output_dir: ./
 project_github: https://github.com/samhatfield/speedy.f90
 author: Sam Hatfield
 author_description: Graduate student in Predictability of Weather and Climate Group, Atmospheric, Oceanic and Planetary Physics, University of Oxford.
