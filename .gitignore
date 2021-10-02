@@ -1,12 +1,24 @@
 *.swp
 *.so
+source/*.o
+source/*.mod
 source/model_state.f90
 source/speedy_driver.f90
 *.pyc
 
+.tox
 .idea
 .vscode
 build
 .pytest_cache
 .ipynb_checkpoints
-/MANIFEST
+MANIFEST
+*.egg-info
+
+examples/data
+/docs/source/generated
+/docs/source/examples/data/
+/docs/source/model_state_def.html
+/pyspeedy/data/model_state.csv
+/pyspeedy/data/model_state.xlsx
+/pyspeedy/data/model_state.json

@@ -16,6 +16,7 @@ except ImportError:
 
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../source").resolve()
+DOCS_DIR = (THIS_FILE_DIR / "../docs/source").resolve()
 PYSPEEDY_DATA_DIR = (THIS_FILE_DIR / "../pyspeedy/data").resolve()
 
 NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}
@@ -417,72 +418,106 @@ model_state = [
     ),
 ]
 
-state_arrays = [var for var in model_state if var.dims and not var.is_module_instance]
-state_scalars = [
-    var for var in model_state if var.dims is None and not var.is_module_instance
-]
-state_modules = [var for var in model_state if var.is_module_instance]
 
-file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
-env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
-template = env.get_template("model_state.f90.j2")
-template.stream(
-    state_arrays=state_arrays, state_scalars=state_scalars, state_modules=state_modules
-).dump(str(SOURCES_DIR / "model_state.f90"))
+def build_fortran_sources():
+    """Create the sources for the Python interface and the model state."""
+    state_arrays = [
+        var for var in model_state if var.dims and not var.is_module_instance
+    ]
+    state_scalars = [
+        var for var in model_state if var.dims is None and not var.is_module_instance
+    ]
+    state_modules = [var for var in model_state if var.is_module_instance]
 
-template = env.get_template("speedy_driver.f90.j2")
-template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
-    str(SOURCES_DIR / "speedy_driver.f90")
-)
+    file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
+    env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
+    template = env.get_template("model_state.f90.j2")
+    template.stream(
+        state_arrays=state_arrays,
+        state_scalars=state_scalars,
+        state_modules=state_modules,
+    ).dump(str(SOURCES_DIR / "model_state.f90"))
 
-###################################################
-# Export state variables description in JSON format
-data2json = {
-    var.name: dict(
-        dtype=var.dtype,
-        dims=var.dims,
-        desc=var.desc,
-        time_dim=var.time_dim,
-        units=var.units,
-        nc_dims=var.nc_dims,
-        alt_name=var.alt_name,
+    template = env.get_template("speedy_driver.f90.j2")
+    template.stream(state_arrays=state_arrays, state_scalars=state_scalars).dump(
+        str(SOURCES_DIR / "speedy_driver.f90")
     )
-    for var in model_state
-}
 
-with open(PYSPEEDY_DATA_DIR / "model_state.json", "w") as outfile:
-    json.dump(data2json, outfile, indent=4)
 
-####################################################
-# Export state variables description in Excel format
-if XLSXWRITER_IMPORTED:
-    _data = defaultdict(list)
-    for var in model_state:
-        _data["name"].append(var.name)
-        _data["dtype"].append(var.dtype)
-        _data["dims"].append(var.dims)
-        _data["nc_dims"].append(var.dims)
-        _data["desc"].append(var.desc)
-        _data["units"].append(var.units)
-        _data["time_dim"].append(var.time_dim)
-        _data["alt_name"].append(var.alt_name)
+def export_model_state_html():
+    """
+    Export state variables description to HTML for docs.
+    """
+    file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
+    env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
+    template = env.get_template("model_state_def.html")
+    file_path = str(DOCS_DIR / "model_state_def.html")
+    template.stream(model_state=model_state).dump(file_path)
+    return file_path
 
-    my_dataframe = pd.DataFrame(data=_data)
-    writer = pd.ExcelWriter("output.xlsx", engine="xlsxwriter")
-    sheetname = "state_variables"
-    my_dataframe.to_excel(writer, sheet_name=sheetname, index=False)
-    # Adjust the columns size
-    worksheet = writer.sheets[sheetname]  # pull worksheet object
-    for idx, col in enumerate(my_dataframe):  # loop through all columns
-        series = my_dataframe[col]
-        max_len = (
-            max(
-                (
-                    series.astype(str).map(len).max(),  # len of largest item
-                    len(str(series.name)),  # len of column name/header
+
+def export_model_state_json():
+    """Export state variables description in JSON format."""
+    data2json = {
+        var.name: dict(
+            dtype=var.dtype,
+            dims=var.dims,
+            desc=var.desc,
+            time_dim=var.time_dim,
+            units=var.units,
+            nc_dims=var.nc_dims,
+            alt_name=var.alt_name,
+        )
+        for var in model_state
+    }
+
+    file_path = PYSPEEDY_DATA_DIR / "model_state.json"
+    with open(file_path, "w") as outfile:
+        json.dump(data2json, outfile, indent=4)
+    return file_path
+
+
+def export_model_state_excel():
+    """Export state variables description in Excel format."""
+    if XLSXWRITER_IMPORTED:
+        _data = defaultdict(list)
+        for var in model_state:
+            _data["name"].append(var.name)
+            _data["dtype"].append(var.dtype)
+            _data["dims"].append(var.dims)
+            _data["nc_dims"].append(var.dims)
+            _data["desc"].append(var.desc)
+            _data["units"].append(var.units)
+            _data["time_dim"].append(var.time_dim)
+            _data["alt_name"].append(var.alt_name)
+
+        my_dataframe = pd.DataFrame(data=_data)
+
+        file_path = PYSPEEDY_DATA_DIR / "model_state.xlsx"
+
+        writer = pd.ExcelWriter(file_path, engine="xlsxwriter")
+        sheetname = "state_variables"
+        my_dataframe.to_excel(writer, sheet_name=sheetname, index=False)
+        # Adjust the columns size
+        worksheet = writer.sheets[sheetname]  # pull worksheet object
+        for idx, col in enumerate(my_dataframe):  # loop through all columns
+            series = my_dataframe[col]
+            max_len = (
+                max(
+                    (
+                        series.astype(str).map(len).max(),  # len of largest item
+                        len(str(series.name)),  # len of column name/header
+                    )
                 )
-            )
-            + 1
-        )  # adding a little extra space
-        worksheet.set_column(idx, idx, max_len)  # set column width
-    writer.save()
+                + 1
+            )  # adding a little extra space
+            worksheet.set_column(idx, idx, max_len)  # set column width
+        writer.save()
+        return file_path
+
+
+if __name__ == "__main__":
+    build_fortran_sources()
+    export_model_state_html()
+    export_model_state_json()
+    export_model_state_excel()

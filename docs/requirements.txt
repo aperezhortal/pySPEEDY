@@ -1,0 +1,10 @@
+# Additional requeriments needed to build the documentation
+sphinx
+numpydoc
+sphinx_rtd_theme
+sphinx_gallery
+autodoc
+ipykernel
+nbsphinx
+nbsphinx-link
+sphinx-gallery

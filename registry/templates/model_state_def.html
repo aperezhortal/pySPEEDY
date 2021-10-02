@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+    <title> pySPEEDY </title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.css">
+</head>
+<body>
+<div class="container">
+    <h1>pySPEEDY model state</h1>
+    <hr>
+    {% block content %}
+    <table id="data" class="table table-striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Fortran type</th>
+            <th>Fortran dimensions</th>
+            <th>Description</th>
+            <th>Time dimension</th>
+            <th>Units</th>
+            <th>Xarray dimensions</th>
+<!--            <th>Xarray name</th>-->
+        </tr>
+        </thead>
+        <tbody>
+        {% for var in model_state %}
+        <tr>
+            <td>{{ var.name }}</td>
+            <td>{{ var.dtype }}</td>
+            <td>{{ var.dims }}</td>
+            <td>{{ var.desc }}</td>
+            <td>{{ var.time_dim }}</td>
+            <td>{{ var.units }}</td>
+            <td>{{ var.nc_dims }}</td>
+<!--            <td>{{ var.alt_name }}</td>-->
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endblock %}
+</div>
+<script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8"
+        src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap5.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#data').DataTable({
+            columns: [
+                null, // name
+                {searchable: false}, // dtype
+                {searchable: false}, //dims
+                {orderable: false}, //desc
+                {searchable: false, searchable: false}, //time_dim
+                {searchable: false}, //units
+                {orderable: false, searchable: false}, //nc_dims
+                // null //alt name
+            ],
+            "iDisplayLength": 25,
+        });
+
+    });
+</script>
+
+
+</body>
+</html>
+
+
+

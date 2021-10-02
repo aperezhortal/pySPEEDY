@@ -6,6 +6,7 @@
 # so that it is in sys.modules
 import numpy.distutils.command.sdist  # noqa
 import setuptools  # noqa
+
 ###############################################################################
 
 import numpy
@@ -38,7 +39,9 @@ class specialized_build_ext(build_ext):
     """
     Specialized builder for the speedy model that uses the Makefile.
     """
+
     special_extension = pyspeedy_extension.name
+
     def build_extension(self, ext):
         import subprocess
         from distutils.errors import DistutilsSetupError
@@ -54,6 +57,7 @@ class specialized_build_ext(build_ext):
                 print(PROJECT_ROOT_DIR)
                 import sys
                 import glob
+
                 print(glob.glob(str(PROJECT_ROOT_DIR / "*")))
 
                 raise DistutilsSetupError(
@@ -66,6 +70,7 @@ class specialized_build_ext(build_ext):
 
 if __name__ == "__main__":
     from numpy.distutils.core import setup
+
     setup(
         ext_modules=[pyspeedy_extension],
         cmdclass={"build_ext": specialized_build_ext},

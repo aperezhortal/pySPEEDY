@@ -27,8 +27,7 @@ def test_speedy_run(start_date, end_date):
         model = Speedy(
             output_dir=tmp_work_dir, start_date=start_date, end_date=end_date
         )
-        model.set_sst_anomalies()
-        model.default_init()
+        model.set_bc()
         model.run()
 
         model_file = os.path.join(tmp_work_dir, file_name)
@@ -53,15 +52,14 @@ def test_speedy_concurrent():
         model = Speedy(
             output_dir=tmp_work_dir1, start_date=start_date, end_date=end_date
         )
-        model.set_sst_anomalies()
-        model.default_init()
+        model.set_bc()
 
         # Create another speedy instance
         model2 = Speedy(
             output_dir=tmp_work_dir2, start_date=start_date, end_date=end_date
         )
-        model2.set_sst_anomalies()
-        model2.default_init()
+        model2.set_bc()
+        model2._set_sst_anomalies()
 
         for day in range(ndays):
             model.start_date = start_date + timedelta(days=day)

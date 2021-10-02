@@ -1,3 +1,7 @@
+"""
+The Speedy model.
+"""
+
 import os
 
 import xarray as xr
@@ -5,8 +9,9 @@ import numpy as np
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import json
+
 from pyspeedy import (
-    _speedy,
+    _speedy,  # noqa
     example_bc_file,
     example_sst_anomaly_file,
     PACKAGE_DATA_DIR,
@@ -25,6 +30,15 @@ _DEFAULT_PARAMS = tuple(_DEFAULT_PARAMS.items())
 with open(PACKAGE_DATA_DIR / "model_state.json") as fp:
     MODEL_STATE_DEF = json.load(fp)
 
+DEFAULT_OUTPUT_VARS = (
+    "u_grid",
+    "v_grid",
+    "t_grid",
+    "q_grid",
+    "phi_grid",
+    "ps_grid",
+)
+
 
 class Speedy:
     """
@@ -36,13 +50,25 @@ class Speedy:
         Constructor. Initializes the model.
 
         For a complete list of the accepted initialization parameters, see:
-        :py:meth:`set_params`.
+        :meth:`set_params`.
         """
         self._start_date = None
         self._end_date = None
-        self._state_cnt = _speedy.modelstate_init()
 
+        # Allocate the model state
+        self._state_cnt = _speedy.modelstate_init()
         self.set_params(**control_params)
+
+        self._initialized_bc = False
+        self._initialized_ssta = False
+
+    def __del__(self):
+        """Clean up."""
+        _speedy.modelstate_close(self._state_cnt)
+        _speedy.controlparams_close(self._control_cnt)
+
+        self._dealloc_date(self._start_date)
+        self._dealloc_date(self._end_date)
 
     def set_params(
         self,
@@ -93,14 +119,7 @@ class Speedy:
         self.output_dir = output_dir
 
         if output_vars is None:
-            output_vars = (
-                "u_grid",
-                "v_grid",
-                "t_grid",
-                "q_grid",
-                "phi_grid",
-                "ps_grid",
-            )
+            output_vars = DEFAULT_OUTPUT_VARS
         self.output_vars = output_vars
 
     @staticmethod
@@ -147,23 +166,11 @@ class Speedy:
 
             time_dim = MODEL_STATE_DEF[var_name]["time_dim"]
             if time_dim:
-                print(time_dim)
                 return _setter(self._state_cnt, value, getattr(self, time_dim))
 
             return _setter(self._state_cnt, value)
 
         return _setter(self._state_cnt, value)
-
-    def __del__(self):
-        """Clean up."""
-        _speedy.modelstate_close(self._state_cnt)
-        _speedy.controlparams_close(self._control_cnt)
-
-        self._control_cnt = None
-        self._state_cnt = None
-
-        self._start_date = self._dealloc_date(self._start_date)
-        self._end_date = self._dealloc_date(self._end_date)
 
     @staticmethod
     def _get_fortran_date(container):
@@ -209,10 +216,62 @@ class Speedy:
     def end_date(self, value):
         self._end_date = self._set_fortran_date(self._end_date, value)
 
-    def default_init(self, bc_file=None):
-        """Initialization using the default initial and boundary conditions."""
-        # In the model state, the variables follow the lon/lat dimension ordering.
+    def set_bc(self, bc_file=None, sst_anomaly=None):
+        """
+        Set the model boundary conditions from a Netcdf file.
+        If no file is provided, the default boundary conditions from the original SPEEDY model are used.
 
+        The boundary conditions file (`bc_file`) should contain the following fields:
+
+        - Time invariant (lon, lat):
+            - orog: Orographic height [m]
+            - lsm: Land sea mask fraction. Values between 0 and 1.
+            - vegl: Low vegetation cover (fraction). Values between 0 and 1.
+            - vegh: High vegetation cover (fraction). Values between 0 and 1.
+            - alb: Annual-mean albedo (fraction). Values between 0 and 1.
+        - Climatological values for each month of the year (lon, lat, month):
+            - stl: Land surface temp (top-layer) [degK].
+            - snowd: Snow depth [kg/m2]
+            - swl1: Soil wetness (layer 1) [vol. fraction, 0-1]
+            - swl2: Soil wetness (layer 2) [vol. fraction, 0-1]
+            - swl3: Soil wetness (layer 3) [vol. fraction, 0-1]
+            - icec: Sea-ice concentration (fraction). Values between 0 and 1.
+            - sst: Sea surface temperature [degK].
+
+        In addition to the climatological fields, the SPEEDY model requires the
+        sea surface temperature anomalies with respect to the the climatologies (lon, lat, day):
+        These anomalies are loaded from the file specified in the `sst_anomaly` keyword, and it should contain the
+        following field:
+
+        - Anomalies fields (lon, lat, day):
+            - ssta: Sea surface temperature anomaly [degK].
+
+        By default, the anomalies available in the original SPEEDY model are used.
+        Note that the anomaly fields should cover the simulation period.
+
+        Notes
+        -----
+        The exact shapes for the invariant fields are:
+        (lon, lat, month) = (96, 48, 12)
+
+        The SPEEDY boundary conditions are included in the pySPEEDY package.
+        This climatology was derived from the ERA interim re-analysis using the 1979-2008 period.
+        Also, the example data provided in the pySPEEDY package include the monthly SST anomalies
+        from 1979-01-01 to 2013-12-01 (Y/m/d).
+
+        See also
+        --------
+        :meth:`set_sst_anomalies`
+        """
+
+        if self._initialized_bc:
+            raise RuntimeError(
+                "The model was already initialized. Create a new instance if you need different boundary conditions."
+            )
+
+        self._set_sst_anomalies(sst_anomaly=sst_anomaly)
+
+        # In the model state, the variables follow the lon/lat dimension ordering.
         if bc_file is None:
             bc_file = example_bc_file()
 
@@ -243,13 +302,24 @@ class Speedy:
         self["sea_ice_frac12"] = ds["icec"].values
 
         _speedy.init(self._state_cnt, self._control_cnt)
+        self._initialized_bc = True
 
-    def set_sst_anomalies(self, sst_anomaly=None):
+    def _set_sst_anomalies(self, sst_anomaly=None):
         """
-        Load SST anomalies from file.
+        Load SST anomalies from netcdf file.
+
+        **Important**: The SST anomalies need to be set before setting the ICs!
 
         Only the times between the simulation's start and end date are loaded.
+
+        See the :meth:`set_bc` documentation for additional details on the expected fields.
         """
+
+        if self._initialized_ssta:
+            raise RuntimeError(
+                "The SST anomaly was already initialized."
+                " Create a new instance if you need different boundary conditions."
+            )
         if sst_anomaly is None:
             sst_anomaly = example_sst_anomaly_file()
 
@@ -304,13 +374,25 @@ class Speedy:
 
         _speedy.modelstate_init_sst_anom(self._state_cnt, expected_months - 2)
         self["sst_anom"] = ds["ssta"]
+        self._initialized_ssta = True
 
-    def run(self):
+    def run(self, save_first_step=True, silent=False):
         """
-        Run the model.
+        Run the model between the start and the end date (`start_date` and `end_date` attributes).
+
+        Before running the model, the boundary conditions need to be set (see the :meth:`set_bc` method).
         """
+        if not self._initialized_bc:
+            raise RuntimeError(
+                "The SPEEDY model was not initialized. Call the `set_bc` method to inialize the model."
+            )
+
         self.model_date = self.start_date
         dt_step = timedelta(seconds=3600 * 24 / 36)
+
+        if save_first_step:
+            self.save(silent=silent)
+
         while self.model_date < self.end_date:
             error_code = _speedy.step(self._state_cnt, self._control_cnt)
             if error_code < 0:
@@ -320,13 +402,20 @@ class Speedy:
             if self["current_step"] % self.history_interval == 0:
                 self.save()
 
-    def save(self):
+    def save(self, silent=False):
         """
         Save selected variables of the current model state into
-        a netcdf or zarr file.
+        a netcdf.
+
         The variables are saved in the lat/lon grid space (not the spectral domain).
+
+        Parameters
+        ----------
+        silent: bool
+            If True, do not print information messages.
         """
-        print("Saving model output at: ", self.model_date)
+        if not silent:
+            print("Saving model output at: ", self.model_date)
         _speedy.compute_grid_vars(self._state_cnt)
         data_vars = dict()
 
