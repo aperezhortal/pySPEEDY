@@ -24,7 +24,7 @@ except ImportError:
 
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../speedy.f90").resolve()
-DOCS_DIR = (THIS_FILE_DIR / "../docs/source").resolve()
+DOCS_DIR = (THIS_FILE_DIR / "../docs").resolve()
 PYSPEEDY_DATA_DIR = (THIS_FILE_DIR / "../pyspeedy/data").resolve()
 
 NC_DIMS_LUT = {"ix": "lon", "il": "lat", "kx": "lev"}

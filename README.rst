@@ -41,7 +41,7 @@ The interface mostly build using the
 `F2PY–Fortran to Python interface generator <https://numpy.org/doc/stable/f2py/>`_. However, since F2PY does not
 support derived data types like the one used in the *Model State*, the variables contained in the *Model State* were
 exposed using the "container" approach described in
-`Pletzer et al., 2008 <https://doi.org/10.1109/MCSE.2008.94>`.
+`Pletzer et al., 2008 <https://doi.org/10.1109/MCSE.2008.94>`_.
 
 Finally, to allow running different instances of the speedy model in parallel, each Speedy instance
 was made self-contained.

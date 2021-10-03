@@ -17,10 +17,10 @@ MANIFEST
 *.egg-info
 
 examples/data
-/docs/source/generated
-/docs/source/examples/data/
-/docs/source/model_state_def.html
+/docs/generated
+/docs/examples/data/
+/docs/model_state_def.html
 /pyspeedy/data/model_state.csv
 /pyspeedy/data/model_state.xlsx
 /pyspeedy/data/model_state.json
-/docs/source/speedy_f90/
+/docs/_build

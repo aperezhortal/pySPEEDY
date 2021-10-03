@@ -1,11 +1,34 @@
 import os
+from os.path import abspath
 import configparser
 import sys
+import subprocess
+from pathlib import Path
 
-sys.path.insert(1, os.path.abspath("."))
-sys.path.insert(1, os.path.abspath("../../examples"))
-if "READTHEDOCS" not in os.environ:
-    sys.path.insert(1, os.path.abspath("../../"))
+DOCS_FOLDER = Path(__file__).parent
+PACKAGE_FOLDER = DOCS_FOLDER / ".."
+REGISTRY_FOLDER = PACKAGE_FOLDER / "registry"
+
+
+def run_cmd(cmd, cwd=None):
+    print(f'Running: "{cmd}"')
+    cmd = cmd.split(" ")
+    result = subprocess.run(cmd, capture_output=True, cwd=cwd)
+    print(result.stdout.decode("utf-8"))
+    if result.returncode != 0:
+        raise RuntimeError('Error running "{cmd}"')
+
+
+sys.path.insert(1, abspath(str(PACKAGE_FOLDER / "examples")))
+sys.path.insert(1, abspath(str(PACKAGE_FOLDER)))
+
+if "READTHEDOCS" in os.environ:
+    # In read the docs, lets create first the fortran documentation.
+    ford_cfg = str(DOCS_FOLDER / "speedy_f90_ford_project_file.md")
+    run_cmd(f"pwd")  # Additional debugging info
+    run_cmd(f"ford {ford_cfg}", cwd=str(DOCS_FOLDER))
+    run_cmd(f"ls", cwd=str(DOCS_FOLDER))  # Additional debugging info
+    run_cmd(f"ls _build/html", cwd=str(DOCS_FOLDER))  # Additional debugging info
 
 # -- Project information -----------------------------------------------------
 
@@ -14,7 +37,7 @@ copyright = "2021, Andrés Pérez Hortal, Sam Hatfield, Fred Kucharski, Franco M
 author = "Andrés Pérez Hortal, Sam Hatfield, Fred Kucharski, Franco Molteni"
 
 # Get the full version from the setup.cfg file.
-setup_cfg_path = os.path.join(os.path.dirname(__file__), "../../setup.cfg")
+setup_cfg_path = str(PACKAGE_FOLDER / "setup.cfg")
 
 config = configparser.ConfigParser()
 config.read(setup_cfg_path)
@@ -24,11 +47,7 @@ release = config["metadata"]["version"]
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import sys
-
-if "READTHEDOCS" not in os.environ:
-    sys.path.insert(1, os.path.abspath("../../"))
 
 # -- General configuration ---------------------------------------------------
 
@@ -60,7 +79,14 @@ numpydoc_show_class_members = False
 autosummary_imported_members = True
 
 # Build the Model State table.
-sys.path.insert(1, os.path.abspath("../../registry"))
+sys.path.insert(1, abspath(str(REGISTRY_FOLDER)))
 from model_state_def import export_model_state_html  # noqa
 
 export_model_state_html()
+
+if "READTHEDOCS" in os.environ:
+    # In read the docs, lets print additional debugging info
+    run_cmd(f"ls _build/html", cwd=str(DOCS_FOLDER))  # Additional debugging info
+    run_cmd(f"ls -R _build/html", cwd=str(DOCS_FOLDER))  # Additional debugging info
+    run_cmd(f"ls -1 ..", cwd=str(DOCS_FOLDER))  # Additional debugging info
+    run_cmd(f"ls -1 ../../", cwd=str(DOCS_FOLDER))  # Additional debugging info

@@ -1,7 +1,7 @@
 project: SPEEDY.f90
 summary: An intermediate complexity atmospheric general circulation model
 src_dir: ../speedy.f90/
-output_dir: ./source/speedy_f90
+output_dir: ./_build/html/speedy_f90
 fpp_extensions: fpp
 author: Sam Hatfield
 predocmark: <
