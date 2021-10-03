@@ -16,6 +16,12 @@ general circulation
 developed by Fred Kucharski, Franco Molteni, and Martin P. King.
 
 
+Documentation
+=============
+
+Check the latest documentation of the project `here <https://pyspeedy.readthedocs.io/en/latest/index.html>`_.
+
+
 What are the differences between pySPEEDY and SPEEDY.f90?
 =========================================================
 
@@ -77,11 +83,6 @@ Installation
 ============
 
 To install the pySPEEDY model, you need jinja2 and numpy installed already in your system.
-Then, to install pySPEEDY, run::
-
-    # From PyPI
-    pip install pySPEEDY
-
 To install the package from source::
 
     # Clone the repo
