@@ -77,7 +77,7 @@ using the default initial and boundary conditions::
 The data is saved inside the `./data` in Netcdf format (CF convention).
 
 Check a more detailed tutorial
-`here <https://colab.research.google.com/github/pySTEPS/pysteps/blob/master/examples/my_first_nowcast.ipynb>`_.
+`here <https://pyspeedy.readthedocs.io/en/latest/examples/My_first_forecast.html>`_.
 
 Installation
 ============
