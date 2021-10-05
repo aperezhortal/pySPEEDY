@@ -87,6 +87,34 @@ Check a more detailed tutorial
 Installation
 ============
 
+Dependencies
+~~~~~~~~~~~~
+
+The following dependencies are needed to build and install the package:
+
+* Netcdf libraries (libnetcdf and libnetcdff)
+* numpy
+* jinja2
+* gfortran
+
+To run pySPEEDY, you also need:
+
+* xarray
+* netCDF4
+* matplotlib (examples)
+* cartopy (examples)
+
+
+Install the latest version from git
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To install the latest development version in the main branch, run::
+
+    pip install -v -U git+https://github.com/aperezhortal/pySPEEDY.git
+
+
+Installation from sources
+~~~~~~~~~~~~~~~~~~~~~~~~~
 To install the pySPEEDY model, you need jinja2 and numpy installed already in your system.
 To install the package from source::
 
@@ -94,7 +122,10 @@ To install the package from source::
     git clone https://github.com/aperezhortal/pySPEEDY.git
 
     # Install the package
-    pip install ./pySPEEDY
+    pip install -v -e ./pySPEEDY
+
+The "-e" option install the package in "editable" mode. This will leave the compiled extensions inside the source
+folder after the installation.
 
 
 Runtime dependencies
