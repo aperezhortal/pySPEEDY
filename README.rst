@@ -21,6 +21,11 @@ Documentation
 
 Check the latest documentation of the project `here <https://pyspeedy.readthedocs.io/en/latest/index.html>`_.
 
+Run you first SPEEDY forecast
+=============================
+
+Try pySPEEDY in a Google Colab interactive environment
+`here <https://colab.research.google.com/github/aperezhortal/pySPEEDY/blob/main/examples/My_first_forecast.ipynb>`_
 
 What are the differences between pySPEEDY and SPEEDY.f90?
 =========================================================
