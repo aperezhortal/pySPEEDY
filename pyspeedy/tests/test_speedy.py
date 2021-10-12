@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 
 import pytest
 import xarray as xr
+
+from pyspeedy.callbacks import XarrayExporter
 from pyspeedy.speedy import Speedy
 
 start_dates = (
@@ -19,16 +21,14 @@ start_dates = (
 def test_speedy_run(start_date, end_date):
     """Run speedy and compare the output with a reference."""
 
-    file_name = end_date.strftime("%Y%m%d%H%M.nc")
+    file_name = end_date.strftime("%Y-%m-%d_%H%M.nc")
 
     reference_file = os.path.join(os.path.dirname(__file__), "fixtures", file_name)
     reference_ds = xr.open_dataset(reference_file)
     with tempfile.TemporaryDirectory() as tmp_work_dir:
-        model = Speedy(
-            output_dir=tmp_work_dir, start_date=start_date, end_date=end_date
-        )
+        model = Speedy(start_date=start_date, end_date=end_date)
         model.set_bc()
-        model.run()
+        model.run(callbacks=[XarrayExporter(output_dir=tmp_work_dir)])
 
         model_file = os.path.join(tmp_work_dir, file_name)
         model_ds = xr.open_dataset(model_file)
@@ -48,7 +48,7 @@ def test_speedy_concurrent():
     start_date = datetime(1982, 1, 1)
     end_date = datetime(1982, 1, 4)
     ndays = 3
-    file_name = end_date.strftime("%Y%m%d%H%M.nc")
+    file_name = end_date.strftime("%Y-%m-%d_%H%M.nc")
 
     reference_file = os.path.join(os.path.dirname(__file__), "fixtures", file_name)
     reference_ds = xr.open_dataset(reference_file)
@@ -56,25 +56,21 @@ def test_speedy_concurrent():
         tmp_work_dir1 = os.path.join(tmp_work_dir, "run1")
         tmp_work_dir2 = os.path.join(tmp_work_dir, "run2")
 
-        model = Speedy(
-            output_dir=tmp_work_dir1, start_date=start_date, end_date=end_date
-        )
+        model = Speedy(start_date=start_date, end_date=end_date)
         model.set_bc()
 
         # Create another speedy instance
-        model2 = Speedy(
-            output_dir=tmp_work_dir2, start_date=start_date, end_date=end_date
-        )
+        model2 = Speedy(start_date=start_date, end_date=end_date)
         model2.set_bc()
 
         for day in range(ndays):
             model.start_date = start_date + timedelta(days=day)
             model.end_date = start_date + timedelta(days=day + 1)
-            model.run()
+            model.run(callbacks=[XarrayExporter(output_dir=tmp_work_dir1)])
 
             model2.start_date = start_date + timedelta(days=day)
             model2.end_date = start_date + timedelta(days=day + 1)
-            model2.run()
+            model2.run(callbacks=[XarrayExporter(output_dir=tmp_work_dir2)])
 
         model_file = os.path.join(tmp_work_dir1, file_name)
         model_ds = xr.open_dataset(model_file)

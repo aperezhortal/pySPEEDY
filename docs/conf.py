@@ -82,7 +82,7 @@ autosummary_imported_members = True
 sys.path.insert(1, abspath(str(REGISTRY_FOLDER)))
 from model_state_def import export_model_state_html  # noqa
 
-export_model_state_html()
+export_model_state_html(str(DOCS_FOLDER / "_build/html/model_state_def.html"))
 
 if "READTHEDOCS" in os.environ:
     # In read the docs, lets print additional debugging info

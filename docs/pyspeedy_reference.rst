@@ -2,12 +2,13 @@
 pySPEEDY reference
 ==================
 
-.. automodule:: pyspeedy
-    :members:
-    :special-members: __init__
-    :imported-members:
-    :exclude-members: Path
-    :noindex:
+.. toctree::
+    :maxdepth: 2
+    :caption: pySPEEDY modules
+
+    dev_reference/pyspeedy
+    dev_reference/callbacks
+
 
 Indices and tables
 ==================

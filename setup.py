@@ -4,7 +4,6 @@
 # Its presence/absence is used in subclassing setup in numpy/distutils/core.py.
 # However, we need to run the distutils version of sdist, so import that first
 # so that it is in sys.modules
-import numpy
 import numpy.distutils.command.sdist  # noqa
 import setuptools  # noqa
 from numpy.distutils.command.build_ext import build_ext

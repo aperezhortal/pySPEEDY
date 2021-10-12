@@ -1,5 +1,11 @@
 """
-The Speedy model.
+The Speedy model
+================
+
+.. autosummary::
+    :toctree: ./generated/
+
+    Speedy
 """
 
 import os
@@ -15,6 +21,7 @@ from pyspeedy import (
     example_bc_file,
     example_sst_anomaly_file,
     PACKAGE_DATA_DIR,
+    DEFAULT_OUTPUT_VARS,
 )
 from pyspeedy.error_codes import ERROR_CODES
 
@@ -29,15 +36,6 @@ _DEFAULT_PARAMS = dict(
 _DEFAULT_PARAMS = tuple(_DEFAULT_PARAMS.items())
 with open(PACKAGE_DATA_DIR / "model_state.json") as fp:
     MODEL_STATE_DEF = json.load(fp)
-
-DEFAULT_OUTPUT_VARS = (
-    "u_grid",
-    "v_grid",
-    "t_grid",
-    "q_grid",
-    "phi_grid",
-    "ps_grid",
-)
 
 
 class Speedy:
@@ -72,20 +70,15 @@ class Speedy:
 
     def set_params(
         self,
-        history_interval=1,  # in time steps
         diag_interval=180,
         start_date=datetime(1982, 1, 1),
         end_date=datetime(1982, 1, 2),
-        output_dir="./",
-        output_vars=None,
     ):
         """
         Set the model's control parameters.
 
         Parameters
         ----------
-        history_interval: int
-            Interval, in time steps, for which the model variables are saved.
         diag_interval: int
             Interval, in time steps, for which the diagnostic variables are saved.
         start_date: datetime
@@ -93,7 +86,6 @@ class Speedy:
         end_date: datetime
             Model end date.
         """
-        self.history_interval = history_interval
         self.diag_interval = diag_interval
         self.start_date = start_date
         self.end_date = end_date
@@ -104,7 +96,6 @@ class Speedy:
         self._control_cnt = _speedy.controlparams_init(
             self._start_date,
             self._end_date,
-            self.history_interval,
             self.diag_interval,
         )
 
@@ -115,12 +106,6 @@ class Speedy:
             + (self.end_date.month - self.start_date.month)
             + 1
         )
-
-        self.output_dir = output_dir
-
-        if output_vars is None:
-            output_vars = DEFAULT_OUTPUT_VARS
-        self.output_vars = output_vars
 
     @staticmethod
     def _dealloc_date(container):
@@ -258,10 +243,6 @@ class Speedy:
         This climatology was derived from the ERA interim re-analysis using the 1979-2008 period.
         Also, the example data provided in the pySPEEDY package include the monthly SST anomalies
         from 1979-01-01 to 2013-12-01 (Y/m/d).
-
-        See also
-        --------
-        :meth:`set_sst_anomalies`
         """
 
         if self._initialized_bc:
@@ -376,22 +357,27 @@ class Speedy:
         self["sst_anom"] = ds["ssta"]
         self._initialized_ssta = True
 
-    def run(self, save_first_step=True, silent=False):
+    def run(self, callbacks=None):
         """
-        Run the model between the start and the end date (`start_date` and `end_date` attributes).
+        Run the model between the start and the end date (defined in the instance `start_date` and
+        `end_date` attributes).
 
         Before running the model, the boundary conditions need to be set (see the :meth:`set_bc` method).
+
+        Parameters
+        ----------
+        callbacks: iterable of callback functions
+            Sequence of callback functions to be call every `history_interval` time steps.
         """
+        if callbacks is None:
+            callbacks = list()
         if not self._initialized_bc:
             raise RuntimeError(
-                "The SPEEDY model was not initialized. Call the `set_bc` method to inialize the model."
+                "The SPEEDY model was not initialized. Call the `set_bc` method to initialize the model."
             )
 
         self.model_date = self.start_date
         dt_step = timedelta(seconds=3600 * 24 / 36)
-
-        if save_first_step:
-            self.save(silent=silent)
 
         while self.model_date < self.end_date:
             error_code = _speedy.step(self._state_cnt, self._control_cnt)
@@ -399,51 +385,67 @@ class Speedy:
                 raise RuntimeError(ERROR_CODES[error_code])
             self.model_date += dt_step
 
-            if self["current_step"] % self.history_interval == 0:
-                self.save()
+            for callback in callbacks:
+                callback(self)
 
-    def save(self, silent=False):
+    def grid2spectral(self):
+        """Transform the grid u, v, t, qv, ps, and phi fields to the spectral domain."""
+        _speedy.transform_grid2spectral(self._state_cnt)  # noqa
+
+    def spectral2grid(self):
+        """Transform the spectral u, v, t, qv, ps, and phi fields to the grid domain."""
+        _speedy.transform_spectral2grid(self._state_cnt)  # noqa
+
+    def to_dataframe(self, variables=None):
         """
-        Save selected variables of the current model state into
-        a netcdf.
-
-        The variables are saved in the lat/lon grid space (not the spectral domain).
-
-        Parameters
-        ----------
-        silent: bool
-            If True, do not print information messages.
+        Return an xarray DataFrame with the current model state.
         """
-        if not silent:
-            print("Saving model output at: ", self.model_date)
-        _speedy.compute_grid_vars(self._state_cnt)
+        if variables is None:
+            variables = DEFAULT_OUTPUT_VARS
+
+        self.spectral2grid()
         data_vars = dict()
 
-        for var in self.output_vars:
+        for var in variables:
             data_vars[MODEL_STATE_DEF[var]["alt_name"]] = (
                 MODEL_STATE_DEF[var]["nc_dims"] + ["time"],
                 self[var][..., None].astype("float32"),
             )
 
+        coords = dict(
+            lon=self["lon"],
+            lat=self["lat"],
+            lev=self["lev"],
+            time=[self.model_date],
+        )
+
         output_ds = xr.Dataset(
             data_vars=data_vars,
-            coords=dict(
-                lon=self["lon"],
-                lat=self["lat"],
-                lev=self["lev"],
-                time=[self.model_date],
-            ),
+            coords=coords,
         )
 
         encoding = dict()
-        for var in self.output_vars:
+        for var in list(variables) + list(coords.keys()):
+            if var == "time":
+                continue
             alt_name = MODEL_STATE_DEF[var]["alt_name"]
-            output_ds[alt_name].attrs["units"] = MODEL_STATE_DEF[var]["units"]
+            if MODEL_STATE_DEF[var]["units"] is not None:
+                output_ds[alt_name].attrs["units"] = MODEL_STATE_DEF[var]["units"]
             output_ds[alt_name].attrs["long_name"] = MODEL_STATE_DEF[var]["desc"]
+            output_ds[alt_name].attrs["standard_name"] = MODEL_STATE_DEF[var][
+                "std_name"
+            ]
             encoding[alt_name] = {"dtype": "float32", "zlib": True}
 
-        file_name = self.model_date.strftime("%Y%m%d%H%M.nc")
+        output_ds["lat"].attrs["axis"] = "Y"
+        output_ds["lon"].attrs["axis"] = "X"
+        output_ds["time"].attrs["axis"] = "T"
+        output_ds["time"].attrs["standard_name"] = "time"
 
-        os.makedirs(self.output_dir, exist_ok=True)
-        output_ds.to_netcdf(os.path.join(self.output_dir, file_name), encoding=encoding)
+        # Reorder the dimensions to follow NWP output standards.
+        # - dimensions: ("time", "lev", "lat", "lon").
+        # - vertical levels increasing with height.
+        output_ds = output_ds.reindex(lev=output_ds.lev[::-1]).transpose(
+            "time", "lev", "lat", "lon"
+        )
         return output_ds

@@ -47,7 +47,6 @@ module model_control
         integer              :: ndaycal(12, 2)   !! The model calendar
         
         integer :: diag_interval     !! Period (number of steps) for diagnostic print-out
-        integer :: history_interval !! Number of time steps between outputs
     end type
 
     ! Container for a ControlParams object. Used for the python interface.
@@ -80,10 +79,10 @@ contains
     !> Initializes control structure with the default parameters.
     subroutine initialize_control(control_params, &
                                   start_datetime, end_datetime, &
-                                  history_interval, diag_interval)
+                                  diag_interval)
         type(ControlParams_t), intent(inout), target  :: control_params
         type(Datetime_t), intent(in)  :: start_datetime, end_datetime
-        integer, intent(in) :: diag_interval, history_interval
+        integer, intent(in) :: diag_interval
 
         integer, pointer   :: ndaycal(:, :)
 
@@ -98,7 +97,6 @@ contains
         control_params%model_datetime = control_params%start_datetime
 
         control_params%diag_interval = diag_interval
-        control_params%history_interval = history_interval
 
         ! Set calendar
         if (ncal == 365) then

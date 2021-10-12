@@ -6,15 +6,17 @@ needs to be recomputed.
 
 from datetime import datetime
 from pyspeedy import Speedy
+from pyspeedy.callbacks import XarrayExporter
 
 model = Speedy(
-    output_dir="./",
     start_date=datetime(1982, 1, 1),
     end_date=datetime(1982, 1, 4),
-    history_interval=36,
     diag_interval=180,
-    output_vars=None,
 )
-
 model.set_bc()
-model.run()
+
+callbacks = [
+    XarrayExporter(interval=36, spinup_time=None, output_dir="./", verbose=True)
+]
+
+model.run(callbacks=callbacks)

@@ -7,13 +7,13 @@ module prognostics
     use model_control, only : ControlParams_t
     use model_state, only : ModelState_t
     use spectral, only : ModSpectral_t
-    use geometry, only: ModGeometry_t
+    use geometry, only : ModGeometry_t
 
     implicit none
 
     private
 
-    public initialize_prognostics, spectral2grid
+    public initialize_prognostics, spectral2grid, grid2spectral, grid_filter
 
 contains
 
@@ -118,7 +118,7 @@ contains
         call check_diagnostics(state%vor(:, :, :, 1), &
                 state%div(:, :, :, 1), &
                 state%t(:, :, :, 1), &
-                0, control_params%diag_interval,&
+                0, control_params%diag_interval, &
                 state%mod_spectral)
 
     end subroutine
@@ -139,12 +139,10 @@ contains
 
         allocate(ucos(mx, nx), vcos(mx, nx))
 
-        ! Convert prognostic fields from spectral space to grid point space
+        ! Convert prognostic fields from spectral space to grid space
         ! Transform some of the variables to more suitable units.
         do k = 1, kx
-
-            call mod_spectral%vort2vel(&
-                    state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
+            call mod_spectral%vort2vel(state%vor(:, :, k, 1), state%div(:, :, k, 1), ucos, vcos)
 
             state%u_grid(:, :, k) = mod_spectral%spec2grid(ucos, 2)
             state%v_grid(:, :, k) = mod_spectral%spec2grid(vcos, 2)
@@ -157,6 +155,71 @@ contains
 
         deallocate(ucos)
         deallocate(vcos)
-
     end subroutine
+
+    !> Transform the prognostic variables from the grid to the spectral space.
+    subroutine grid2spectral(state)
+        use physical_constants, only : grav, p0
+
+        type(ModelState_t), intent(inout), target :: state
+
+        integer :: k
+        class(ModSpectral_t), pointer :: mod_spectral
+
+        mod_spectral => state%mod_spectral
+
+        ! Convert prognostic fields from the grid to the spectral space
+        ! Transform some of the variables the units used by the model prognostic variables.
+        do k = 1, kx
+            call mod_spectral%grid_vel2vort(&
+                    state%u_grid(:, :, k), state%v_grid(:, :, k), state%vor(:, :, k, 1), state%div(:, :, k, 1), 2)
+
+            state%t(:, :, k, 1) = mod_spectral%grid2spec(state%t_grid(:, :, k))
+            state%tr(:, :, k, 1, 1) = mod_spectral%grid2spec(state%q_grid(:, :, k)) / 1.0e-3 ! gr/kg
+            state%phi(:, :, k) = mod_spectral%grid2spec(state%phi_grid(:, :, k)) * grav ! dam
+        end do
+
+        state%ps(:, :, 1) = mod_spectral%grid2spec(log(state%ps_grid / p0)) ! log(normalized pressure)
+    end subroutine
+
+    !> Apply an spectral filtered (truncate wave numbers) to the grid prognostic variables
+    ! t_grid, v_grid, u_grid, q_grid, phi_grid, and ps_grid.
+    subroutine grid_filter(state)
+        use physical_constants, only : grav, p0
+
+        type(ModelState_t), intent(inout), target :: state
+
+        real(p), dimension(:, :), allocatable :: tmp
+        integer :: k
+        class(ModSpectral_t), pointer :: mod_spectral
+
+        mod_spectral => state%mod_spectral
+
+        allocate(tmp(ix, il))
+
+        ! Convert prognostic fields from spectral space to grid space
+        ! Transform some of the variables to more suitable units.
+        do k = 1, kx
+            call mod_spectral%grid_filter(state%u_grid(:, :, k), tmp)
+            state%u_grid(:, :, k) = tmp
+
+            call mod_spectral%grid_filter(state%v_grid(:, :, k), tmp)
+            state%v_grid(:, :, k) = tmp
+
+            call mod_spectral%grid_filter(state%t_grid(:, :, k), tmp)
+            state%t_grid(:, :, k) = tmp
+
+            call mod_spectral%grid_filter(state%q_grid(:, :, k), tmp)
+            state%q_grid(:, :, k) = tmp
+
+            call mod_spectral%grid_filter(state%phi_grid(:, :, k), tmp)
+            state%phi_grid(:, :, k) = tmp
+        end do
+
+        call mod_spectral%grid_filter(state%ps_grid(:, :), tmp)
+        state%ps_grid(:, :) = tmp
+
+        deallocate(tmp)
+    end subroutine
+
 end module

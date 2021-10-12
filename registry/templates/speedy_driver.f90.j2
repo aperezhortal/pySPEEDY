@@ -53,7 +53,7 @@ contains
         call do_single_step(state_ptr%p, control_ptr%p, error_code)
     end subroutine
 
-    subroutine compute_grid_vars(state_container)
+    subroutine transform_spectral2grid(state_container)
         use prognostics, only: spectral2grid
 
         integer(8), intent(in) :: state_container
@@ -64,18 +64,40 @@ contains
         call spectral2grid(state_ptr%p)
     end subroutine
 
+    subroutine transform_grid2spectral(state_container)
+        use prognostics, only: grid2spectral
+
+        integer(8), intent(in) :: state_container
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        call grid2spectral(state_ptr%p)
+    end subroutine
+
+    subroutine apply_grid_filter(state_container)
+        use prognostics, only: grid_filter
+
+        integer(8), intent(in) :: state_container
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        call grid_filter(state_ptr%p)
+    end subroutine
+
     ! =========================================================================
     ! ControlParams interface
     ! =========================================================================
     !> Initialize the ControlParams and return the container with the object.
     subroutine controlparams_init(control_cnt, &
                                   start_datetime_cnt, end_datetime_cnt, &
-                                  history_interval, diag_interval)
+                                  diag_interval)
 
         integer(8), intent(out) :: control_cnt !! Container for the ControlParams_Ptr_t object.
         integer(8), intent(in) :: start_datetime_cnt
         integer(8), intent(in) :: end_datetime_cnt
-        integer, intent(in)    :: history_interval, diag_interval
+        integer, intent(in)    :: diag_interval
 
         type(ControlParams_Ptr_t) :: control_ptr
         type(Datetime_Ptr_t) :: start_datetime_ptr, end_datetime_ptr
@@ -87,7 +109,7 @@ contains
         allocate (control_ptr%p)
         call initialize_control(control_ptr%p, &
                                 start_datetime_ptr%p, end_datetime_ptr%p, &
-                                history_interval, diag_interval)
+                                diag_interval)
 
         control_cnt = transfer(control_ptr, control_cnt)
     end subroutine

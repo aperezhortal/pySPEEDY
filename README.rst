@@ -6,26 +6,26 @@ pySPEEDY
 What is pySPEEDY?
 =================
 
-pySPEEDY is a fork of the `SPEEDY.f90 <https://github.com/samhatfield/speedy.f90>`_ atmospheric model written
-by `Sam Hatfield <https://samhatfield.co.uk/>`_ that uses a python interface for running and controlling
+pySPEEDY is a fork of the `SPEEDY.f90 <https://github.com/samhatfield/speedy.f90>`__ atmospheric model written
+by `Sam Hatfield <https://samhatfield.co.uk/>`__ that uses a python interface for running and controlling
 the SPEEDY.f90 model.
 
 The SPEEDY.f90 is a modern Fortran implementation of the intermediate complexity atmospheric
 general circulation
-`SPEEDY model <http://users.ictp.it/~kucharsk/speedy_description/km_ver41_appendixA.pdf>`_,
+`SPEEDY model <http://users.ictp.it/~kucharsk/speedy_description/km_ver41_appendixA.pdf>`__,
 developed by Fred Kucharski, Franco Molteni, and Martin P. King.
 
 
 Documentation
 =============
 
-Check the latest documentation of the project `here <https://pyspeedy.readthedocs.io/en/latest/index.html>`_.
+Check the latest documentation of the project `here <https://pyspeedy.readthedocs.io/en/latest/index.html>`__.
 
 Run you first SPEEDY forecast
 =============================
 
 Try pySPEEDY in a Google Colab interactive environment
-`here <https://colab.research.google.com/github/aperezhortal/pySPEEDY/blob/main/examples/My_first_forecast.ipynb>`_
+`here <https://colab.research.google.com/github/aperezhortal/pySPEEDY/blob/main/examples/My_first_forecast.ipynb>`__
 
 What are the differences between pySPEEDY and SPEEDY.f90?
 =========================================================
@@ -49,10 +49,10 @@ One of the reasons to use programmatic generation of the sources is to facilitat
 
 Another important element regarding the python interface is how python communicates back and forth with Fortran.
 The interface mostly build using the
-`F2PY–Fortran to Python interface generator <https://numpy.org/doc/stable/f2py/>`_. However, since F2PY does not
+`F2PY–Fortran to Python interface generator <https://numpy.org/doc/stable/f2py/>`__. However, since F2PY does not
 support derived data types like the one used in the *Model State*, the variables contained in the *Model State* were
 exposed using the "container" approach described in
-`Pletzer et al., 2008 <https://doi.org/10.1109/MCSE.2008.94>`_.
+`Pletzer et al., 2008 <https://doi.org/10.1109/MCSE.2008.94>`__.
 
 Finally, to allow running different instances of the speedy model in parallel, each Speedy instance
 was made self-contained.
@@ -82,7 +82,7 @@ using the default initial and boundary conditions::
 The data is saved inside the `./data` in Netcdf format (CF convention).
 
 Check a more detailed tutorial
-`here <https://pyspeedy.readthedocs.io/en/latest/examples/My_first_forecast.html>`_.
+`here <https://pyspeedy.readthedocs.io/en/latest/examples/My_first_forecast.html>`__.
 
 Installation
 ============

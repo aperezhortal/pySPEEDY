@@ -21,7 +21,6 @@ try:
 except ImportError:
     PANDAS_IMPORTED = False
 
-
 THIS_FILE_DIR = Path(__file__).parent
 SOURCES_DIR = (THIS_FILE_DIR / "../speedy.f90").resolve()
 DOCS_DIR = (THIS_FILE_DIR / "../docs").resolve()
@@ -37,6 +36,7 @@ class VarDef:
         dtype,
         dims,
         desc,
+        std_name=None,
         units=None,
         time_dim=None,
         alt_name=None,
@@ -45,6 +45,28 @@ class VarDef:
         """
         If time_dim is not None, the variable is not allocated during the
         initialization since it depends on the duration of the simulation.
+
+        Parameters
+        ----------
+        name: str
+            SPEEDY.f90 variable name.
+        dtype: str
+            Fortran data type used in the SPEEDY.f90 model.
+            E.g.: "complex(8)"
+        dims: str or None
+            Variable dimensions in the SPEEDY.f90 model. E.g.: "(mx, nx, kx, t_levs)"
+        desc: str
+            Variable description.
+        std_name: str
+            CF standard name associated with the variable. If std_name is not provided, the `name` is used.
+        units: str
+            Variable units
+        time_dim: str
+            Time dimension. Only required if the variable has a time dimension.
+        alt_name: str
+            Alternative name used for the variable. For example, name used in the NETCDF files.
+        value: str
+            Default value used for the variable initialization.
         """
         self.name = name
         self.dtype = dtype
@@ -61,8 +83,13 @@ class VarDef:
         self.time_dim = time_dim
         self.units = units
         self.alt_name = name
+        self.std_name = name
+
         if alt_name is not None:
             self.alt_name = alt_name
+        if std_name is None:
+            self.std_name = name
+
         self.is_module_instance = "class" in dtype.lower()
         self.value = value
 
@@ -115,14 +142,45 @@ model_state = [
         "(mx, nx, kx, t_levs,ntr)",
         "Tracers (tr(1): specific humidity in g/kg)",
     ),
-    VarDef("phi", "complex(8)", "(mx, nx, kx)", "Atmospheric geopotential"),
+    VarDef(
+        "phi",
+        "complex(8)",
+        "(mx, nx, kx)",
+        "Atmospheric geopotential",
+        std_name="geopotential_height",
+        units="m",
+    ),
     VarDef("phis", "complex(8)", "(mx, nx)", "Surface geopotential"),
     ####################################
     # Prognostic variables (grid domain)
     ####################################
-    VarDef("u_grid", "real(8)", "(ix, il, kx)", "eastward_wind", "m/s", alt_name="u"),
-    VarDef("v_grid", "real(8)", "(ix, il, kx)", "northward_wind", "m/s", alt_name="v"),
-    VarDef("t_grid", "real(8)", "(ix, il, kx)", "air_temperature", "K", alt_name="t"),
+    VarDef(
+        "u_grid",
+        "real(8)",
+        "(ix, il, kx)",
+        "eastward_wind",
+        units="m/s",
+        alt_name="u",
+        std_name="eastward_wind",
+    ),
+    VarDef(
+        "v_grid",
+        "real(8)",
+        "(ix, il, kx)",
+        "northward_wind",
+        units="m/s",
+        alt_name="v",
+        std_name="northward_wind",
+    ),
+    VarDef(
+        "t_grid",
+        "real(8)",
+        "(ix, il, kx)",
+        "air_temperature",
+        units="K",
+        alt_name="t",
+        std_name="air_temperature",
+    ),
     VarDef(
         "q_grid", "real(8)", "(ix, il, kx)", "specific_humidity", "Kg/Kg", alt_name="q"
     ),
@@ -400,9 +458,19 @@ model_state = [
     #############
     # Coordinates
     #############
-    VarDef("lon", "real", "(ix)", "longitude", "[degrees]"),
-    VarDef("lat", "real", "(il)", "latitude", "[degrees]"),
-    VarDef("lev", "real", "(kx)", "atmosphere_sigma_coordinate", "[]"),
+    VarDef(
+        "lon", "real", "(ix)", "longitude", units="degrees_east", std_name="longitude"
+    ),
+    VarDef(
+        "lat", "real", "(il)", "latitude", units="degrees_north", std_name="latitude"
+    ),
+    VarDef(
+        "lev",
+        "real",
+        "(kx)",
+        "Vertical sigma coordinate",
+        std_name="atmosphere_sigma_coordinate",
+    ),
     #
     # Module instances
     #
@@ -456,14 +524,15 @@ def build_fortran_sources():
     print(f"Saved source: {output_file} file.")
 
 
-def export_model_state_html():
+def export_model_state_html(file_path=None):
     """
     Export state variables description to HTML for docs.
     """
     file_loader = FileSystemLoader(THIS_FILE_DIR / "templates")
     env = Environment(loader=file_loader, trim_blocks=True, lstrip_blocks=True)
     template = env.get_template("model_state_def.html")
-    file_path = str(DOCS_DIR / "model_state_def.html")
+    if file_path is None:
+        file_path = str(DOCS_DIR / "model_state_def.html")
     template.stream(model_state=model_state).dump(file_path)
     return file_path
 
@@ -479,6 +548,7 @@ def export_model_state_json():
             units=var.units,
             nc_dims=var.nc_dims,
             alt_name=var.alt_name,
+            std_name=var.std_name,
         )
         for var in model_state
     }
@@ -504,6 +574,7 @@ def export_model_state_excel():
             _data["units"].append(var.units)
             _data["time_dim"].append(var.time_dim)
             _data["alt_name"].append(var.alt_name)
+            _data["std_name"].append(var.std_name)
 
         my_dataframe = pd.DataFrame(data=_data)
 
