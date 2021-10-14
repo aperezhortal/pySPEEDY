@@ -62,27 +62,10 @@ This was done in two parts. First, the model state variables were directly added
 structure. The other change was encapsulating the Legendre, Fourier, Spectral, Diffusion, Geometry, and Implicit
 Fortran modules into a Fortran data type and add an instance of each module to the model state.
 
-Simple usage example
-====================
+Example gallery
+===============
 
-The following example runs the SPEEDY model for four days, from 1982/01/01 to 1982/01/04,
-using the default initial and boundary conditions::
-
-    from datetime import datetime
-    from pyspeedy.speedy import Speedy
-
-    work_dir = "./data"
-    model = Speedy(
-        output_dir=work_dir, start_date=datetime(1982, 1, 1), end_date=datetime(1982, 1, 4)
-    )
-    model.set_sst_anomalies()
-    model.default_init()
-    model.run()
-
-The data is saved inside the `./data` in Netcdf format (CF convention).
-
-Check a more detailed tutorial
-`here <https://pyspeedy.readthedocs.io/en/latest/examples/My_first_forecast.html>`__.
+Check `this example gallery <https://pyspeedy.readthedocs.io/en/latest/example_gallery.html>`__ with examples using pySPEEDY.
 
 Installation
 ============
