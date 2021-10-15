@@ -1,16 +1,18 @@
-# Set variables depending on target
-# Usefull options for debugging: -g -fbacktrace -fcheck=bounds
-default : COMPOPTS = $(OPT) $(BASE) -fPIC
-profile : COMPOPTS = -pg $(BASE)
-
 # Default
 default : base_target
 
 # For profiling
 profile : base_target
 
+# For debugging
+debug : base_target
+
+.PHONY: default
+.PHONY: debug
+.PHONY: profile
+
 # Base compiler options (always used)
-BASE=-fconvert=swap -Wall -cpp
+BASE=-fconvert=swap -Wall -cpp -fPIC
 
 # Optimisation flags (disabled for debugging, profiling etc.)
 OPT=-O3 \
@@ -25,11 +27,20 @@ OPT=-O3 \
 # valid in IEEE754 arithmetic.
 # Note that "-Ofast" includes this flag.
 
-# # Location of NetCDF module (netcdf.mod)
-INC=-I/usr/include
+# Set variables depending on target
+default : COMPOPTS = $(OPT) $(BASE)
+profile : COMPOPTS = -pg $(BASE)
+debug : COMPOPTS =  -g -fbacktrace -fcheck=bounds $(BASE) -O0
+
+ifndef NETCDF
+override NETCDF = /usr
+endif
+
+# Location of NetCDF module (netcdf.mod)
+INC=-I$(NETCDF)/include
 
 # Library flags
-LIB=-L$/usr/lib -lnetcdff -lnetcdf
+LIB=-L$(NETCDF)/lib -lnetcdff -lnetcdf
 
 FILES= \
        error_codes.o \

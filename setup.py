@@ -9,12 +9,28 @@ import setuptools  # noqa
 from numpy.distutils.command.build_ext import build_ext
 from numpy.distutils.core import Extension
 from pathlib import Path
+import os
+import sys
 
 ###############################################################################
 
 PROJECT_ROOT_DIR = Path(__file__).parent
 SPEEDY_F90_SOURCE_DIR = PROJECT_ROOT_DIR / "speedy.f90"
 F2CMAP = SPEEDY_F90_SOURCE_DIR.resolve() / ".f2py_f2cmap"
+
+# Use user defined NETCDF library is the "NETCDF" environment variable is set.
+NETCDF_DIR = os.environ.get("NETCDF", "/usr")
+NETCDF_INCLUDE = os.path.join(NETCDF_DIR, "include")
+NETCDF_LIB = os.path.join(NETCDF_DIR, "lib")
+
+SPEEDY_TARGET = os.environ.get("SPEEDY_TARGET", "default")
+VALID_TARGETS = ("default", "profile", "debug")
+
+if SPEEDY_TARGET not in VALID_TARGETS:
+    print("\nInvalid Makefile target.")
+    print(" Supported values: " + ",".join(VALID_TARGETS) + "\n")
+    print("Exiting installation.")
+    sys.exit(1)
 
 pyspeedy_extension = Extension(
     name="pyspeedy.speedy_driver",
@@ -23,8 +39,15 @@ pyspeedy_extension = Extension(
         "speedy.f90/params.f90",
         "speedy.f90/speedy_driver.f90",
     ],
-    extra_link_args=["-fopenmp", "-L./speedy.f90", "-lspeedy", "-lnetcdf", "-lnetcdff"],
-    include_dirs=[numpy.get_include()],
+    extra_link_args=[
+        "-fopenmp",
+        "-L./speedy.f90",
+        f"-L{NETCDF_LIB}",
+        "-lspeedy",
+        "-lnetcdf",
+        "-lnetcdff",
+    ],
+    include_dirs=[numpy.get_include(), NETCDF_INCLUDE],
     f2py_options=["--f2cmap", str(F2CMAP)],
 )
 
@@ -42,7 +65,9 @@ class specialized_build_ext(build_ext):
 
         if ext.name == self.special_extension:
             # First compile the special extensions using Make
-            make_process = subprocess.Popen("make", cwd=PROJECT_ROOT_DIR)
+            make_process = subprocess.Popen(
+                ["make", "-C", "speedy.f90", SPEEDY_TARGET], cwd=PROJECT_ROOT_DIR
+            )
             stdout, stderr = make_process.communicate()
             print(stdout)
             print(stderr)
