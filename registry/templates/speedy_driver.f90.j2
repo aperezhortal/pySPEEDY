@@ -26,17 +26,18 @@ contains
     ! =========================================================================
     ! Speedy interface
     ! =========================================================================
-    subroutine init(state_container, control_container)
+    subroutine init(state_container, control_container, error_code)
         use initialization, only: initialize_state
         
         integer(8), intent(in) :: state_container, control_container
+        integer, intent(out) :: error_code
 
         type(ModelState_Ptr_t):: state_ptr
         type(ControlParams_Ptr_t):: control_ptr
 
         state_ptr = transfer(state_container, state_ptr)
         control_ptr = transfer(control_container, control_ptr)
-        call initialize_state(state_ptr%p, control_ptr%p)
+        call initialize_state(state_ptr%p, control_ptr%p, error_code)
     end subroutine
    
     subroutine step(state_container, control_container, error_code)

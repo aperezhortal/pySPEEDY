@@ -56,11 +56,11 @@ contains
         call step(state, 2, 2, 2 * delt)
 
         ! Check model diagnostics
-        call check_diagnostics(state%vor(:, :, :, 2), &
-                state%div(:, :, :, 2), &
-                state%t(:, :, :, 2), &
-                state%current_step + 1, &
-                control_params%diag_interval, state%mod_spectral)
+        call check_diagnostics(state, time_lev = 2, istep = state%current_step + 1, error_code = error_code)
+
+        if (error_code /= SUCCESS) then
+            return
+        end if
 
         ! Increment time step counter
         state%current_step = state%current_step + 1

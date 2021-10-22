@@ -19,20 +19,20 @@ contains
 
     !> Initializes all spectral variables starting from either a reference
     !  atmosphere or a restart file.
-    subroutine initialize_prognostics(prognostic_vars, control_params)
+    subroutine initialize_prognostics(prognostic_vars, error_code)
         type(ModelState_t), intent(inout) :: prognostic_vars
-        type(ControlParams_t), intent(in) :: control_params
-        call initialize_from_rest_state(prognostic_vars, control_params)
+        integer, intent(out) :: error_code
+        call initialize_from_rest_state(prognostic_vars, error_code)
     end subroutine
 
     !> Initializes all spectral variables starting from a reference atmosphere.
-    subroutine initialize_from_rest_state(state, control_params)
+    subroutine initialize_from_rest_state(state, error_code)
         use physical_constants, only : gamma, hscale, hshum, refrh1
         use physical_constants, only : grav, rgas
         use diagnostics, only : check_diagnostics
 
         type(ModelState_t), intent(inout), target :: state
-        type(ControlParams_t), intent(in) :: control_params
+        integer, intent(out) :: error_code
 
         complex(p) :: surfs(mx, nx)
         real(p) :: surfg(ix, il)
@@ -115,11 +115,7 @@ contains
         end do
 
         ! Print diagnostics from initial conditions
-        call check_diagnostics(state%vor(:, :, :, 1), &
-                state%div(:, :, :, 1), &
-                state%t(:, :, :, 1), &
-                0, control_params%diag_interval, &
-                state%mod_spectral)
+        call check_diagnostics(state, time_lev = 1, istep = 0, error_code=error_code)
 
     end subroutine
 

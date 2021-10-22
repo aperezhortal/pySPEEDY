@@ -122,9 +122,9 @@ land_model.o           : params.o model_control.o interpolation.o  boundaries.o\
 large_scale_condensation.o : params.o physical_constants.o types.o
 legendre.o             : params.o physical_constants.o geometry.o types.o
 matrix_inversion.o     : types.o
-diagnostics.o          : params.o spectral.o types.o
+diagnostics.o          : params.o spectral.o types.o error_codes.o
 prognostics.o          : params.o physical_constants.o geometry.o\
-                         boundaries.o diagnostics.o spectral.o  types.o
+                         boundaries.o diagnostics.o spectral.o types.o error_codes.o
 interpolation.o        : params.o model_control.o types.o
 physical_constants.o   : params.o types.o
 mod_radcon.o           : params.o types.o
