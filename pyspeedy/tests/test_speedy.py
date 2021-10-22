@@ -79,3 +79,17 @@ def test_speedy_concurrent():
         model_file = os.path.join(tmp_work_dir2, file_name)
         model_ds = xr.open_dataset(model_file)
         xr.testing.assert_allclose(model_ds, reference_ds, rtol=1e-06, atol=0)
+
+
+def test_exceptions():
+    """Test that certain exceptions are raised."""
+    model = Speedy(start_date=datetime(1982, 1, 1), end_date=datetime(1982, 1, 2))
+    model.set_bc()
+    model.run()
+
+    # Force a failure in the diagnostic check
+    t = model["t"]
+    t[:] = 0
+    model["t"] = t
+    with pytest.raises(RuntimeError):
+        model.check()

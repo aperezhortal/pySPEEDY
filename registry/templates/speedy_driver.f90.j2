@@ -54,6 +54,19 @@ contains
         call do_single_step(state_ptr%p, control_ptr%p, error_code)
     end subroutine
 
+    subroutine check(state_container, error_code)
+        use diagnostics, only : check_diagnostics
+
+        integer(8), intent(in) :: state_container
+        integer, intent(out)   :: error_code
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        call check_diagnostics(state_ptr%p, time_lev=1, error_code=error_code)
+    end subroutine
+
+
     subroutine transform_spectral2grid(state_container)
         use prognostics, only: spectral2grid
 

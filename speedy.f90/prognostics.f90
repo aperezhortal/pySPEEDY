@@ -115,7 +115,7 @@ contains
         end do
 
         ! Print diagnostics from initial conditions
-        call check_diagnostics(state, time_lev = 1, istep = 0, error_code=error_code)
+        call check_diagnostics(state, time_lev = 1, error_code=error_code)
 
     end subroutine
 

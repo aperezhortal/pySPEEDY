@@ -55,15 +55,15 @@ contains
         ! Perform one leapfrog time step
         call step(state, 2, 2, 2 * delt)
 
+        ! Increment time step counter
+        state%current_step = state%current_step + 1
+
         ! Check model diagnostics
-        call check_diagnostics(state, time_lev = 2, istep = state%current_step + 1, error_code = error_code)
+        call check_diagnostics(state, time_lev = 2, error_code = error_code)
 
         if (error_code /= SUCCESS) then
             return
         end if
-
-        ! Increment time step counter
-        state%current_step = state%current_step + 1
 
         ! Increment model datetime
         call advance_date(control_params)

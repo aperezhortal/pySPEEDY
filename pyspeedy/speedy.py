@@ -283,6 +283,8 @@ class Speedy:
         self["sea_ice_frac12"] = ds["icec"].values
 
         _speedy.init(self._state_cnt, self._control_cnt)
+
+        self.spectral2grid()  # Convert some spectral variables to the grid space.
         self._initialized_bc = True
 
     def _set_sst_anomalies(self, sst_anomaly=None):
@@ -449,3 +451,9 @@ class Speedy:
             "time", "lev", "lat", "lon"
         )
         return output_ds
+
+    def check(self):
+        """Run a diagnostic check for the model state."""
+        error_code = _speedy.check(self._state_cnt)
+        if error_code < 0:
+            raise RuntimeError(ERROR_CODES[error_code])

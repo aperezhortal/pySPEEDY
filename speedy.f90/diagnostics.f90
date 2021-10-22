@@ -13,7 +13,7 @@ contains
     !> Compute the global mean of eddy kinetic energy and temperature.
     !  Stops the integration if the computed diagnostics are outside of
     !  allowable ranges.
-    subroutine check_diagnostics(state, time_lev, istep, error_code)
+    subroutine check_diagnostics(state, time_lev, error_code)
         use params
         use spectral, only : ModSpectral_t
         use model_state, only : ModelState_t
@@ -21,8 +21,6 @@ contains
         use error_codes, only : SUCCESS, E_DIAGNOSTICS_OUTSIDE_RANGE
 
         type(ModelState_t), intent(inout), target :: state
-
-        integer, intent(in) :: istep  !! Current time step
         integer, intent(in) :: time_lev  !! Time level (1 or 2)
         integer, intent(out) :: error_code ! 0: No error, 1: Error.
 
@@ -69,7 +67,7 @@ contains
                 !print 2002, (diag(kk, 2), kk=1, kx)
                 !print 2003, (diag(kk, 3), kk=1, kx)
                 write(0, *) "Model variables out of accepted range"
-                write(0, *) "step =", istep
+                write(0, *) "step =", state%current_step
                 error_code = E_DIAGNOSTICS_OUTSIDE_RANGE
                 return
             end if
