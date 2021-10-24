@@ -26,8 +26,6 @@ from pyspeedy import (
 from pyspeedy.error_codes import ERROR_CODES
 
 _DEFAULT_PARAMS = dict(
-    history_interval=1,  # in time steps
-    diag_interval=180,
     start_date=datetime(1982, 1, 1),
     end_date=datetime(1982, 1, 2),
 )
@@ -70,7 +68,6 @@ class Speedy:
 
     def set_params(
         self,
-        diag_interval=180,
         start_date=datetime(1982, 1, 1),
         end_date=datetime(1982, 1, 2),
     ):
@@ -79,25 +76,18 @@ class Speedy:
 
         Parameters
         ----------
-        diag_interval: int
-            Interval, in time steps, for which the diagnostic variables are saved.
         start_date: datetime
             Model start date.
         end_date: datetime
             Model end date.
         """
-        self.diag_interval = diag_interval
         self.start_date = start_date
         self.end_date = end_date
 
         if self.start_date > self.end_date:
             raise ValueError("The start date should be lower than the en date.")
 
-        self._control_cnt = _speedy.controlparams_init(
-            self._start_date,
-            self._end_date,
-            self.diag_interval,
-        )
+        self._control_cnt = _speedy.controlparams_init(self._start_date, self._end_date)
 
         self._model_date = None
 

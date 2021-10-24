@@ -104,14 +104,11 @@ contains
     ! ControlParams interface
     ! =========================================================================
     !> Initialize the ControlParams and return the container with the object.
-    subroutine controlparams_init(control_cnt, &
-                                  start_datetime_cnt, end_datetime_cnt, &
-                                  diag_interval)
+    subroutine controlparams_init(control_cnt, start_datetime_cnt, end_datetime_cnt)
 
         integer(8), intent(out) :: control_cnt !! Container for the ControlParams_Ptr_t object.
         integer(8), intent(in) :: start_datetime_cnt
         integer(8), intent(in) :: end_datetime_cnt
-        integer, intent(in)    :: diag_interval
 
         type(ControlParams_Ptr_t) :: control_ptr
         type(Datetime_Ptr_t) :: start_datetime_ptr, end_datetime_ptr
@@ -121,9 +118,7 @@ contains
         end_datetime_ptr = transfer(end_datetime_cnt, end_datetime_ptr)
 
         allocate (control_ptr%p)
-        call initialize_control(control_ptr%p, &
-                                start_datetime_ptr%p, end_datetime_ptr%p, &
-                                diag_interval)
+        call initialize_control(control_ptr%p, start_datetime_ptr%p, end_datetime_ptr%p)
 
         control_cnt = transfer(control_ptr, control_cnt)
     end subroutine

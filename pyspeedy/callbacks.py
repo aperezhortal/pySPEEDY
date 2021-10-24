@@ -9,6 +9,7 @@ The following callbacks are available in pySPEEDY:
     :toctree: ../generated/
 
     BaseCallback
+    DiagnosticCheck
     ModelCheckpoint
     XarrayExporter
 """
@@ -66,6 +67,36 @@ class BaseCallback:
     def __call__(self, model_instance):
         """Object call."""
         pass
+
+
+class DiagnosticCheck(BaseCallback):
+    """
+    Callback used to check on that the prognostic variables are inside reasonable ranges.
+    """
+
+    def __init__(self, interval=36):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        interval: int
+            Interval, in time steps, for which the diagnostic checkes are run.
+        """
+        super().__init__(interval=interval)
+
+    def __call__(self, model_instance):
+        """
+        Object call.
+
+        Run diagnostic check if needed.
+        """
+        if self.skip_flag(model_instance):
+            # Only run tests every `interval` steps.
+            return
+
+        # If the test fails, it will raise a runtime exception.
+        model_instance.check()
 
 
 class ModelCheckpoint(BaseCallback):
