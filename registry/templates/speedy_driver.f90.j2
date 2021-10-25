@@ -54,6 +54,30 @@ contains
         call do_single_step(state_ptr%p, control_ptr%p, error_code)
     end subroutine
 
+    !> Parallel execution of the step function for an ensemble of states.
+    subroutine parallel_step(state_containers, control_containers, error_codes, n_members)
+        !f2py threadsafe
+        use speedy, only: do_single_step
+        Use omp_lib
+
+        integer, intent(in) :: n_members
+        integer(8), dimension(n_members), intent(in) :: state_containers, control_containers
+        integer, dimension(n_members), intent(out)   :: error_codes
+
+        integer :: m
+        type(ModelState_Ptr_t):: state_ptr
+        type(ControlParams_Ptr_t):: control_ptr
+
+        !$OMP PARALLEL DO default(shared) PRIVATE (state_ptr ,control_ptr,m) SCHEDULE(dynamic)
+        do m=1,n_members
+            state_ptr = transfer(state_containers(m), state_ptr)
+            control_ptr = transfer(control_containers(m), control_ptr)
+            call do_single_step(state_ptr%p, control_ptr%p, error_codes(m))
+        enddo
+        !$OMP END PARALLEL DO
+
+    end subroutine
+
     subroutine check(state_container, error_code)
         use diagnostics, only : check_diagnostics
 

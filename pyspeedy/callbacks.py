@@ -13,6 +13,8 @@ The following callbacks are available in pySPEEDY:
     ModelCheckpoint
     XarrayExporter
 """
+import copy
+
 from datetime import datetime
 
 import os
@@ -20,9 +22,9 @@ import os
 import xarray as xr
 from pyspeedy import (
     _speedy,  # noqa
-    MODEL_STATE_DEF,
     DEFAULT_OUTPUT_VARS,
 )
+from pyspeedy.speedy import SpeedyEns, Speedy
 
 
 class BaseCallback:
@@ -49,20 +51,25 @@ class BaseCallback:
 
     def skip_flag(self, model_instance):
         """
-        Return True when the callback excecution is skipped for this time step if
+        Return True when the callback execution is skipped for this time step if
         - model_date < spinup_date
         - current_step % interval !=0
         """
         if self.spinup_date is not None:
-            if model_instance.model_date < self.spinup_date:
+            if model_instance.current_date < self.spinup_date:
                 # Do not save during spinup time
                 return True
-        return model_instance["current_step"] % self.interval != 0
+
+        return model_instance.get_current_step() % self.interval != 0
 
     def print_msg(self, msg):
         """Print debug message if `verbose` was set to True."""
         if self.verbose:
             print(msg)
+
+    def copy(self):
+        """Create a copy of the instance."""
+        return copy.deepcopy(self)
 
     def __call__(self, model_instance):
         """Object call."""
@@ -95,8 +102,13 @@ class DiagnosticCheck(BaseCallback):
             # Only run tests every `interval` steps.
             return
 
-        # If the test fails, it will raise a runtime exception.
-        model_instance.check()
+        if isinstance(model_instance, Speedy):
+            # If it is a single run, we convert it to a list to make iterable.
+            model_instance = [model_instance]
+
+        for _member in model_instance:
+            # If the test fails, it will raise a runtime exception.
+            _member.check()
 
 
 class ModelCheckpoint(BaseCallback):
@@ -121,7 +133,6 @@ class ModelCheckpoint(BaseCallback):
         spinup_date=None,
         variables=None,
         output_dir="./",
-        filename_fmt="%Y-%m-%d_%H%M.nc",
     ):
         """
         Parameters
@@ -136,9 +147,6 @@ class ModelCheckpoint(BaseCallback):
             List of variables to save
         output_dir: str
             Path to folder where the output files are stored.
-        filename_fmt: str
-            Format string used to generate the output filename. The format string is passed to the `strftime` method
-            for the current model datetime.
         interval: int
             History interval in timesteps every which the output files are saved.
         spinup_date: datetime or None
@@ -148,7 +156,6 @@ class ModelCheckpoint(BaseCallback):
             variables = DEFAULT_OUTPUT_VARS
         self.variables = variables
         self.output_dir = output_dir
-        self.filename_fmt = filename_fmt
         self.history_interval = interval
         super().__init__(verbose=verbose, interval=interval, spinup_date=spinup_date)
         self.dataframe = None
@@ -176,6 +183,9 @@ class XarrayExporter(BaseCallback):
 
     The variables are saved in the lat/lon grid space (not the spectral domain).
     Spectral variables are not supported by this callback.
+
+    For ensemble runs, each output file is saved in a different subdirectory (named "member###").
+    This ensure that concurrent calls to the callback from different ensemble members do not interfere with each other.
     """
 
     def __init__(
@@ -203,6 +213,7 @@ class XarrayExporter(BaseCallback):
         filename_fmt: str
             Format string used to generate the output filename. The format string is passed to the `strftime` method
             for the current model datetime.
+            For ensemble runs, each member output is saved in a different subfolder (named "member###").
         interval: int
             History interval in timesteps every which the output files are saved.
         spinup_date: datetime or None
@@ -231,9 +242,10 @@ class XarrayExporter(BaseCallback):
         vars_and_coords = list(model_df.variables.keys()) + list(model_df.coords.keys())
         encoding = dict()
         for var in vars_and_coords:
-            encoding[var] = {"dtype": "float32", "zlib": True}
+            if var in ("time", "ens"):
+                continue
 
-        file_name = model_instance.model_date.strftime(self.filename_fmt)
+        file_name = model_instance.current_date.strftime(self.filename_fmt)
         os.makedirs(self.output_dir, exist_ok=True)
         output_file_path = os.path.join(self.output_dir, file_name)
         self.print_msg(f"Saving model output at: {output_file_path}.")

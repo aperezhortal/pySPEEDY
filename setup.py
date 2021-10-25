@@ -39,14 +39,9 @@ pyspeedy_extension = Extension(
         "speedy.f90/params.f90",
         "speedy.f90/speedy_driver.f90",
     ],
-    extra_link_args=[
-        "-fopenmp",
-        "-L./speedy.f90",
-        f"-L{NETCDF_LIB}",
-        "-lspeedy",
-        "-lnetcdf",
-        "-lnetcdff",
-    ],
+    extra_f90_compile_args=["-fopenmp"],  # IMPORTANT!
+    library_dirs=[NETCDF_LIB, "./speedy.f90"],
+    libraries=["gomp", "speedy", "netcdf", "netcdff"],
     include_dirs=[numpy.get_include(), NETCDF_INCLUDE],
     f2py_options=["--f2cmap", str(F2CMAP)],
 )

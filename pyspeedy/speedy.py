@@ -41,22 +41,38 @@ class Speedy:
     Speedy model.
     """
 
-    def __init__(self, **control_params):
+    def __init__(
+        self,
+        start_date=datetime(1982, 1, 1),
+        end_date=datetime(1982, 1, 2),
+        member=None,
+    ):
         """
         Constructor. Initializes the model.
 
-        For a complete list of the accepted initialization parameters, see:
-        :meth:`set_params`.
+        Parameters
+        ----------
+        start_date: datetime
+            Model start date.
+        end_date: datetime
+            Model end date.
+        member: int
+            Member number. If None, the run is not considered part of an ensemble run.
+            This value is used by the callback functions to determine how to treat the simulation
+            (a single isolated run, or an ensemble member).
         """
         self._start_date = None
         self._end_date = None
+        self.member_id = member  # member number
+        self.is_ensemble_member = self.member_id is not None
 
         # Allocate the model state
         self._state_cnt = _speedy.modelstate_init()
-        self.set_params(**control_params)
+        self.set_params(start_date=start_date, end_date=end_date)
 
         self._initialized_bc = False
         self._initialized_ssta = False
+        self.current_date = self.start_date
 
     def __del__(self):
         """Clean up."""
@@ -90,6 +106,8 @@ class Speedy:
         self._control_cnt = _speedy.controlparams_init(self._start_date, self._end_date)
 
         self._model_date = None
+
+        self.current_date = start_date
 
         self.n_months = (
             (self.end_date.year - self.start_date.year) * 12
@@ -167,6 +185,10 @@ class Speedy:
         else:
             raise TypeError("The input value is not a datetime object.")
 
+    def get_current_step(self):
+        """Return the current step in the simulation."""
+        return self["current_step"]
+
     @property
     def start_date(self):
         return self._get_fortran_date(self._start_date)
@@ -176,11 +198,11 @@ class Speedy:
         self._start_date = self._set_fortran_date(self._start_date, value)
 
     @property
-    def model_date(self):
+    def current_date(self):
         return self._get_fortran_date(self._model_date)
 
-    @model_date.setter
-    def model_date(self, value):
+    @current_date.setter
+    def current_date(self, value):
         self._model_date = self._set_fortran_date(self._model_date, value)
 
     @property
@@ -359,7 +381,8 @@ class Speedy:
         Parameters
         ----------
         callbacks: iterable of callback functions
-            Sequence of callback functions to be call every `history_interval` time steps.
+            Sequence of callback functions to be call every `interval` time steps. The interval is specified in each
+            callback instance.
         """
         if callbacks is None:
             callbacks = list()
@@ -368,14 +391,14 @@ class Speedy:
                 "The SPEEDY model was not initialized. Call the `set_bc` method to initialize the model."
             )
 
-        self.model_date = self.start_date
+        self.current_date = self.start_date
         dt_step = timedelta(seconds=3600 * 24 / 36)
 
-        while self.model_date < self.end_date:
+        while self.current_date < self.end_date:
             error_code = _speedy.step(self._state_cnt, self._control_cnt)
             if error_code < 0:
                 raise RuntimeError(ERROR_CODES[error_code])
-            self.model_date += dt_step
+            self.current_date += dt_step
 
             for callback in callbacks:
                 callback(self)
@@ -399,17 +422,24 @@ class Speedy:
         data_vars = dict()
 
         for var in variables:
-            data_vars[MODEL_STATE_DEF[var]["alt_name"]] = (
-                MODEL_STATE_DEF[var]["nc_dims"] + ["time"],
-                self[var][..., None].astype("float32"),
-            )
+            # Append time dimension
+            dims = MODEL_STATE_DEF[var]["nc_dims"] + ["time"]
+            var_data = self[var][..., None].astype("float32")
+            if self.is_ensemble_member:
+                # Append ensemble dimension if needed.
+                dims = dims + ["ens"]
+                var_data = var_data[..., None]
+
+            data_vars[MODEL_STATE_DEF[var]["alt_name"]] = (dims, var_data)
 
         coords = dict(
             lon=self["lon"],
             lat=self["lat"],
             lev=self["lev"],
-            time=[self.model_date],
+            time=[self.current_date],
         )
+        if self.is_ensemble_member:
+            coords["ens"] = [self.member_id]
 
         output_ds = xr.Dataset(
             data_vars=data_vars,
@@ -418,7 +448,8 @@ class Speedy:
 
         encoding = dict()
         for var in list(variables) + list(coords.keys()):
-            if var == "time":
+            if var in ("time", "ens"):
+                encoding[var] = {"dtype": "int32"}
                 continue
             alt_name = MODEL_STATE_DEF[var]["alt_name"]
             if MODEL_STATE_DEF[var]["units"] is not None:
@@ -435,11 +466,13 @@ class Speedy:
         output_ds["time"].attrs["standard_name"] = "time"
 
         # Reorder the dimensions to follow NWP output standards.
-        # - dimensions: ("time", "lev", "lat", "lon").
+        # - dimensions: ("time", ["ensemble"], "lev", "lat", "lon").
         # - vertical levels increasing with height.
-        output_ds = output_ds.reindex(lev=output_ds.lev[::-1]).transpose(
-            "time", "lev", "lat", "lon"
-        )
+        if self.is_ensemble_member:
+            sorted_dims = ("time", "ens", "lev", "lat", "lon")
+        else:
+            sorted_dims = ("time", "lev", "lat", "lon")
+        output_ds = output_ds.reindex(lev=output_ds.lev[::-1]).transpose(*sorted_dims)
         return output_ds
 
     def check(self):
@@ -447,3 +480,118 @@ class Speedy:
         error_code = _speedy.check(self._state_cnt)
         if error_code < 0:
             raise RuntimeError(ERROR_CODES[error_code])
+
+
+class SpeedyEns:
+    """
+    Ensemble of Speedy model instances.
+    """
+
+    def __init__(
+        self,
+        num_of_members,
+        start_date=datetime(1982, 1, 1),
+        end_date=datetime(1982, 1, 2),
+    ):
+        """
+        Constructor. Initializes the ensemble of Speedy instances.
+
+        Parameters
+        ----------
+        num_of_members: int
+            Ensemble size.
+        start_date: datetime
+            Model start date.
+        end_date: datetime
+            Model end date.
+        """
+        self.n_members = num_of_members
+        self.members = [
+            Speedy(start_date=start_date, end_date=end_date, member=mem_num)
+            for mem_num in range(num_of_members)
+        ]
+        self.current_date = self.members[
+            0
+        ].current_date  # Current date for the ensemble run.
+
+    def __iter__(self):
+        """Iterate over the ensemble members"""
+        return iter(self.members)
+
+    def __len__(self):
+        return self.n_members
+
+    def set_params(
+        self, start_date=datetime(1982, 1, 1), end_date=datetime(1982, 1, 2)
+    ):
+        """
+        Set the model's control parameters.
+
+        See :meth:`~Speedy.set_params` for additional details.
+        """
+        for member in self:
+            member.set_params(start_date=start_date, end_date=end_date)
+
+        self.current_date = start_date
+
+    def to_dataframe(self, variables=None):
+        """
+        Return an xarray DataFrame with the current model state.
+        """
+        member_dfs = []
+        for member in self:
+            member_dfs.append(member.to_dataframe(variables=variables))
+        return xr.merge(member_dfs)
+
+    def run(self, callbacks=None):
+        """
+        Run each ensemble member between the start and the end dates
+
+        Before running the model, the boundary conditions need to be set for each members
+        (see the :meth:`set_bc` method).
+
+        To initialize all the member with the default parameters, run::
+
+        .. code-block:: python
+            speedy_ensemble = SpeedyEns()
+            for member in speedy_ensemble:
+                member.set_bc()
+
+        Parameters
+        ----------
+        callbacks: iterable of callback functions
+            Sequence of callback functions to be call every `interval` time steps. The interval is specified in each
+            callback instance.
+        """
+        if callbacks is None:
+            callbacks = []
+
+        end_date = self.members[0].end_date
+        dt_step = timedelta(seconds=3600 * 24 / 36)
+
+        state_cnts = np.zeros(self.n_members, dtype=np.int64)
+        control_cnts = np.zeros(self.n_members, dtype=np.int64)
+        for m, member in enumerate(self):
+            state_cnts[m] = member._state_cnt  # noqa
+            control_cnts[m] = member._control_cnt  # noqa
+
+        while self.current_date < end_date:
+            error_codes = _speedy.parallel_step(state_cnts, control_cnts)
+            self.current_date += dt_step
+
+            if (error_codes < 0).any():
+                msg = ""
+                for n, code in enumerate(error_codes):
+                    msg += f"Member{n}: {ERROR_CODES[code]}\n"
+                raise RuntimeError(msg)
+
+            # Update current date in all members
+            for member in self:
+                member.current_date = self.current_date
+
+            for callback in callbacks:
+                callback(self)
+
+    def get_current_step(self):
+        """Return the current step in the simulation."""
+        return self.members[0]["current_step"]

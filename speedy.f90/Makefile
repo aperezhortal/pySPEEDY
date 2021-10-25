@@ -79,8 +79,8 @@ FILES= \
 	   time_stepping.o \
 	   types.o \
 	   vertical_diffusion.o \
-	   speedy.o \
-	   speedy_driver.o
+	   speedy.o
+
 
 
 %.o: %.f90
@@ -94,7 +94,6 @@ clean:
 	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
 error_codes.o          :
-speedy_driver.o        : model_state.o speedy.o
 speedy.o               : params.o model_control.o prognostics.o \
 				         shortwave_radiation.o time_stepping.o error_codes.o \
                          diagnostics.o model_state.o 
