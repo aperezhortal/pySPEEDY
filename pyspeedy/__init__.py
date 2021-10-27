@@ -34,4 +34,4 @@ def example_sst_anomaly_file():
     return str(PACKAGE_DATA_DIR / "sst_anomaly.nc")
 
 
-from .speedy import Speedy, MODEL_STATE_DEF  # noqa
+from .speedy import Speedy, SpeedyEns, MODEL_STATE_DEF  # noqa

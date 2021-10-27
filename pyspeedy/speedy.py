@@ -6,6 +6,7 @@ The Speedy model
     :toctree: ./generated/
 
     Speedy
+    SpeedyEns
 """
 
 import os
