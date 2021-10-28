@@ -8,6 +8,7 @@ pySpeedy main module
     example_bc_file
     example_sst_anomaly_file
     Speedy
+    SpeedyEns
 """
 from pathlib import Path
 from .speedy_driver import speedy_driver as _speedy  # noqa

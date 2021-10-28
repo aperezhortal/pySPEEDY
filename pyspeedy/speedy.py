@@ -551,12 +551,11 @@ class SpeedyEns:
         Before running the model, the boundary conditions need to be set for each members
         (see the :meth:`set_bc` method).
 
-        To initialize all the member with the default parameters, run::
+        To initialize all the member with the default parameters, run:
 
-        .. code-block:: python
-            speedy_ensemble = SpeedyEns()
-            for member in speedy_ensemble:
-                member.set_bc()
+        >>> speedy_ensemble = SpeedyEns()
+        >>> for member in speedy_ensemble:
+        >>>     member.set_bc()
 
         Parameters
         ----------
