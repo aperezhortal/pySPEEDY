@@ -10,7 +10,7 @@ module initialization
 contains
 
     !> Initializes everything.
-    subroutine initialize_state(state, control_params)
+    subroutine initialize_state(state, control_params, error_code)
         use model_control, only : ControlParams_t
         use coupler, only : initialize_coupler
         use sea_model, only : sea_coupling_flag
@@ -21,14 +21,16 @@ contains
         use geopotential, only : initialize_geopotential
         use forcing, only : set_forcing
         use params, only : ix, il
-
-        integer :: k
+        use error_codes, only: SUCCESS
 
         ! =========================================================================
         ! Subroutine definitions
         ! =========================================================================
         type(ModelState_t), intent(inout) :: state
         type(ControlParams_t), intent(out) :: control_params
+        integer, intent(out) :: error_code
+
+        integer :: k
 
         ! call print_speedy_title
         state%current_step = 0
@@ -59,7 +61,11 @@ contains
         call initialize_boundaries(state)
 
         ! Initialize model variables
-        call initialize_prognostics(state, control_params)
+        call initialize_prognostics(state, error_code)
+
+        if (error_code /= SUCCESS) then
+            return
+        end if
 
         ! =========================================================================
         ! Initialization of coupled modules (land, sea, ice)

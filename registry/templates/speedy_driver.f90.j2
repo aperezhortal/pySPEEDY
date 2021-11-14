@@ -26,17 +26,18 @@ contains
     ! =========================================================================
     ! Speedy interface
     ! =========================================================================
-    subroutine init(state_container, control_container)
+    subroutine init(state_container, control_container, error_code)
         use initialization, only: initialize_state
         
         integer(8), intent(in) :: state_container, control_container
+        integer, intent(out) :: error_code
 
         type(ModelState_Ptr_t):: state_ptr
         type(ControlParams_Ptr_t):: control_ptr
 
         state_ptr = transfer(state_container, state_ptr)
         control_ptr = transfer(control_container, control_ptr)
-        call initialize_state(state_ptr%p, control_ptr%p)
+        call initialize_state(state_ptr%p, control_ptr%p, error_code)
     end subroutine
    
     subroutine step(state_container, control_container, error_code)
@@ -52,6 +53,43 @@ contains
         control_ptr = transfer(control_container, control_ptr)
         call do_single_step(state_ptr%p, control_ptr%p, error_code)
     end subroutine
+
+    !> Parallel execution of the step function for an ensemble of states.
+    subroutine parallel_step(state_containers, control_containers, error_codes, n_members)
+        !f2py threadsafe
+        use speedy, only: do_single_step
+        Use omp_lib
+
+        integer, intent(in) :: n_members
+        integer(8), dimension(n_members), intent(in) :: state_containers, control_containers
+        integer, dimension(n_members), intent(out)   :: error_codes
+
+        integer :: m
+        type(ModelState_Ptr_t):: state_ptr
+        type(ControlParams_Ptr_t):: control_ptr
+
+        !$OMP PARALLEL DO default(shared) PRIVATE (state_ptr ,control_ptr,m) SCHEDULE(dynamic)
+        do m=1,n_members
+            state_ptr = transfer(state_containers(m), state_ptr)
+            control_ptr = transfer(control_containers(m), control_ptr)
+            call do_single_step(state_ptr%p, control_ptr%p, error_codes(m))
+        enddo
+        !$OMP END PARALLEL DO
+
+    end subroutine
+
+    subroutine check(state_container, error_code)
+        use diagnostics, only : check_diagnostics
+
+        integer(8), intent(in) :: state_container
+        integer, intent(out)   :: error_code
+
+        type(ModelState_Ptr_t):: state_ptr
+
+        state_ptr = transfer(state_container, state_ptr)
+        call check_diagnostics(state_ptr%p, time_lev=1, error_code=error_code)
+    end subroutine
+
 
     subroutine transform_spectral2grid(state_container)
         use prognostics, only: spectral2grid
@@ -90,14 +128,11 @@ contains
     ! ControlParams interface
     ! =========================================================================
     !> Initialize the ControlParams and return the container with the object.
-    subroutine controlparams_init(control_cnt, &
-                                  start_datetime_cnt, end_datetime_cnt, &
-                                  diag_interval)
+    subroutine controlparams_init(control_cnt, start_datetime_cnt, end_datetime_cnt)
 
         integer(8), intent(out) :: control_cnt !! Container for the ControlParams_Ptr_t object.
         integer(8), intent(in) :: start_datetime_cnt
         integer(8), intent(in) :: end_datetime_cnt
-        integer, intent(in)    :: diag_interval
 
         type(ControlParams_Ptr_t) :: control_ptr
         type(Datetime_Ptr_t) :: start_datetime_ptr, end_datetime_ptr
@@ -107,9 +142,7 @@ contains
         end_datetime_ptr = transfer(end_datetime_cnt, end_datetime_ptr)
 
         allocate (control_ptr%p)
-        call initialize_control(control_ptr%p, &
-                                start_datetime_ptr%p, end_datetime_ptr%p, &
-                                diag_interval)
+        call initialize_control(control_ptr%p, start_datetime_ptr%p, end_datetime_ptr%p)
 
         control_cnt = transfer(control_ptr, control_cnt)
     end subroutine

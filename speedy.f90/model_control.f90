@@ -43,10 +43,9 @@ module model_control
         real(p)              :: tmonth           !! The fraction of the current month elapsed
         real(p)              :: tyear            !! The fraction of the current year elapsed
 
-        integer              :: month_idx = 1     !! Simulation month (star month=1)
+        integer              :: month_idx = 1     !! Simulation month (start month=1)
         integer              :: ndaycal(12, 2)   !! The model calendar
-        
-        integer :: diag_interval     !! Period (number of steps) for diagnostic print-out
+
     end type
 
     ! Container for a ControlParams object. Used for the python interface.
@@ -77,12 +76,9 @@ contains
     end function
 
     !> Initializes control structure with the default parameters.
-    subroutine initialize_control(control_params, &
-                                  start_datetime, end_datetime, &
-                                  diag_interval)
+    subroutine initialize_control(control_params, start_datetime, end_datetime)
         type(ControlParams_t), intent(inout), target  :: control_params
         type(Datetime_t), intent(in)  :: start_datetime, end_datetime
-        integer, intent(in) :: diag_interval
 
         integer, pointer   :: ndaycal(:, :)
 
@@ -95,8 +91,6 @@ contains
         control_params%end_datetime = end_datetime
         ! Current model datetime is start datetime
         control_params%model_datetime = control_params%start_datetime
-
-        control_params%diag_interval = diag_interval
 
         ! Set calendar
         if (ncal == 365) then

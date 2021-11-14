@@ -1,16 +1,18 @@
-# Set variables depending on target
-# Usefull options for debugging: -g -fbacktrace -fcheck=bounds
-default : COMPOPTS = $(OPT) $(BASE) -fPIC
-profile : COMPOPTS = -pg $(BASE)
-
 # Default
 default : base_target
 
 # For profiling
 profile : base_target
 
+# For debugging
+debug : base_target
+
+.PHONY: default
+.PHONY: debug
+.PHONY: profile
+
 # Base compiler options (always used)
-BASE=-fconvert=swap -Wall -cpp
+BASE=-fconvert=swap -Wall -cpp -fPIC
 
 # Optimisation flags (disabled for debugging, profiling etc.)
 OPT=-O3 \
@@ -25,11 +27,20 @@ OPT=-O3 \
 # valid in IEEE754 arithmetic.
 # Note that "-Ofast" includes this flag.
 
-# # Location of NetCDF module (netcdf.mod)
-INC=-I/usr/include
+# Set variables depending on target
+default : COMPOPTS = $(OPT) $(BASE)
+profile : COMPOPTS = -pg $(BASE)
+debug : COMPOPTS =  -g -fbacktrace -fcheck=bounds $(BASE) -O0
+
+ifndef NETCDF
+override NETCDF = /usr
+endif
+
+# Location of NetCDF module (netcdf.mod)
+INC=-I$(NETCDF)/include
 
 # Library flags
-LIB=-L$/usr/lib -lnetcdff -lnetcdf
+LIB=-L$(NETCDF)/lib -lnetcdff -lnetcdf
 
 FILES= \
        error_codes.o \
@@ -68,8 +79,8 @@ FILES= \
 	   time_stepping.o \
 	   types.o \
 	   vertical_diffusion.o \
-	   speedy.o \
-	   speedy_driver.o
+	   speedy.o
+
 
 
 %.o: %.f90
@@ -83,7 +94,6 @@ clean:
 	rm -f *.o *.mod speedy libspeedy.so libspeedy.a
 
 error_codes.o          :
-speedy_driver.o        : model_state.o speedy.o
 speedy.o               : params.o model_control.o prognostics.o \
 				         shortwave_radiation.o time_stepping.o error_codes.o \
                          diagnostics.o model_state.o 
@@ -111,9 +121,9 @@ land_model.o           : params.o model_control.o interpolation.o  boundaries.o\
 large_scale_condensation.o : params.o physical_constants.o types.o
 legendre.o             : params.o physical_constants.o geometry.o types.o
 matrix_inversion.o     : types.o
-diagnostics.o          : params.o spectral.o types.o
+diagnostics.o          : params.o spectral.o types.o error_codes.o
 prognostics.o          : params.o physical_constants.o geometry.o\
-                         boundaries.o diagnostics.o spectral.o  types.o
+                         boundaries.o diagnostics.o spectral.o types.o error_codes.o
 interpolation.o        : params.o model_control.o types.o
 physical_constants.o   : params.o types.o
 mod_radcon.o           : params.o types.o

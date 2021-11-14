@@ -4,6 +4,8 @@
 module error_codes
     implicit none
 
+    integer, parameter :: SUCCESS=0
     integer, parameter :: E_STATE_NOT_INITIALIZED=-1
+    integer, parameter :: E_DIAGNOSTICS_OUTSIDE_RANGE=-2
 
 end module

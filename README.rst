@@ -104,12 +104,22 @@ To install the package from source::
     # Clone the repo
     git clone https://github.com/aperezhortal/pySPEEDY.git
 
+If needed, specify the location of the NETCDF library (`/usr` by default).
+and the compilation mode for the SPEEDY.f90 model ("default", "profile", "debug")::
+
+    # Optional, specify the location of the NETCDF library
+    # Default value: /usr
+    export NETCDF=/usr
+
+    # Optional, specify the compilation mode.
+    # Default value: default
+    export SPEEDY_TARGET=default
+
     # Install the package
     pip install -v -e ./pySPEEDY
 
 The "-e" option install the package in "editable" mode. This will leave the compiled extensions inside the source
 folder after the installation.
-
 
 Runtime dependencies
 ====================
