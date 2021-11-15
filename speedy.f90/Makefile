@@ -12,7 +12,7 @@ debug : base_target
 .PHONY: profile
 
 # Base compiler options (always used)
-BASE=-fconvert=swap -Wall -cpp -fPIC
+BASE=-Wall -cpp -fPIC -frecursive
 
 # Optimisation flags (disabled for debugging, profiling etc.)
 OPT=-O3 \
