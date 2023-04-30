@@ -170,7 +170,7 @@ class ModelCheckpoint(BaseCallback):
             # Only save files at every history_interval steps.
             return
 
-        model_df = model_instance.to_dataframe()
+        model_df = model_instance.to_dataframe(variables=self.variables)
         if self.dataframe is None:
             self.dataframe = model_df
         else:
@@ -237,7 +237,7 @@ class XarrayExporter(BaseCallback):
             # Only save files at every history_interval steps.
             return
 
-        model_df = model_instance.to_dataframe()
+        model_df = model_instance.to_dataframe(variables=self.variables)
 
         vars_and_coords = list(model_df.variables.keys()) + list(model_df.coords.keys())
         encoding = dict()

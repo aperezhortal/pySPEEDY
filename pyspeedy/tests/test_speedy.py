@@ -16,6 +16,13 @@ start_dates = (
     (datetime(1982, 1, 1), datetime(1982, 1, 4)),
 )
 
+export_variables = (
+    ["u_grid", "v_grid"],
+    ["t_grid", "q_grid"],
+    ["phi_grid", "ps_grid"],
+    ["precnv", "precls"],
+)
+
 
 @pytest.mark.parametrize("start_date, end_date", start_dates)
 def test_speedy_run(start_date, end_date):
@@ -119,3 +126,25 @@ def test_exceptions():
     model["t"] = t
     with pytest.raises(RuntimeError):
         model.check()
+
+
+@pytest.mark.parametrize("variables", export_variables)
+def test_speedy_variable_export(variables):
+    """Run speedy and compare the output with a reference."""
+
+    start_date = datetime(1982, 1, 1)
+    end_date = datetime(1982, 1, 2)
+
+    file_name = end_date.strftime("%Y-%m-%d_%H%M.nc")
+
+    with tempfile.TemporaryDirectory() as tmp_work_dir:
+        model = Speedy(start_date=start_date, end_date=end_date)
+        model.set_bc()
+
+        exporter = XarrayExporter(output_dir=tmp_work_dir, variables=variables)
+        model.run(callbacks=[exporter])
+
+        model_file = os.path.join(tmp_work_dir, file_name)
+        model_ds = xr.open_dataset(model_file)
+
+        assert set((v.replace("_grid", "") for v in variables)) == set(model_ds.keys())
