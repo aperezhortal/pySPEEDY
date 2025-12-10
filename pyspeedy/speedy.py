@@ -542,7 +542,7 @@ class SpeedyEns:
         member_dfs = []
         for member in self:
             member_dfs.append(member.to_dataframe(variables=variables))
-        return xr.merge(member_dfs)
+        return xr.merge(member_dfs, join="outer", compat="no_conflicts")
 
     def run(self, callbacks=None):
         """

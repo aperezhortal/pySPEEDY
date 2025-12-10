@@ -1,0 +1,37 @@
+[build-system]
+requires = [
+    "meson-python>=0.15",
+    "numpy>=1.22",          # Needed at build time for f2py headers
+]
+build-backend = "mesonpy"
+
+[project]
+name = "pyspeedy"
+version = "0.2.0"
+description = "Python interface for the SPEEDY model."
+readme = "README.rst"
+authors = [
+    { name = "Andrés Pérez Hortal" },
+    { name = "Sam Hatfield" },
+    { name = "Fred Kucharski" },
+    { name = "Franco Molteni" },
+]
+license = { text = "MIT" }  # or your license
+requires-python = ">=3.7"
+
+# Runtime dependencies
+dependencies = [
+    "numpy",
+    "netCDF4",
+    "xarray",
+    "jinja2",
+]
+
+[project.urls]
+Homepage = "https://github.com/aperezhortal/pySPEEDY"
+Source = "https://github.com/aperezhortal/pySPEEDY"
+Issues = "https://github.com/aperezhortal/pySPEEDY/issues"
+
+# Install package data (handled by Meson + MANIFEST-like behavior)
+[tool.meson-python]
+# include-package-data = true   # meson-python includes all installed files automatically
