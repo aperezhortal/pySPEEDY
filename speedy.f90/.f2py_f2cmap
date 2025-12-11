@@ -11,4 +11,6 @@
           'idp': 'double',
           'isp': 'float',
           'p': 'double',
-          'KIND(p)': "double"}}
+          'KIND(p)': "double",
+          'real64': 'double',
+          'KIND(64)': "double"}}
