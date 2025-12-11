@@ -13,6 +13,7 @@ The following callbacks are available in pySPEEDY:
     ModelCheckpoint
     XarrayExporter
 """
+
 import copy
 
 from datetime import datetime
@@ -174,12 +175,14 @@ class ModelCheckpoint(BaseCallback):
         if self.dataframe is None:
             self.dataframe = model_df
         else:
-            self.dataframe = xr.merge((self.dataframe, model_df))
+            self.dataframe = xr.merge(
+                (self.dataframe, model_df), join="outer", compat="no_conflicts"
+            )
 
 
 class XarrayExporter(BaseCallback):
     """
-    Callback used to create an xarray dataset with selected variables a the current model time step.
+    Callback used to create an xarray dataset with selected variables at the current model time step.
 
     The variables are saved in the lat/lon grid space (not the spectral domain).
     Spectral variables are not supported by this callback.

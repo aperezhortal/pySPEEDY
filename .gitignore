@@ -24,3 +24,5 @@ examples/data
 /pyspeedy/data/model_state.xlsx
 /pyspeedy/data/model_state.json
 /docs/_build
+/libspeedy.a
+/.eggs/

@@ -15,7 +15,7 @@ debug : base_target
 BASE=-Wall -cpp -fPIC -frecursive
 
 # Optimisation flags (disabled for debugging, profiling etc.)
-OPT=-O3 \
+OPT=-O2 \
     -fno-math-errno \
     -fno-signaling-nans \
     -ffinite-math-only \

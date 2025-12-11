@@ -3,4 +3,4 @@ pytest
 jinja2
 setuptools
 netCDF4
-xarray
+xarrayco
